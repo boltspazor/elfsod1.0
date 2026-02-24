@@ -1,9 +1,8 @@
 // src/pages/AutoCreate.tsx
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navigation from '../components/Navigation';
 import StepIndicator from '../components/auto-create/StepIndicator';
-import PlatformSelectorStep from '../components/auto-create/PlatformSelectorStep';
 import CampaignGoalStep from '../components/auto-create/CampaignGoalStep';
 import CreativeAssetsStep from '../components/auto-create/CreativeAssetsStep';
 import CopyMessagingStep from '../components/auto-create/CopyMessagingStep';
@@ -12,140 +11,112 @@ import BudgetTestingStep from '../components/auto-create/BudgetTestingStep';
 
 export type CampaignGoal = 'awareness' | 'consideration' | 'conversions' | 'retention' | null;
 
+/* accent colours per step, matching the image Next button colours */
+const NEXT_COLORS: Record<number, string> = {
+  0: '#00e5d4', // cyan  – Campaign Goal
+  1: '#8b6fff', // purple – Creative Assets
+  2: '#c944ff', // purple – Copy & Messaging
+  3: '#00e5d4', // cyan  – Audience
+  4: '#00e5d4', // cyan  – Budget & Testing
+};
+
 const AutoCreate: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<CampaignGoal>(null);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedPlatforms] = useState<string[]>(['meta']);
 
-  // Updated steps array to include platform selector as step 0
   const steps = [
-    { id: 'platform', label: 'Platforms', component: PlatformSelectorStep },
     { id: 'goal', label: 'Campaign Goal', component: CampaignGoalStep },
     { id: 'creative', label: 'Creative Assets', component: CreativeAssetsStep },
     { id: 'copy', label: 'Copy & Messaging', component: CopyMessagingStep },
     { id: 'audience', label: 'Audience', component: AudienceStep },
-    { id: 'budget', label: 'Budget & Testing', component: BudgetTestingStep }
+    { id: 'budget', label: 'Budget & Testing', component: BudgetTestingStep },
   ];
 
   const CurrentStepComponent = steps[currentStep].component;
 
-  const handleNext = () => {
-    if (currentStep === 0 && selectedPlatforms.length === 0) {
-      // Don't proceed from platform selection without selecting at least one platform
-      alert('Please select at least one platform to continue.');
-      return;
+  const getStepProps = () => {
+    switch (currentStep) {
+      case 0: return { selectedGoal, setSelectedGoal, selectedPlatforms };
+      default: return { selectedGoal, selectedPlatforms };
     }
+  };
 
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) setCurrentStep(s => s + 1);
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
+    if (currentStep > 0) setCurrentStep(s => s - 1);
   };
 
-  const handleStepClick = (index: number) => {
-    // Allow navigation to platform selector always
-    if (index === 0) {
-      setCurrentStep(index);
-      return;
-    }
-
-    // For other steps, check if platforms are selected (for step 1+)
-    if (index === 1 && selectedPlatforms.length === 0) {
-      alert('Please select platforms first before proceeding to campaign goal.');
-      return;
-    }
-
-    // Allow navigation to steps that have been completed or are current
-    if (index <= currentStep || (index === 1 && selectedPlatforms.length > 0)) {
-      setCurrentStep(index);
-    }
-  };
-
-  const handlePlatformSelect = (platforms: string[]) => {
-    setSelectedPlatforms(platforms);
-  };
-
-  // Props to pass to each step component
-  // Update getStepProps in AutoCreate.tsx to pass platforms to other steps
-  const getStepProps = () => {
-    switch (currentStep) {
-      case 0:
-        return { onPlatformSelect: handlePlatformSelect };
-      case 1:
-        return {
-          selectedGoal,
-          setSelectedGoal,
-          selectedPlatforms // Pass to CampaignGoalStep if needed
-        };
-      default:
-        return {
-          selectedGoal,
-          selectedPlatforms // Pass to other steps
-        };
-    }
-  };
+  const accentColor = NEXT_COLORS[currentStep] ?? '#00e5d4';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-cyan-50 to-teal-50">
+    <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', flexDirection: 'column' }}>
       <Navigation />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Step Indicator */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 1200, width: '100%', margin: '0 auto', padding: '0 32px 32px' }}>
+        {/* Tab step indicator */}
         <StepIndicator
           steps={steps}
           currentStep={currentStep}
-          onStepClick={handleStepClick}
-          selectedGoal={selectedPlatforms.length > 0} // Use platforms selection as completion indicator for step 0
+          onStepClick={(i) => { if (i <= currentStep) setCurrentStep(i); }}
         />
 
-        {/* Step Content */}
-        <div className="mt-8">
+        {/* Step content */}
+        <div style={{ flex: 1, marginTop: 32 }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={{ duration: 0.25 }}
+              style={{ height: '100%' }}
             >
               <CurrentStepComponent {...getStepProps()} />
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center mt-8">
+        {/* Bottom navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 }}>
           <button
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className={`px-6 py-3 rounded-xl font-medium transition-all ${currentStep === 0
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm'
-              }`}
+            style={{
+              padding: '10px 28px',
+              borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'transparent',
+              color: currentStep === 0 ? '#555' : '#fff',
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s',
+            }}
           >
             Previous
           </button>
 
           <button
             onClick={handleNext}
-            disabled={currentStep === 0 ? selectedPlatforms.length === 0 : currentStep === 1 && !selectedGoal}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all ${(currentStep === 0 && selectedPlatforms.length === 0) ||
-                (currentStep === 1 && !selectedGoal)
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                : 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 shadow-lg'
-              }`}
+            style={{
+              padding: '10px 28px',
+              borderRadius: 8,
+              border: 'none',
+              background: accentColor,
+              color: '#000',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            {currentStep === steps.length - 1
-              ? 'Launch Campaign'
-              : currentStep === 0
-                ? 'Continue to Campaign Goal'
-                : 'Next Step'}
+            {currentStep === steps.length - 1 ? 'Launch Campaign' : 'Next'}
           </button>
         </div>
       </div>
