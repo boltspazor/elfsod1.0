@@ -1,273 +1,467 @@
-import React, { useState } from 'react';
-import { ChevronRight, Sparkles, Briefcase, Target } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+
+/* ─── Data ──────────────────────────────────────────────────── */
+
+const steps = [
+  {
+    id: 'industry',
+    question: 'What industry do you primarily serve?',
+    options: [
+      { label: 'E-Commerce & Retail' },
+      { label: 'Technology & SaaS' },
+      { label: 'Healthcare &  Wellness' },
+      { label: 'Real Estate' },
+      { label: 'Foods & Beverages' },
+      { label: 'Fashion & Beauty' },
+      { label: 'Education' },
+      { label: 'Finance & Insurance' },
+    ],
+  },
+  {
+    id: 'businessType',
+    question: 'What type of marketing business do you run?',
+    options: [
+      { label: 'Digital Marketing Agency' },
+      { label: 'Social Media Marketing' },
+      { label: 'Content Marketing' },
+      { label: 'Email Marketing' },
+      { label: 'SEO/SEM Services' },
+      { label: 'Influencer Marketing' },
+      { label: 'Brand Strategy' },
+      { label: 'Freelancer Marketer' },
+    ],
+  },
+  {
+    id: 'goals',
+    question: 'What is your primary goal with our platform?',
+    options: [
+      { label: 'Generate more leads' },
+      { label: 'Improve\ncampaign performance' },
+      { label: 'Automate\nMarketing Instance' },
+      { label: 'Better Understanding\nof Analytics' },
+      { label: 'Create Engaging Content' },
+      { label: 'Manage Multiple Clients' },
+      { label: 'Scale My Business' },
+      { label: 'Learning New\nMarketing Services' },
+    ],
+  },
+];
+
+/* ─── Gradient border colours ───────────────────────────────── */
+const GRADIENT = 'linear-gradient(to bottom, #00e5d4, #8b6fff, #ff4fcb)';
+
+/* ─── CheckerBoard placeholder ─────────────────────────────── */
+const CheckerBoard = () => (
+  <div
+    style={{
+      flex: 1,
+      backgroundImage:
+        'linear-gradient(45deg, #ccc 25%, transparent 25%),' +
+        'linear-gradient(-45deg, #ccc 25%, transparent 25%),' +
+        'linear-gradient(45deg, transparent 75%, #ccc 75%),' +
+        'linear-gradient(-45deg, transparent 75%, #ccc 75%)',
+      backgroundSize: '20px 20px',
+      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+      backgroundColor: '#fff',
+    }}
+  />
+);
+
+/* ─── Option Card ────────────────────────────────────────────── */
+const OptionCard = ({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      background: selected
+        ? 'linear-gradient(135deg,rgba(0,229,212,0.25),rgba(139,111,255,0.25))'
+        : '#2a2a2e',
+      border: selected ? '2px solid #8b6fff' : '2px solid #3a3a3e',
+      borderRadius: 16,
+      overflow: 'hidden',
+      cursor: 'pointer',
+      transition: 'border-color 0.2s, transform 0.2s',
+      aspectRatio: '3/4',
+      minWidth: 0,
+    }}
+    onMouseEnter={e => {
+      (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)';
+    }}
+    onMouseLeave={e => {
+      (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+    }}
+  >
+    <CheckerBoard />
+    <div
+      style={{
+        padding: '6px 8px',
+        fontSize: 11,
+        fontWeight: 500,
+        color: selected ? '#fff' : '#ccc',
+        textAlign: 'left',
+        whiteSpace: 'pre-line',
+        lineHeight: 1.3,
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </div>
+  </button>
+);
+
+/* ─── Side Strip ─────────────────────────────────────────────── */
+const SideStrip = ({
+  stepNumber,
+  onClick,
+}: {
+  stepNumber: number;
+  onClick: () => void;
+}) => (
+  <div
+    onClick={onClick}
+    style={{
+      width: 68,
+      flexShrink: 0,
+      borderRadius: 20,
+      padding: 2,
+      background: GRADIENT,
+      cursor: 'pointer',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      paddingBottom: 12,
+    }}
+  >
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        borderRadius: 18,
+        background: '#1a1a1e',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        paddingBottom: 14,
+      }}
+    >
+      <div
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: '50%',
+          border: '2px solid rgba(255,255,255,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 15,
+          fontWeight: 700,
+          color: '#fff',
+          fontFamily: "'Space Mono', monospace",
+        }}
+      >
+        {String(stepNumber).padStart(2, '0')}
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── Main Panel ─────────────────────────────────────────────── */
+const MainPanel = ({
+  step,
+  stepNumber,
+  selected,
+  onSelect,
+}: {
+  step: (typeof steps)[number];
+  stepNumber: number;
+  selected: string;
+  onSelect: (v: string) => void;
+}) => (
+  <div
+    style={{
+      flex: 1,
+      borderRadius: 20,
+      padding: 2,
+      background: GRADIENT,
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
+    }}
+  >
+    <div
+      style={{
+        flex: 1,
+        borderRadius: 18,
+        background: '#1a1a1e',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '18px 18px 0 18px',
+      }}
+    >
+      {/* 4 × 2 grid */}
+      <div
+        style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4,1fr)',
+          gridTemplateRows: 'repeat(2,1fr)',
+          gap: 10,
+          minHeight: 0,
+        }}
+      >
+        {step.options.map(opt => (
+          <OptionCard
+            key={opt.label}
+            label={opt.label}
+            selected={selected === opt.label}
+            onClick={() => onSelect(opt.label)}
+          />
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '18px 0 18px',
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#fff',
+            fontFamily: "'Space Mono', monospace",
+            flexShrink: 0,
+          }}
+        >
+          {String(stepNumber).padStart(2, '0')}
+        </div>
+        <span
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: '#fff',
+            fontFamily: "'Space Mono', monospace",
+            lineHeight: 1.3,
+          }}
+        >
+          {step.question}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── Page ───────────────────────────────────────────────────── */
 
 const OnboardingPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState({
-    businessType: '',
-    industry: '',
-    goals: ''
-  });
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const questions = [
-    {
-      id: 'businessType',
-      question: "What type of marketing business do you run?",
-      icon: Briefcase,
-      options: [
-        'Digital Marketing Agency',
-        'Social Media Marketing',
-        'Content Marketing',
-        'Email Marketing',
-        'SEO/SEM Services',
-        'Influencer Marketing',
-        'Brand Strategy',
-        'Freelance Marketer'
-      ]
-    },
-    {
-      id: 'industry',
-      question: "Which industry do you primarily serve?",
-      icon: Sparkles,
-      options: [
-        'E-commerce & Retail',
-        'Technology & SaaS',
-        'Healthcare & Wellness',
-        'Real Estate',
-        'Food & Beverage',
-        'Fashion & Beauty',
-        'Education',
-        'Finance & Insurance',
-        'Multiple Industries'
-      ]
-    },
-    {
-      id: 'goals',
-      question: "What's your primary goal with our platform?",
-      icon: Target,
-      options: [
-        'Generate more leads',
-        'Improve campaign performance',
-        'Automate marketing tasks',
-        'Better understand analytics',
-        'Create engaging content',
-        'Manage multiple clients',
-        'Scale my business',
-        'Learn new marketing strategies'
-      ]
-    }
-  ];
-
-  const currentQuestion = questions[currentStep];
-  const Icon = currentQuestion?.icon;
-  const progress = ((currentStep + 1) / questions.length) * 100;
-
-  const handleOptionSelect = (option) => {
-    const currentQuestionId = currentQuestion?.id;
-    if (!currentQuestionId) return;
-    
-    setAnswers(prev => ({
-      ...prev,
-      [currentQuestionId]: option
-    }));
-  };
-
   const handleNext = () => {
-    const currentQuestionId = currentQuestion?.id;
-    if (!currentQuestionId || !answers[currentQuestionId]) {
+    if (!answers[steps[currentStep].id]) {
       setError('Please select an option to continue');
       return;
     }
-    
     setError('');
-    setIsAnimating(true);
-    
-    setTimeout(() => {
-      if (currentStep < questions.length - 1) {
-        setCurrentStep(prev => prev + 1);
-      } else {
-        handleSubmit();
-      }
-      setIsAnimating(false);
-    }, 300);
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(s => s + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) setCurrentStep(s => s - 1);
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setError('');
-
     try {
       const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setError('Authentication token not found. Please sign up again.');
-        return;
-      }
+      if (!token) { setError('Auth token missing. Please sign up again.'); return; }
 
-      const response = await fetch('http://localhost:5003/complete-onboarding', {
+      const payload = {
+        industry: answers['industry'],
+        businessType: answers['businessType'],
+        goals: answers['goals'],
+      };
+
+      const res = await fetch('http://localhost:5003/complete-onboarding', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(answers)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        setTimeout(() => { window.location.href = '/'; }, 800);
       } else {
         setError(data.error || 'Failed to complete onboarding');
       }
-    } catch (err) {
-      console.error('Onboarding error:', err);
-      setError('Network error. Please check your connection and try again.');
+    } catch {
+      setError('Network error. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /* left / right step indices */
+  const leftSteps = steps.slice(0, currentStep);
+  const rightSteps = steps.slice(currentStep + 1);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/20 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Floating Orbs - matching Home page */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-cyan-300/20 to-teal-300/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-cyan-200/10 to-teal-200/10 rounded-full blur-3xl" />
+    <div
+      style={{
+        height: '100vh',
+        background: '#111114',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px 24px',
+        boxSizing: 'border-box',
+        fontFamily: "'Inter', 'Space Mono', sans-serif",
+      }}
+    >
+      {/* ── Row of panels ──────────────────────────────────── */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 1100,
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          gap: 10,
+        }}
+      >
+        {/* Left strips — previous steps */}
+        {leftSteps.map((_, i) => (
+          <SideStrip
+            key={i}
+            stepNumber={i + 1}
+            onClick={() => setCurrentStep(i)}
+          />
+        ))}
+
+        {/* Active panel */}
+        <MainPanel
+          step={steps[currentStep]}
+          stepNumber={currentStep + 1}
+          selected={answers[steps[currentStep].id] || ''}
+          onSelect={val =>
+            setAnswers(prev => ({ ...prev, [steps[currentStep].id]: val }))
+          }
+        />
+
+        {/* Right strips — upcoming steps */}
+        {rightSteps.map((_, i) => (
+          <SideStrip
+            key={currentStep + 1 + i}
+            stepNumber={currentStep + 2 + i}
+            onClick={() => {
+              /* only allow going forward if current is answered */
+              if (answers[steps[currentStep].id]) {
+                setCurrentStep(currentStep + 1 + i);
+              }
+            }}
+          />
+        ))}
       </div>
 
-      <div className="w-full max-w-2xl relative z-10">
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-slate-700 text-sm font-bold tracking-tight">
-              Step {currentStep + 1} of {questions.length}
-            </span>
-            <span className="text-cyan-600 text-sm font-bold tracking-tight">
-              {Math.round(progress)}%
-            </span>
-          </div>
-          <div className="w-full bg-slate-200/50 rounded-full h-2.5 overflow-hidden backdrop-blur-sm border border-slate-200/50">
-            <div 
-              className="h-full bg-gradient-to-r from-cyan-500 to-teal-600 rounded-full transition-all duration-700 ease-out shadow-lg"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
+      {/* ── Error ─────────────────────────────────────────── */}
+      {error && (
+        <p style={{ color: '#ff6b6b', marginTop: 12, fontSize: 13, fontWeight: 600 }}>
+          {error}
+        </p>
+      )}
 
-        {/* Question Card */}
-        <div 
-          className={`bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-8 md:p-12 transition-all duration-300 ${
-            isAnimating ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
-          }`}
+      {/* ── Navigation arrows ─────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 24,
+          marginTop: 20,
+        }}
+      >
+        <button
+          onClick={handlePrev}
+          disabled={currentStep === 0}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
+            color: currentStep === 0 ? '#444' : '#fff',
+            fontSize: 22,
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'color 0.2s',
+          }}
         >
-          {/* Icon */}
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
-              {Icon && <Icon className="w-10 h-10 text-white" strokeWidth={2.5} />}
-            </div>
-          </div>
-
-          {/* Question */}
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-10 tracking-tight leading-tight">
-            {currentQuestion?.question}
-          </h2>
-
-          {/* Options */}
-          <div className="space-y-3 mb-8">
-            {currentQuestion?.options.map((option, index) => {
-              const currentQuestionId = currentQuestion?.id;
-              const isSelected = answers[currentQuestionId] === option;
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleOptionSelect(option)}
-                  className={`w-full p-4 rounded-xl text-left transition-all duration-200 transform hover:scale-[1.02] ${
-                    isSelected
-                      ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]'
-                      : 'bg-slate-50 text-slate-800 hover:bg-slate-100 border-2 border-slate-200 hover:border-cyan-300'
-                  }`}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                    animation: isAnimating ? 'none' : 'slideIn 0.4s ease-out forwards'
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`font-bold tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                      {option}
-                    </span>
-                    {isSelected && (
-                      <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
-                        <div className="w-3 h-3 bg-gradient-to-r from-cyan-500 to-teal-600 rounded-full" />
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-              <p className="text-red-700 text-sm font-semibold">{error}</p>
-            </div>
+          <ArrowLeft size={24} />
+        </button>
+        <button
+          onClick={handleNext}
+          disabled={isSubmitting}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            color: '#fff',
+            fontSize: 22,
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'color 0.2s',
+          }}
+        >
+          {isSubmitting ? (
+            <span style={{ fontSize: 13 }}>Saving…</span>
+          ) : (
+            <ArrowRight size={24} />
           )}
-
-          {/* Next Button */}
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 flex items-center justify-center space-x-2 tracking-tight ${
-              isSubmitting
-                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 transform hover:scale-[1.02] active:scale-[0.98]'
-            }`}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Completing...</span>
-              </div>
-            ) : (
-              <>
-                <span>{currentStep === questions.length - 1 ? 'Complete Setup' : 'Continue'}</span>
-                <ChevronRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Skip Button */}
-        <div className="text-center mt-6">
-          <button 
-            onClick={() => window.location.href = '/'}
-            className="text-slate-700 hover:text-cyan-600 transition-colors text-sm font-bold underline underline-offset-4 hover:underline-offset-2 tracking-tight"
-          >
-            Skip for now
-          </button>
-        </div>
+        </button>
       </div>
 
-      <style>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      {/* ── Skip ──────────────────────────────────────────── */}
+      <button
+        onClick={() => { window.location.href = '/'; }}
+        style={{
+          marginTop: 12,
+          background: 'none',
+          border: 'none',
+          color: '#666',
+          fontSize: 13,
+          cursor: 'pointer',
+          textDecoration: 'underline',
+        }}
+      >
+        Skip for now
+      </button>
     </div>
   );
 };
