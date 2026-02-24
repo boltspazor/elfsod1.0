@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useNavigate } from "react-router-dom"
-import Footer from "./Footer"
+import googleIcon from "./SocialIcons/google-svgrepo-com.svg"
+import appleIcon from "./SocialIcons/apple-173-svgrepo-com.svg"
 
 
 export function LoginForm({
@@ -26,7 +27,7 @@ export function LoginForm({
     setError("") // Clear error when user types
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
@@ -86,7 +87,7 @@ return (
 
       {/* Email */}
       <div className="space-y-2">
-        <label className="text-sm text-white">Email</label>
+        <label htmlFor="email" className="text-sm text-white">Email</label>
         <Input
           id="email"
           type="email"
@@ -100,8 +101,8 @@ return (
       {/* Password */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <label className="text-sm text-white">Password</label>
-          <a className="text-xs text-gray-400 hover:text-white underline">
+          <label htmlFor="password" className="text-sm text-white">Password</label>
+          <a href="/forgot-password" className="text-xs text-gray-400 hover:text-white underline">
             Forgot Password?
           </a>
         </div>
@@ -136,15 +137,17 @@ return (
       <div className="grid grid-cols-2 gap-4">
         <Button
           type="button"
-          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white"
+          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
         >
+          <img src={googleIcon} alt="Google" className="w-5 h-5" />{" "}
           Google
         </Button>
 
         <Button
           type="button"
-          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white"
+          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
         >
+          <img src={appleIcon} alt="Apple" className="w-5 h-5" />{" "}
           Apple
         </Button>
       </div>
@@ -164,12 +167,10 @@ return (
     {/* Terms */}
     <div className="text-center mt-4 text-xs text-gray-500 leading-relaxed">
       By clicking Continue, you agree to our{" "}
-      <a className="underline hover:text-gray-400">Terms Of Service</a> and{" "}
-      <a className="underline hover:text-gray-400">Privacy Policy</a>
+      <a href="/terms" className="underline hover:text-gray-400">Terms Of Service</a> and{" "}
+      <a href="/privacy" className="underline hover:text-gray-400">Privacy Policy</a>
     </div>
 
-    {/* Footer stays exactly here */}
-    <Footer />
   </div>
 
      

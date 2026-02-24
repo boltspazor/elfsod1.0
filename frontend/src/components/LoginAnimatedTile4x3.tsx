@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 ========================================== */
 
 const GRID_CONFIG = {
-  ROWS: 4,
+  ROWS: 3,
   COLS: 3,
   GAP: '12px',
 }

@@ -337,3 +337,24 @@ Gives you a test root / endpoint.
 uvicorn app.main:app --reload
 
 python terminal.py
+-------------------
+
+To run authentication:
+cd backend/ados-backend/auth-service/
+python auth.py
+
+How to run Adsurvillance & Targintel:
+cd backend/ados-backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+To run autocreate:
+cd backend/app/api/autocreate
+python main.py
+
+
+To run command centre:
+cd backend/app/api/commandCenter
+python main.py
+
+frontend
+cd frontend && pnpm i && pnpm dev
