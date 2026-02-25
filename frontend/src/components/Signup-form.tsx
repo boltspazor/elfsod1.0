@@ -1,22 +1,10 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useNavigate } from "react-router-dom"
+import googleIcon from "./SocialIcons/google-svgrepo-com.svg"
+import appleIcon from "./SocialIcons/apple-173-svgrepo-com.svg"
 
 export function SignupForm({
   className,
@@ -80,124 +68,135 @@ export function SignupForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome to Ad OS</CardTitle>
-          <CardDescription>
-            SignUp with your Apple or Google account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              <Field>
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path
-                      d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  Login with Apple
-                </Button>
-                <Button variant="outline" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path
-                      d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  Login with Google
-                </Button>
-              </Field>
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with
-              </FieldSeparator>
-              
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
+    <div className={cn("flex flex-col w-full max-w-[380px] mx-auto", className)} {...props}>
 
-              <Field>
-                <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Srijan Sarkar"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                </div>
-                <Input 
-                  id="password" 
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  minLength={8}
-                  required 
-                />
-                <FieldDescription>
-                  Password must be at least 8 characters long
-                </FieldDescription>
-              </Field>
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-                </div>
-                <Input 
-                  id="confirmPassword" 
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required 
-                />
-              </Field>
-              <Field>
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Signing up...
-                    </>
-                  ) : (
-                    "SignUp"
-                  )}
-                </Button>
-                <FieldDescription className="text-center">
-                  Already have an account? <a href="/login" className="font-medium hover:underline">Login</a>
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#" className="underline">Terms of Service</a>{" "}
-        and <a href="#" className="underline">Privacy Policy</a>.
-      </FieldDescription>
+      {/* Header */}
+      <div className="text-center mb-10 space-y-2">
+        <h1 className="text-[44px] font-semibold text-white tracking-tight">
+          Create Account
+        </h1>
+        <p className="text-gray-400 text-sm">
+          Sign up with your Apple or Google Account
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+
+        {error && (
+          <div className="p-3 rounded bg-red-900/30 border border-red-500/40">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Name */}
+        <div className="space-y-2">
+          <label htmlFor="name" className="text-sm text-white">Name</label>
+          <Input
+            id="name"
+            type="text"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className="h-11 bg-[#e7ecf3] text-black border-0 rounded-sm px-4 focus-visible:ring-0"
+          />
+        </div>
+
+        {/* Email */}
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm text-white">Email</label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="h-11 bg-[#e7ecf3] text-black border-0 rounded-sm px-4 focus-visible:ring-0"
+          />
+        </div>
+
+        {/* Password */}
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm text-white">Password</label>
+          <Input
+            id="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            minLength={8}
+            required
+            className="h-11 bg-[#e7ecf3] text-black border-0 rounded-sm px-4 focus-visible:ring-0"
+          />
+          <p className="text-xs text-gray-500">Password must be at least 8 characters long</p>
+        </div>
+
+        {/* Confirm Password */}
+        <div className="space-y-2">
+          <label htmlFor="confirmPassword" className="text-sm text-white">Confirm Password</label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            className="h-11 bg-[#e7ecf3] text-black border-0 rounded-sm px-4 focus-visible:ring-0"
+          />
+        </div>
+
+        {/* Sign Up Button */}
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full h-14 rounded-sm bg-gradient-to-r from-[#ff6db3] to-[#ff2f92] hover:opacity-95 text-white text-lg font-medium shadow-md"
+        >
+          {isLoading ? "Signing up..." : "Sign Up"}
+        </Button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-gray-700" />
+          <span className="text-sm text-gray-400">Or</span>
+          <div className="flex-1 h-px bg-gray-700" />
+        </div>
+
+        {/* Social Buttons */}
+        <div className="grid grid-cols-2 gap-4">
+          <Button
+            type="button"
+            className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
+          >
+            <img src={googleIcon} alt="Google" className="w-5 h-5" />{" "}
+            Google
+          </Button>
+
+          <Button
+            type="button"
+            className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
+          >
+            <img src={appleIcon} alt="Apple" className="w-5 h-5" />{" "}
+            Apple
+          </Button>
+        </div>
+
+      </form>
+
+      {/* Login Link */}
+      <div className="text-center mt-8">
+        <p className="text-sm text-gray-400">
+          Already have an account?{" "}
+          <a href="/login" className="text-white font-medium hover:underline">
+            Login
+          </a>
+        </p>
+      </div>
+
+      {/* Terms */}
+      <div className="text-center mt-4 text-xs text-gray-500 leading-relaxed">
+        By clicking Continue, you agree to our{" "}
+        <a href="/terms" className="underline hover:text-gray-400">Terms Of Service</a> and{" "}
+        <a href="/privacy" className="underline hover:text-gray-400">Privacy Policy</a>
+      </div>
+
     </div>
   )
 }
