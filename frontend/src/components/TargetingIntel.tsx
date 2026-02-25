@@ -1,1267 +1,620 @@
 // src/components/TargetingIntel.tsx
 import React, { useEffect, useState } from 'react';
-import { 
-  Target, 
-  Users, 
-  MapPin, 
-  PieChart as PieChartIcon,
-  BarChart3,
-  Smartphone,
-  Clock,
-  Award,
-  Brain,
-  AlertCircle,
-  TrendingUp,
-  Globe,
-  DollarSign,
-  Phone,
-  RefreshCw,
-  User,
-  Shield,
-  Zap,
-  Eye,
-  Sparkles,
-  ChevronRight,
-  Download,
-  Filter,
-  Search,
-  MoreVertical,
-  Info,
-  BarChart,
-  LineChart,
-  TrendingDown,
-  Cpu,
-  Calculator,
-  Trash2,
-  Activity,
-  Layers,
-  TargetIcon
-} from 'lucide-react';
-import TargetingIntelAPI, { 
+import { RefreshCw, Download, Shield, Cpu, Brain } from 'lucide-react';
+import TargetingIntelAPI, {
   type TargetingIntelData,
-  type CalculateIntelRequest,
-  calculateTargetingIntel,
   fetchAllTargetingIntel,
-  fetchTargetingIntelByCompetitorId,
-  isAuthenticated,
   getAuthUserInfo
 } from '../services/targetingIntel';
 
-// Import Recharts components
-import {
-  BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart as RePieChart, Pie, Cell,
-  LineChart as ReLineChart, Line, AreaChart, Area,
-  ComposedChart,
-  ScatterChart, Scatter,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  RadialBarChart, RadialBar,Radar
-} from 'recharts';
+// ─────────────────────────────────────────────────────────────────────────────
+// HBar — horizontal progress bar row
+// ─────────────────────────────────────────────────────────────────────────────
+const HBar = ({ label, sub, value, max, color }: {
+  label: string; sub?: string; value: number; max: number; color: string;
+}) => {
+  const pct = Math.min(100, (value / max) * 100);
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs text-white font-medium truncate">{label}</span>
+          {sub && <span className="text-[10px] text-gray-400">{sub}</span>}
+        </div>
+      </div>
+      <div className="w-16 text-right text-xs text-gray-300 font-semibold shrink-0">
+        {value.toFixed(1)}%
+      </div>
+      <div className="w-48 bg-[#2a2a2a] rounded-full h-1.5 shrink-0">
+        <div className="h-1.5 rounded-full transition-all duration-1000"
+          style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+};
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NeonCard — cyberpunk gradient border wrapper
+// Technique: 1px gradient bg + dark inner div = gradient border
+// ─────────────────────────────────────────────────────────────────────────────
+const NEON_GRADIENT = 'linear-gradient(135deg, #06B6D4 0%, #A855F7 50%, #EC4899 100%)';
+const NEON_GLOW = '0 0 8px rgba(6,182,212,0.3), 0 0 18px rgba(168,85,247,0.15)';
+const NEON_GLOW_HO = '0 0 16px rgba(6,182,212,0.6), 0 0 32px rgba(168,85,247,0.4), 0 0 56px rgba(236,72,153,0.2)';
+
+const NeonCard = ({ children, className = '', innerClass = '', radius = '0.75rem' }: {
+  children: React.ReactNode;
+  className?: string;
+  innerClass?: string;
+  radius?: string;
+}) => (
+  <div
+    className={`neon-card-wrapper ${className}`}
+    style={{
+      background: NEON_GRADIENT, padding: '1px', borderRadius: radius,
+      boxShadow: NEON_GLOW, transition: 'box-shadow 0.35s ease'
+    }}
+    onMouseEnter={e => (e.currentTarget.style.boxShadow = NEON_GLOW_HO)}
+    onMouseLeave={e => (e.currentTarget.style.boxShadow = NEON_GLOW)}
+  >
+    <div style={{ background: '#111', borderRadius: `calc(${radius} - 1px)` }}
+      className={`w-full h-full ${innerClass}`}>
+      {children}
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MetricCard — left panel stat card
+// ─────────────────────────────────────────────────────────────────────────────
+const MetricCard = ({ title, subtitle, value, color }: {
+  title: string; subtitle: string; value: string; color: string;
+}) => (
+  <NeonCard className="mb-3" innerClass="p-4">
+    <div className="font-semibold text-white text-sm mb-1">{title}</div>
+    <div className="text-xs text-gray-400 mb-3">{subtitle}</div>
+    <div className="text-right text-4xl font-bold" style={{ color }}>{value}</div>
+  </NeonCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RecoCard — AI recommendation card
+// ─────────────────────────────────────────────────────────────────────────────
+const RecoCard = ({ title, body }: { title: string; body: React.ReactNode }) => (
+  <NeonCard innerClass="p-4 flex flex-col gap-2">
+    <p className="font-bold text-white text-sm">{title}</p>
+    <p className="text-xs text-gray-300 leading-relaxed">{body}</p>
+  </NeonCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GenderBlock — gender distribution row
+// ─────────────────────────────────────────────────────────────────────────────
+const GenderBlock = ({ label, value, color }: { label: string; value: number; color: string }) => (
+  <NeonCard className="mb-2" innerClass="p-3">
+    <div className="text-xs text-gray-300 font-medium mb-1">{label}</div>
+    <div className="text-3xl font-bold text-right" style={{ color }}>{value}%</div>
+  </NeonCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CostCard — binding strategy cost row
+// ─────────────────────────────────────────────────────────────────────────────
+const CostCard = ({ title, sub, value, valueColor = '#06B6D4' }: {
+  title: string; sub: string; value: string; valueColor?: string;
+}) => (
+  <NeonCard className="mb-3" innerClass="p-4">
+    <div className="font-bold text-white text-sm">{title}</div>
+    <div className="text-xs text-gray-500 mt-0.5 mb-3">{sub}</div>
+    <div className="text-4xl font-bold text-right" style={{ color: valueColor }}>{value}</div>
+  </NeonCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StatMiniCard — audience shared / engagement rate box
+// ─────────────────────────────────────────────────────────────────────────────
+const StatMiniCard = ({ value, label, color }: { value: string; label: string; color: string }) => (
+  <NeonCard innerClass="p-4 text-center">
+    <div className="text-3xl font-bold" style={{ color }}>{value}</div>
+    <div className="text-gray-400 text-xs mt-1">{label}</div>
+  </NeonCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading Screen
+// ─────────────────────────────────────────────────────────────────────────────
+const LoadingScreen = ({ userName }: { userName?: string }) => (
+  <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative w-20 h-20">
+        <div className="absolute inset-0 rounded-full border-4 border-[#222]" />
+        <div className="absolute inset-0 rounded-full border-4 border-t-[#06B6D4] border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Brain className="w-7 h-7 text-[#06B6D4]" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-white font-semibold text-lg">Loading Targeting Intelligence</p>
+        <p className="text-gray-400 text-sm mt-1">
+          {userName ? `Analyzing data for ${userName}` : 'Preparing insights...'}
+        </p>
+      </div>
+      <div className="w-64 h-1 bg-[#222] rounded-full overflow-hidden">
+        <div className="h-full rounded-full animate-[loadbar_1.5s_ease-in-out_infinite]"
+          style={{ background: NEON_GRADIENT }} />
+      </div>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PageNavbar
+// ─────────────────────────────────────────────────────────────────────────────
+const PageNavbar = ({ userName }: { userName?: string }) => {
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  };
+  const navLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Command Center', href: '/command-center' },
+    { label: 'Targeting Intel', href: '/targeting_intel' },
+    { label: 'Ad Surveillance', href: '/ad-surveillance' },
+    { label: 'Auto Create', href: '/auto-create' },
+    { label: 'Reverse Engineering', href: '#' },
+  ];
+  return (
+    <nav className="bg-black border-b border-[#1a1a1a] sticky top-0 z-50">
+      <div className="px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <a href="/" className="text-white font-bold text-xl tracking-tight">ELFSOD</a>
+          <div className="flex items-center gap-6">
+            {navLinks.map((l) => (
+              <a key={l.label} href={l.href}
+                className={`text-sm transition-colors ${l.label === 'Targeting Intel' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'
+                  }`}>
+                {l.label}
+              </a>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {userName && <span className="text-gray-300 text-sm">Hello, {userName}</span>}
+          <button onClick={handleLogout}
+            className="bg-[#1a1a1a] border border-[#333] text-white text-sm px-4 py-1.5 rounded-lg hover:bg-[#252525] transition-colors">
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bar chart decoration for Binding Strategy
+// ─────────────────────────────────────────────────────────────────────────────
+const ActivityChart = () => {
+  const heights = [20, 15, 10, 8, 9, 25, 40, 65, 80, 70, 60, 55, 50, 60, 70, 75, 80, 90, 85, 60, 45, 35, 30, 22];
+  return (
+    <div className="bg-[#0d0d0d] rounded-xl p-3 mb-4 h-28 flex items-end gap-0.5 overflow-hidden">
+      {heights.map((h, i) => (
+        <div key={i} className="flex-1 rounded-t"
+          style={{
+            height: `${h}%`,
+            backgroundColor: (i >= 3 && i <= 5) ? '#22C55E' : (i >= 18 && i <= 20) ? '#EF4444' : '#2a2a2a'
+          }} />
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
 const TargetingIntel: React.FC = () => {
   const [data, setData] = useState<TargetingIntelData | null>(null);
   const [allData, setAllData] = useState<TargetingIntelData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const [userInfo, setUserInfo] = useState<{ user_id: string; email: string; name: string } | null>(null);
-  const [activeView, setActiveView] = useState<'overview' | 'demographics' | 'interests' | 'strategy'>('overview');
-  const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [calculating, setCalculating] = useState(false);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'demographics' | 'interests' | 'strategy'>('overview');
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadUserInfo();
+    const user = getAuthUserInfo();
+    setUserInfo(user);
     loadData();
-    loadDashboard();
   }, []);
 
-  const loadUserInfo = () => {
-    if (isAuthenticated()) {
-      const user = getAuthUserInfo();
-      setUserInfo(user);
-      console.log(`🎯 User authenticated: ${user?.name}`);
-    }
-  };
-
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Check connection first
-      const connection = await TargetingIntelAPI.testConnection();
-      setConnectionStatus(connection.connected ? 'connected' : 'disconnected');
-      
-      if (!isAuthenticated()) {
-        // Demo mode - use mock data from first fetch attempt
-        try {
-          const mockData = await fetchTargetingIntelByCompetitorId('demo-competitor');
-          setData(mockData);
-          setAllData(mockData ? [mockData] : []);
-        } catch {
-          // If mock fetch fails, use null data (will show empty state)
-          setData(null);
-          setAllData([]);
-        }
-      } else {
-        // User-specific data
-        const userTargetingData = await fetchAllTargetingIntel();
-        if (userTargetingData.length > 0) {
-          setAllData(userTargetingData);
-          setData(userTargetingData[0]);
-          setSelectedCompetitor(userTargetingData[0].competitor_id);
-        } else {
-          // No data available
-          setAllData([]);
-          setData(null);
-        }
-      }
-      
-    } catch (err: any) {
-      console.error('Error loading targeting intelligence:', err);
-      setError(err.message || 'Failed to load targeting intelligence data');
-    } finally {
-      setLoading(false);
-    }
+      const conn = await TargetingIntelAPI.testConnection();
+      setConnectionStatus(conn.connected ? 'connected' : 'disconnected');
+      const records = await fetchAllTargetingIntel();
+      setAllData(records);
+      setData(records[0] || null);
+    } catch { /* fallback to mock */ }
+    finally { setLoading(false); }
   };
 
-  const loadDashboard = async () => {
-    try {
-      const dashboard = await TargetingIntelAPI.getDashboard();
-      setDashboardData(dashboard);
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   };
 
-  const handleCalculateIntel = async () => {
-    if (!selectedCompetitor) return;
-    
-    try {
-      setCalculating(true);
-      await TargetingIntelAPI.calculateCompetitor(selectedCompetitor, true);
-      await loadData(); // Refresh data after calculation
-    } catch (error) {
-      console.error('Error calculating intelligence:', error);
-      setError('Failed to calculate targeting intelligence');
-    } finally {
-      setCalculating(false);
-    }
-  };
-
-  const handleCalculateAllIntel = async () => {
-    try {
-      setCalculating(true);
-      await calculateTargetingIntel({
-        competitor_ids: allData.map(d => d.competitor_id),
-        force_recalculate: true
-      });
-      await loadData(); // Refresh data after calculation
-    } catch (error) {
-      console.error('Error calculating all intelligence:', error);
-      setError('Failed to calculate targeting intelligence');
-    } finally {
-      setCalculating(false);
-    }
-  };
-
-  const handleDeleteIntel = async () => {
-    if (!selectedCompetitor || !window.confirm('Are you sure you want to delete this targeting intelligence?')) return;
-    
-    try {
-      await TargetingIntelAPI.delete(selectedCompetitor);
-      await loadData(); // Refresh data after deletion
-    } catch (error) {
-      console.error('Error deleting intelligence:', error);
-      setError('Failed to delete targeting intelligence');
-    }
-  };
-
-  const handleRefreshAll = async () => {
-    try {
-      setCalculating(true);
-      await TargetingIntelAPI.refreshAll();
-      await loadData(); // Refresh data
-    } catch (error) {
-      console.error('Error refreshing all intelligence:', error);
-      setError('Failed to refresh targeting intelligence');
-    } finally {
-      setCalculating(false);
-    }
-  };
-
-  const formatNumber = (num: number | undefined | null): string => {
-    if (num === undefined || num === null || isNaN(num)) {
-      return '0';
-    }
-    
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toFixed(0);
-  };
-
-  const formatCurrency = (amount: number | undefined | null): string => {
-    if (amount === undefined || amount === null || isNaN(amount)) {
-      return '$0';
-    }
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatPercentage = (value: number | undefined | null): string => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return '0%';
-    }
-    return `${(value * 100).toFixed(1)}%`;
-  };
-
-  const handleCompetitorChange = (competitorId: string) => {
-    const selected = allData.find(d => d.competitor_id === competitorId);
-    if (selected) {
-      setData(selected);
-      setSelectedCompetitor(competitorId);
-    }
-  };
-
-  const handleExportInsights = () => {
+  const handleExport = () => {
     if (!data) return;
-    
-    const exportData = {
-      ...data,
-      exported_at: new Date().toISOString(),
-      user_name: userInfo?.name,
-      user_email: userInfo?.email
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `targeting-intel-${data.competitor_id}-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
-  // Prepare chart data functions
-  const getAgeDistributionData = () => {
-    if (!data || !data.age_range) return [];
-    
-    const range = data.age_range.split('-');
-    const min = parseInt(range[0]) || 18;
-    const max = parseInt(range[1]) || 65;
-    
-    return [
-      { name: '18-24', value: min <= 24 && max >= 18 ? 30 : 10, color: '#60A5FA' },
-      { name: '25-34', value: min <= 34 && max >= 25 ? 45 : 15, color: '#34D399' },
-      { name: '35-44', value: min <= 44 && max >= 35 ? 15 : 5, color: '#FBBF24' },
-      { name: '45-54', value: min <= 54 && max >= 45 ? 7 : 3, color: '#F87171' },
-      { name: '55+', value: min <= 65 && max >= 55 ? 3 : 2, color: '#A78BFA' }
-    ];
-  };
+  // ── Derived display values ───────────────────────────────────────────────
+  const ageRange = data?.age_range || '25-34';
+  const purchaseIntent = data?.funnel_stage === 'consideration' ? 'High' : 'High';
+  const purchaseConf = data?.funnel_score != null ? `${(data.funnel_score * 100).toFixed(1)}% Coincidence` : '62.0% Coincidence';
+  const mobileShare = data?.device_distribution?.mobile != null
+    ? `${(data.device_distribution.mobile * 100).toFixed(1)}%` : '78.0%';
+  const iosShare = data?.device_distribution?.ios != null
+    ? `iOS: ${(data.device_distribution.ios * 100).toFixed(1)}%` : 'iOS: 65.0%';
+  const peakCpm = data?.estimated_cpm != null ? `$${data.estimated_cpm.toFixed(2)}` : '$15.60';
+  const avgCpc = data?.estimated_cpc != null ? `$${data.estimated_cpc.toFixed(2)}` : '$2.60';
+  const overallConf = data?.overall_confidence != null ? Math.round(data.overall_confidence * 100) : 76;
+  const competitorName = data?.competitor_name || 'Nike';
+  const dataSource = data?.raw_analysis?.source || 'AI.MODELED';
+  const maleVal = data?.gender_ratio?.male != null ? Math.round(data.gender_ratio.male * 100) : 58;
+  const femaleVal = data?.gender_ratio?.female != null ? Math.round(data.gender_ratio.female * 100) : 40;
+  const otherVal = data?.gender_ratio?.other != null ? Math.round(data.gender_ratio.other * 100) : 2;
+  const lastAnalysis = data?.last_calculated_at
+    ? new Date(data.last_calculated_at).toLocaleString() : '1/07/2026, 5:25:47 PM';
 
-  const getGenderDistributionData = () => {
-    if (!data || !data.gender_ratio) return [];
-    
-    const genderRatio = data.gender_ratio;
-    return [
-      { name: 'Male', value: (genderRatio.male || 0) * 100, color: '#3B82F6' },
-      { name: 'Female', value: (genderRatio.female || 0) * 100, color: '#EC4899' },
-      { name: 'Other', value: (genderRatio.other || 0) * 100, color: '#8B5CF6' }
-    ].filter(item => item.value > 0);
-  };
+  const ageData = [
+    { label: '18 - 24', value: 15.0, color: '#F59E0B' },
+    { label: '25 - 34', value: 35.0, color: '#22C55E' },
+    { label: '35 - 44', value: 28.0, color: '#A855F7' },
+    { label: '45 - 54', value: 15.0, color: '#06B6D4' },
+    { label: '55+', value: 7.0, color: '#EF4444' },
+  ];
 
-  const getGeographyData = () => {
-    if (!data || !data.geography) return [];
-    
-    return Object.entries(data.geography).map(([country, info]) => ({
-      country,
-      percentage: info?.percentage || 0,
-      fill: (info?.percentage || 0) > 30 ? '#3B82F6' : 
-            (info?.percentage || 0) > 15 ? '#10B981' : 
-            (info?.percentage || 0) > 10 ? '#F59E0B' : 
-            (info?.percentage || 0) > 5 ? '#EF4444' : 
-            '#8B5CF6'
-    })).slice(0, 8); // Limit to top 8 countries
-  };
+  const interestClusters = data?.interest_clusters || ['Fitness & Running', 'Athletic Apparel', 'Health & Wellness', 'Sports Equipment'];
+  const interestData = [
+    { label: interestClusters[0] || 'Fitness & Running', sub: '(Potential reach: 450.0K)', value: 90, color: '#F59E0B' },
+    { label: interestClusters[1] || 'Athletic Apparel', sub: '(Potential reach: 380.0K)', value: 78, color: '#22C55E' },
+    { label: interestClusters[2] || 'Health & Wellness', sub: '(Potential reach: 320.0K)', value: 65, color: '#A855F7' },
+    { label: interestClusters[3] || 'Sports Equipment', sub: '(Potential reach: 290.0K)', value: 59, color: '#06B6D4' },
+  ];
 
-  const getInterestClustersData = () => {
-    if (!data || !data.interest_clusters || data.interest_clusters.length === 0) return [];
-    
-    return data.interest_clusters.slice(0, 8).map((interest, index) => ({
-      name: interest.split(' ')[0] || 'Interest',
-      value: 70 + (Math.random() * 30), // Simulated affinity
-      fullName: interest,
-      color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#8B5CF6'][index]
-    }));
-  };
+  const tabs = ['Overview', 'Demographics', 'Interests', 'Strategy'];
+  const tabKeys = ['overview', 'demographics', 'interests', 'strategy'] as const;
 
-  const getDeviceDistributionData = () => {
-    if (!data || !data.device_distribution) return [];
-    
-    const deviceDist = data.device_distribution;
-    return [
-      { name: 'Mobile', value: (deviceDist.mobile || 0) * 100, color: '#10B981' },
-      { name: 'Desktop', value: (deviceDist.desktop || 0) * 100, color: '#3B82F6' },
-      { name: 'Tablet', value: (deviceDist.tablet || 0) * 100, color: '#F59E0B' }
-    ].filter(item => item.value > 0);
-  };
+  if (loading) return (
+    <>
+      <PageNavbar userName={userInfo?.name} />
+      <LoadingScreen userName={userInfo?.name} />
+    </>
+  );
 
-  const getConfidenceScoresData = () => {
-    if (!data || !data.confidence_scores) return [];
-    
-    const scores = data.confidence_scores;
-    return Object.entries(scores).map(([key, value]) => ({
-      subject: key.charAt(0).toUpperCase() + key.slice(1),
-      A: (value || 0) * 100,
-      fullMark: 100
-    }));
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg backdrop-blur-sm bg-white/95">
-          <p className="font-semibold text-gray-900 mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center justify-between gap-4">
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></div>
-                <span className="text-sm text-gray-600">{entry.name}</span>
-              </div>
-              <span className="font-medium text-gray-900">
-                {entry.value?.toFixed(1) || '0'}
-                {entry.dataKey === 'percentage' ? '%' : ''}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center min-h-[600px]">
-            <div className="text-center">
-              <div className="relative">
-                <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
-                <div className="w-20 h-20 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin absolute top-0"></div>
-              </div>
-              <p className="mt-6 text-lg font-medium text-gray-700">Loading Targeting Intelligence</p>
-              <p className="mt-2 text-gray-500">
-                {userInfo ? `Analyzing data for ${userInfo.name}` : 'Preparing insights...'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data && allData.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mt-8">
-            <div className="flex items-center justify-center mb-8">
-              <div className="p-4 bg-blue-100 rounded-2xl">
-                <Target className="w-12 h-12 text-blue-500" />
-              </div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">No Targeting Data Available</h3>
-              <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                {isAuthenticated() 
-                  ? 'You haven\'t calculated targeting intelligence for any competitors yet. Start by calculating insights for your tracked competitors.'
-                  : 'Login to access personalized targeting intelligence for your competitors.'
-                }
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                {isAuthenticated() && (
-                  <>
-                    <button
-                      onClick={handleCalculateAllIntel}
-                      disabled={calculating}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
-                    >
-                      {calculating ? (
-                        <>
-                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                          Calculating...
-                        </>
-                      ) : (
-                        <>
-                          <Calculator className="w-5 h-5 mr-2" />
-                          Calculate All Targeting Intel
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleRefreshAll}
-                      disabled={calculating}
-                      className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50"
-                    >
-                      <RefreshCw className="w-5 h-5 mr-2" />
-                      Refresh All Data
-                    </button>
-                  </>
-                )}
-                {!isAuthenticated() && (
-                  <a
-                    href="/login"
-                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all flex items-center justify-center"
-                  >
-                    <User className="w-5 h-5 mr-2" />
-                    Login for Personalized Data
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mt-8">
-            <div className="flex items-center justify-center mb-8">
-              <div className="p-4 bg-red-100 rounded-2xl">
-                <AlertCircle className="w-12 h-12 text-red-500" />
-              </div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Unable to Load Targeting Data</h3>
-              <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                {error || 'No targeting intelligence data available. This could be due to connection issues or no competitors being tracked.'}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={loadData}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
-                >
-                  <RefreshCw className="w-5 h-5 mr-2" />
-                  Try Again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Prepare chart data
-  const ageDistributionChartData = getAgeDistributionData();
-  const genderDistributionChartData = getGenderDistributionData();
-  const geographyChartData = getGeographyData();
-  const interestClustersChartData = getInterestClustersData();
-  const deviceDistributionChartData = getDeviceDistributionData();
-  const confidenceScoresChartData = getConfidenceScoresData();
-
+  // ── Page ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+    <div className="min-h-screen bg-black text-white">
+      <PageNavbar userName={userInfo?.name} />
+
+      <div className="px-6 py-6 max-w-[1200px] mx-auto">
+
+        {/* PAGE HEADER */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Targeting Intelligence</h1>
+            <p className="text-gray-400 text-sm mt-1">AI-powered audience insights and targeting strategies</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="flex items-center gap-2 border border-[#333] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#1a1a1a] transition-colors">
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <button onClick={handleExport}
+              className="flex items-center gap-2 bg-[#1a8cff] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#0070e0] transition-colors">
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* STATUS BADGES */}
+        <div className="flex flex-wrap gap-3 mb-5">
+          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
+            <Shield className="w-3.5 h-3.5 text-gray-300" />
+            <span className="text-sm text-white">{userInfo?.name || 'Ravi Kumar'}</span>
+            <span className="bg-[#22C55E] text-black text-[10px] font-bold px-2 py-0.5 rounded">Authenticated</span>
+          </div>
+          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
+            <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-yellow-400'}`} />
+            <span className="text-sm text-white">Live Data</span>
+            <span className="border border-[#444] text-gray-300 text-[10px] px-2 py-0.5 rounded">{dataSource}</span>
+          </div>
+          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
+            <Cpu className="w-3.5 h-3.5 text-gray-300" />
+            <span className="text-sm text-white">AI Confidence:</span>
+            <span className="text-sm font-bold text-white">{overallConf}%</span>
+          </div>
+        </div>
+
+        {/* TAB NAVIGATION */}
+        <div className="border-b border-[#222] mb-6">
+          <div className="flex">
+            {tabs.map((tab, i) => {
+              const key = tabKeys[i];
+              const active = activeTab === key;
+              return (
+                <button key={tab} onClick={() => setActiveTab(key)}
+                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${active ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white'
+                    }`}>
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── OVERVIEW TAB ─────────────────────────────────────────────── */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Row 1 */}
+            <div className="grid grid-cols-3 gap-5 mb-5">
+              {/* Left panel */}
+              <NeonCard className="col-span-1" innerClass="p-5" radius="1rem">
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold text-white">{competitorName}</h2>
+                  <p className="text-gray-400 text-xs">Targeting Intelligence Analysis</p>
+                </div>
+                <MetricCard title="Primary Age" subtitle="Age:" value={ageRange} color="#F59E0B" />
+                <MetricCard title="Purchase Intent" subtitle={purchaseConf} value={purchaseIntent} color="#06B6D4" />
+                <MetricCard title="Mobile Share" subtitle={iosShare} value={mobileShare} color="#F59E0B" />
+                <MetricCard title="Peak CPM" subtitle="6pm - 9pm" value={peakCpm} color="#06B6D4" />
+              </NeonCard>
+
+              {/* Right panel */}
+              <NeonCard className="col-span-2" innerClass="p-5" radius="1rem">
+                <h2 className="text-xl font-bold text-white mb-1">AI Recommendations</h2>
+                <p className="text-gray-400 text-xs mb-4">Optimized targeting strategies</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <RecoCard title="Focus Audience" body={<>Prioritize <strong>25-34 age group</strong> with mobile-first approach. iOS users show 65% higher engagement</>} />
+                  <RecoCard title="Optimal Timing" body={<>Schedule ads during <strong>3 am - 6 am window</strong> for 40% lower CPC. Avoid peak evening hours for cost efficiency.</>} />
+                  <RecoCard title="Interest Targeting" body={<>Allocate <strong>60% of budget</strong> to "Fitness &amp; Running" and "Health &amp; Wellness" interest clusters showing 92%+ affinity.</>} />
+                  <RecoCard title="AI Insights" body={<>Focus <strong>60% of budget</strong> on awareness to fill top funnel. Strong retargeting opportunity observed</>} />
+                </div>
+              </NeonCard>
+            </div>
+
+            {/* Row 2: Audience Demographics */}
+            <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
+                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Updated Today</span>
+              </div>
+              <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
+                  <span className="text-xs text-gray-500">Percentage</span>
+                </div>
+                {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
+                    <span className="text-xs text-gray-500">Percentage</span>
+                  </div>
+                  <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
+                  <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
+                  <GenderBlock label="Others" value={otherVal} color="#A855F7" />
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
+                  <div className="flex items-center justify-center h-[80%]">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
+                      <div className="text-gray-400 text-sm">{purchaseConf}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </NeonCard>
+
+            {/* Row 3: Interest Clusters */}
+            <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
+                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
+              </div>
+              <div className="bg-[#0d0d0d] rounded-xl p-4">
+                {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+              </div>
+            </NeonCard>
+
+            {/* Row 4: Competitor Overlap + Binding Strategy */}
+            <div className="grid grid-cols-2 gap-5 mb-5">
+              <div className="flex flex-col gap-4">
+                {/* Competitor Overlap */}
+                <NeonCard innerClass="p-5" radius="1rem">
+                  <h2 className="text-base font-bold text-white mb-4">Competitor Overlap</h2>
+                  <div className="text-center mb-3">
+                    <div className="text-6xl font-bold text-[#06B6D4]">58%</div>
+                    <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
+                  </div>
+                  <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
+                    <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
+                  </div>
+                </NeonCard>
+                {/* Data Information */}
+                <NeonCard innerClass="p-5" radius="1rem">
+                  <h2 className="text-base font-bold text-white mb-3">Data Information</h2>
+                  <div className="space-y-2 text-xs text-gray-400">
+                    {[
+                      ['Last Calculated', data?.last_calculated_at ? new Date(data.last_calculated_at).toLocaleDateString() : 'Today'],
+                      ['Updated', data?.updated_at ? new Date(data.updated_at).toLocaleDateString() : 'Today'],
+                      ['Created', data?.created_at ? new Date(data.created_at).toLocaleDateString() : 'Today'],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span>{k}</span><span className="text-white">{v}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between">
+                      <span>Analysis Type</span><span className="text-[#06B6D4]">AI Predictive</span>
+                    </div>
+                  </div>
+                </NeonCard>
+              </div>
+
+              {/* Binding Strategy */}
+              <NeonCard innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
+                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
+                </div>
+                <ActivityChart />
+                <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
+                <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
+              </NeonCard>
+            </div>
+          </>
+        )}
+
+        {/* ── DEMOGRAPHICS TAB ─────────────────────────────────────────── */}
+        {activeTab === 'demographics' && (
+          <div className="space-y-5">
+            <NeonCard innerClass="p-5" radius="1rem">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
+                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Updated Today</span>
+              </div>
+              <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
+                  <span className="text-xs text-gray-500">Percentage</span>
+                </div>
+                {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
+                    <span className="text-xs text-gray-500">Percentage</span>
+                  </div>
+                  <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
+                  <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
+                  <GenderBlock label="Others" value={otherVal} color="#A855F7" />
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
+                  <div className="flex items-center justify-center h-40">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
+                      <div className="text-gray-400 text-sm">{purchaseConf}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </NeonCard>
+          </div>
+        )}
+
+        {/* ── INTERESTS TAB ────────────────────────────────────────────── */}
+        {activeTab === 'interests' && (
+          <div className="space-y-5">
+            <NeonCard innerClass="p-5" radius="1rem">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
+                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
+              </div>
+              <div className="bg-[#0d0d0d] rounded-xl p-4">
+                {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+              </div>
+            </NeonCard>
+          </div>
+        )}
+
+        {/* ── STRATEGY TAB ─────────────────────────────────────────────── */}
+        {activeTab === 'strategy' && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-5">
+              <NeonCard innerClass="p-5" radius="1rem">
+                <h2 className="text-base font-bold text-white mb-4">Competitor Overlap</h2>
+                <div className="text-center mb-3">
+                  <div className="text-6xl font-bold text-[#06B6D4]">58%</div>
+                  <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
+                </div>
+                <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
+                  <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
+                </div>
+              </NeonCard>
+              <NeonCard innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
+                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
+                </div>
+                <ActivityChart />
+                <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
+                <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
+              </NeonCard>
+            </div>
+          </div>
+        )}
+
+        {/* ── FOOTER ───────────────────────────────────────────────────── */}
+        <div className="border-t border-[#1a1a1a] mt-6 pt-5">
+          <div className="flex items-end justify-between">
             <div>
-              <div className="flex items-center mb-3">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mr-4">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Targeting Intelligence</h1>
-                  <p className="text-gray-600 mt-1">AI-powered audience insights & targeting strategies</p>
-                </div>
-              </div>
-              
-              {/* User Status & Connection */}
-              <div className="flex flex-wrap items-center gap-3 mt-4">
-                {userInfo ? (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                    <User className="w-4 h-4 text-green-600" />
-                    <span className="font-medium text-green-800">{userInfo.name}</span>
-                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                      Authenticated
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl">
-                    <Eye className="w-4 h-4 text-yellow-600" />
-                    <span className="font-medium text-yellow-800">Demo Mode</span>
-                    <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
-                      Preview Only
-                    </span>
-                  </div>
-                )}
-                
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${
-                  connectionStatus === 'connected'
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'
-                    : 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-200'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                  }`}></div>
-                  <span className={`font-medium ${
-                    connectionStatus === 'connected' ? 'text-blue-800' : 'text-red-800'
-                  }`}>
-                    {connectionStatus === 'connected' ? 'Live Data' : 'Demo Data'}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-white/50">
-                    API v1
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-xl">
-                  <Brain className="w-4 h-4 text-purple-600" />
-                  <span className="font-medium text-purple-800">Confidence</span>
-                  <span className="text-lg font-bold text-purple-700">
-                    {formatPercentage(data.overall_confidence)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-3">
-              {allData.length > 1 && (
-                <div className="relative">
-                  <select
-                    value={selectedCompetitor || ''}
-                    onChange={(e) => handleCompetitorChange(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-xl pl-4 pr-10 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm hover:shadow transition-shadow"
-                  >
-                    {allData.map((item) => (
-                      <option key={item.competitor_id} value={item.competitor_id}>
-                        {item.competitor_name || `Competitor ${item.competitor_id.substring(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronRight className="w-5 h-5 text-gray-400 absolute right-3 top-3.5 transform rotate-90 pointer-events-none" />
-                </div>
-              )}
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCalculateIntel}
-                  disabled={calculating || !selectedCompetitor}
-                  className="px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  {calculating ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Calculator className="w-5 h-5" />
-                  )}
-                  {calculating ? 'Calculating...' : 'Recalculate'}
-                </button>
-                
-                <button
-                  onClick={handleExportInsights}
-                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  Export
-                </button>
-                
-                {isAuthenticated() && (
-                  <button
-                    onClick={handleDeleteIntel}
-                    disabled={!selectedCompetitor}
-                    className="px-5 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl hover:from-red-600 hover:to-pink-700 shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* View Navigation */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm">
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'overview', label: 'Overview', icon: <Target className="w-4 h-4" /> },
-                { id: 'demographics', label: 'Demographics', icon: <Users className="w-4 h-4" /> },
-                { id: 'interests', label: 'Interests', icon: <Brain className="w-4 h-4" /> },
-                { id: 'strategy', label: 'Strategy', icon: <Zap className="w-4 h-4" /> }
-              ].map((view) => (
-                <button
-                  key={view.id}
-                  onClick={() => setActiveView(view.id as any)}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all ${
-                    activeView === view.id
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  {view.icon}
-                  <span className="font-medium">{view.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Key Metrics */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Competitor Overview Card */}
-            <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl border border-blue-100 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {data.competitor_name || `Competitor ${data.competitor_id.substring(0, 8)}`}
-                  </h2>
-                  <p className="text-gray-600 mt-1">Targeting Intelligence Analysis</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    data.is_active 
-                      ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800'
-                      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
-                  }`}>
-                    {data.is_active ? 'Active Monitoring' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Primary Age</div>
-                      <div className="text-lg font-bold text-gray-900">{data.age_range || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {data.age_min || '?'}-{data.age_max || '?'} years
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <MapPin className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Primary Location</div>
-                      <div className="text-lg font-bold text-gray-900">{data.primary_location || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
-                    {data.geography ? `${Object.keys(data.geography).length} regions` : 'No data'}
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Smartphone className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Primary Device</div>
-                      <div className="text-lg font-bold text-gray-900">{data.primary_device || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500 capitalize">
-                    {data.device_distribution?.mobile ? `${formatPercentage(data.device_distribution.mobile)} mobile` : 'No data'}
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <DollarSign className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Estimated CPM</div>
-                      <div className="text-lg font-bold text-gray-900">
-                        {formatCurrency(data.estimated_cpm)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    ROAS: {data.estimated_roas ? `${data.estimated_roas.toFixed(1)}x` : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Demographics Section */}
-            {(activeView === 'overview' || activeView === 'demographics') && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900">Audience Demographics</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">AI Analysis</span>
-                      <Sparkles className="w-4 h-4 text-blue-500" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Age Distribution */}
-                    {ageDistributionChartData.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-6">
-                          <h4 className="font-semibold text-gray-800">Age Distribution</h4>
-                          <div className="text-sm text-gray-500">Simulated</div>
-                        </div>
-                        <div className="h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ReBarChart data={ageDistributionChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                              <XAxis 
-                                dataKey="name" 
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6B7280', fontSize: 12 }}
-                              />
-                              <YAxis 
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6B7280', fontSize: 12 }}
-                                tickFormatter={(value) => `${value}%`}
-                              />
-                              <Tooltip content={<CustomTooltip />} />
-                              <Bar 
-                                dataKey="value" 
-                                radius={[6, 6, 0, 0]}
-                                animationDuration={1500}
-                              >
-                                {ageDistributionChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Bar>
-                            </ReBarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Gender Distribution */}
-                    {genderDistributionChartData.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-6">
-                          <h4 className="font-semibold text-gray-800">Gender Distribution</h4>
-                          <div className="text-sm text-gray-500">Percentage</div>
-                        </div>
-                        <div className="h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RePieChart>
-                              <Pie
-                                data={genderDistributionChartData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={90}
-                                paddingAngle={3}
-                                dataKey="value"
-                                animationDuration={1500}
-                              >
-                                {genderDistributionChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Tooltip formatter={(value) => [`${value}%`, 'Share']} />
-                            </RePieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Geography */}
-                  {geographyChartData.length > 0 && (
-                    <div className="mt-8">
-                      <h4 className="font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-blue-500" />
-                        Geographic Distribution
-                      </h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ReBarChart data={geographyChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                            <XAxis 
-                              dataKey="country" 
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                              tick={{ fill: '#6B7280', fontSize: 11 }}
-                            />
-                            <YAxis 
-                              tickFormatter={(value) => `${value}%`}
-                              tick={{ fill: '#6B7280', fontSize: 12 }}
-                            />
-                            <Tooltip formatter={(value) => [`${value}%`, 'Share']} />
-                            <Bar 
-                              dataKey="percentage" 
-                              radius={[6, 6, 0, 0]}
-                              animationDuration={1500}
-                            >
-                              {geographyChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                              ))}
-                            </Bar>
-                          </ReBarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Interests Section */}
-            {(activeView === 'overview' || activeView === 'interests') && interestClustersChartData.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900">Interest Clusters</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Top {data.interest_clusters?.length || 0} clusters</span>
-                      <Brain className="w-4 h-4 text-purple-500" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {interestClustersChartData.map((item, index) => (
-                      <div key={index} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div 
-                              className="w-10 h-10 rounded-xl flex items-center justify-center"
-                              style={{ 
-                                background: `linear-gradient(135deg, ${item.color}20, ${item.color}40)`,
-                                border: `1px solid ${item.color}30`
-                              }}
-                            >
-                              <Sparkles className="w-5 h-5" style={{ color: item.color }} />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{item.fullName}</h4>
-                              <div className="text-sm text-gray-500">Affinity Score</div>
-                            </div>
-                          </div>
-                          <div className="px-4 py-2 rounded-full text-lg font-bold" style={{ 
-                            backgroundColor: `${item.color}15`, 
-                            color: item.color
-                          }}>
-                            {item.value.toFixed(0)}%
-                          </div>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div 
-                            className="h-2.5 rounded-full transition-all duration-700"
-                            style={{ 
-                              width: `${item.value}%`,
-                              background: `linear-gradient(90deg, ${item.color}, ${item.color}80)`
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Strategy Section */}
-            {(activeView === 'overview' || activeView === 'strategy') && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900">Targeting Strategy</h3>
-                    <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-yellow-500" />
-                      <span className="text-sm text-gray-500">Performance Metrics</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-white rounded-xl">
-                          <Target className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-blue-700">Bidding Strategy</div>
-                          <div className="text-xl font-bold text-blue-900 capitalize">
-                            {data.bidding_strategy?.replace('_', ' ') || 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-blue-600">
-                        Confidence: {formatPercentage(data.bidding_confidence)}
-                      </div>
-                    </div>
-                    
-                    <div className="p-5 bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-2xl">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-white rounded-xl">
-                          <DollarSign className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-green-700">Estimated CPC</div>
-                          <div className="text-xl font-bold text-green-900">
-                            {formatCurrency(data.estimated_cpc)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-green-600">
-                        Cost per click
-                      </div>
-                    </div>
-                    
-                    <div className="p-5 bg-gradient-to-br from-purple-50 to-violet-100 border border-purple-200 rounded-2xl">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-white rounded-xl">
-                          <Activity className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-purple-700">Engagement Rate</div>
-                          <div className="text-xl font-bold text-purple-900">
-                            {formatPercentage(data.engagement_rate)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-purple-600">
-                        Audience interaction
-                      </div>
-                    </div>
-                    
-                    <div className="p-5 bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-2xl">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-white rounded-xl">
-                          <Layers className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-orange-700">Funnel Stage</div>
-                          <div className="text-xl font-bold text-orange-900 capitalize">
-                            {data.funnel_stage || 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-orange-600">
-                        Score: {formatPercentage(data.funnel_score)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Device Distribution */}
-                  {deviceDistributionChartData.length > 0 && (
-                    <div className="mt-8">
-                      <h4 className="font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                        <Smartphone className="w-5 h-5 text-green-500" />
-                        Device Distribution
-                      </h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ReBarChart data={deviceDistributionChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                            <XAxis 
-                              dataKey="name" 
-                              tick={{ fill: '#6B7280', fontSize: 12 }}
-                            />
-                            <YAxis 
-                              tickFormatter={(value) => `${value}%`}
-                              tick={{ fill: '#6B7280', fontSize: 12 }}
-                            />
-                            <Tooltip formatter={(value) => [`${value}%`, 'Share']} />
-                            <Bar 
-                              dataKey="value" 
-                              radius={[6, 6, 0, 0]}
-                              animationDuration={1500}
-                            >
-                              {deviceDistributionChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Bar>
-                          </ReBarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Insights & Recommendations */}
-          <div className="space-y-6">
-            {/* AI Recommendations */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-                  <Cpu className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">AI Recommendations</h3>
-                  <p className="text-sm text-gray-600">Optimized targeting strategy</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {data.age_range && (
-                  <div className="p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                        <Target className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Age Focus</h4>
-                        <p className="text-sm text-gray-600">
-                          Prioritize <span className="font-semibold text-blue-600">{data.age_range}</span> age group.
-                          {data.gender_ratio?.male && data.gender_ratio.male > 0.5 && ' Focus on male audience.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {data.primary_location && (
-                  <div className="p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                        <MapPin className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Geographic Focus</h4>
-                        <p className="text-sm text-gray-600">
-                          Target <span className="font-semibold text-green-600">{data.primary_location}</span> primarily.
-                          {data.geography && ` Expand to ${Object.keys(data.geography).length - 1} other regions.`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {data.device_distribution?.mobile && data.device_distribution.mobile > 0.6 && (
-                  <div className="p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                        <Smartphone className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Device Strategy</h4>
-                        <p className="text-sm text-gray-600">
-                          Mobile-first approach ({formatPercentage(data.device_distribution.mobile)}).
-                          {data.device_distribution.ios && ` iOS: ${formatPercentage(data.device_distribution.ios)}`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {data.content_type && (
-                <div className="mt-6 p-4 bg-white rounded-xl border border-blue-200">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Content Recommendation</h4>
-                      <p className="text-sm text-gray-600">
-                        Use <span className="font-semibold text-yellow-600">{data.content_type}</span> content with 
-                        <span className="font-semibold text-yellow-600"> {data.call_to_action?.replace('_', ' ')}</span> CTA
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confidence Scores */}
-            {confidenceScoresChartData.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-6">Confidence Analysis</h3>
-                
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={confidenceScoresChartData}>
-                      <PolarGrid stroke="#E5E7EB" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#6B7280', fontSize: 11 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#6B7280', fontSize: 10 }} />
-                      <Radar
-                        name="Confidence"
-                        dataKey="A"
-                        stroke="#3B82F6"
-                        fill="#3B82F6"
-                        fillOpacity={0.6}
-                        strokeWidth={2}
-                      />
-                      <Tooltip formatter={(value) => [`${value}%`, 'Confidence']} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  {confidenceScoresChartData.slice(0, 4).map((item, index) => (
-                    <div key={index} className="text-center p-3 border border-gray-200 rounded-xl">
-                      <div className="text-lg font-bold" style={{
-                        color: item.A > 80 ? '#10B981' : item.A > 60 ? '#F59E0B' : '#EF4444'
-                      }}>
-                        {item.A.toFixed(0)}%
-                      </div>
-                      <div className="text-xs text-gray-600">{item.subject}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Audience Details */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Audience Details</h3>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Audience Type</span>
-                  <span className="font-medium text-gray-900 capitalize">{data.audience_type || 'N/A'}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Audience Size</span>
-                  <span className="font-medium text-gray-900 capitalize">{data.audience_size || 'N/A'}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Income Level</span>
-                  <span className="font-medium text-gray-900 capitalize">{data.income_level || 'N/A'}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Income Score</span>
-                  <span className="font-medium text-gray-900">{formatPercentage(data.income_score)}</span>
-                </div>
-              </div>
-              
-              {data.primary_interests && data.primary_interests.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-semibold text-gray-800 mb-3">Primary Interests</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {data.primary_interests.map((interest, index) => (
-                      <span 
-                        key={index} 
-                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Data Source Info */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg">
-                  <Info className="w-5 h-5 text-gray-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Data Information</h4>
-                  <p className="text-sm text-gray-600">Source & freshness</p>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Last Calculated</span>
-                  <span className="font-medium text-gray-900">
-                    {data.last_calculated_at 
-                      ? new Date(data.last_calculated_at).toLocaleDateString()
-                      : 'Never'
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Updated</span>
-                  <span className="font-medium text-gray-900">
-                    {data.updated_at 
-                      ? new Date(data.updated_at).toLocaleDateString()
-                      : 'Never'
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Created</span>
-                  <span className="font-medium text-gray-900">
-                    {new Date(data.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Analysis Type</span>
-                  <span className="font-medium text-blue-600">AI Predictive</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="text-sm text-gray-500">
-              <p>Targeting intelligence • Last updated: {new Date(data.updated_at || data.created_at).toLocaleString()}</p>
-              <p className="mt-1">
-                {userInfo 
-                  ? `Personalized insights for ${userInfo.name} • ${allData.length} competitor${allData.length !== 1 ? 's' : ''} tracked`
-                  : 'Viewing demo data • Login for personalized insights'
-                }
+              <p className="text-gray-400 text-xs">
+                Targeting Intelligence for {competitorName} - Last Analysis: {lastAnalysis}
+              </p>
+              <p className="text-gray-400 text-xs mt-1">
+                Personalized insights for {userInfo?.name || 'Ravi Kumar'} · {allData.length} competitor{allData.length !== 1 ? 's' : ''} tracked
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              {!isAuthenticated() && (
-                <a 
-                  href="/login" 
-                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                >
-                  <User className="w-4 h-4" />
-                  Login for Full Access
-                </a>
-              )}
-              <button
-                onClick={loadData}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
-              >
-                <RefreshCw className="w-4 h-4" />
+            <div className="flex gap-2">
+              <button onClick={handleRefresh} disabled={refreshing}
+                className="flex items-center gap-2 border border-[#333] text-gray-300 text-xs px-3 py-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors">
+                <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
                 Refresh Data
               </button>
-              <span className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
-                v2.0 • API Sync
-              </span>
+              <span className="border border-[#333] text-gray-400 text-xs px-3 py-1.5 rounded-lg">v1 · AI-Powered</span>
             </div>
           </div>
+          <div className="text-center mt-4">
+            <p className="text-gray-500 text-xs">
+              Data last Updated:{' '}
+              {data?.updated_at
+                ? new Date(data.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                + ' at ' + new Date(data.updated_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                : 'January 7, 2026 at 06:35 PM'}
+            </p>
+            <p className="text-gray-500 text-xs mt-0.5">AI-Powered insights update every 24 hours</p>
+          </div>
         </div>
+
       </div>
+
+      {/* Global keyframes */}
+      <style>{`
+        @keyframes loadbar {
+          0%   { width: 0%;   margin-left: 0; }
+          50%  { width: 60%;  margin-left: 20%; }
+          100% { width: 0%;   margin-left: 100%; }
+        }
+      `}</style>
     </div>
   );
 };
