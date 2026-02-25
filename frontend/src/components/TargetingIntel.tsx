@@ -6,6 +6,9 @@ import TargetingIntelAPI, {
   fetchAllTargetingIntel,
   getAuthUserInfo
 } from '../services/targetingIntel';
+import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
+import SplashScreen from '@/components/SplashScreen';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HBar — horizontal progress bar row
@@ -147,49 +150,6 @@ const LoadingScreen = ({ userName }: { userName?: string }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PageNavbar
-// ─────────────────────────────────────────────────────────────────────────────
-const PageNavbar = ({ userName }: { userName?: string }) => {
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-  };
-  const navLinks = [
-    { label: 'Home', href: '/' },
-    { label: 'Command Center', href: '/command-center' },
-    { label: 'Targeting Intel', href: '/targeting_intel' },
-    { label: 'Ad Surveillance', href: '/ad-surveillance' },
-    { label: 'Auto Create', href: '/auto-create' },
-    { label: 'Reverse Engineering', href: '#' },
-  ];
-  return (
-    <nav className="bg-black border-b border-[#1a1a1a] sticky top-0 z-50">
-      <div className="px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <a href="/" className="text-white font-bold text-xl tracking-tight">ELFSOD</a>
-          <div className="flex items-center gap-6">
-            {navLinks.map((l) => (
-              <a key={l.label} href={l.href}
-                className={`text-sm transition-colors ${l.label === 'Targeting Intel' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'
-                  }`}>
-                {l.label}
-              </a>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {userName && <span className="text-gray-300 text-sm">Hello, {userName}</span>}
-          <button onClick={handleLogout}
-            className="bg-[#1a1a1a] border border-[#333] text-white text-sm px-4 py-1.5 rounded-lg hover:bg-[#252525] transition-colors">
-            Logout
-          </button>
-        </div>
-      </div>
-    </nav>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Bar chart decoration for Binding Strategy
 // ─────────────────────────────────────────────────────────────────────────────
 const ActivityChart = () => {
@@ -294,15 +254,18 @@ const TargetingIntel: React.FC = () => {
 
   if (loading) return (
     <>
-      <PageNavbar userName={userInfo?.name} />
+      <SplashScreen visible={true} duration={1500} />
+      <Navigation />
       <LoadingScreen userName={userInfo?.name} />
+      <Footer />
     </>
   );
 
   // ── Page ─────────────────────────────────────────────────────────────────
   return (
+    <>
+    <Navigation />
     <div className="min-h-screen bg-black text-white">
-      <PageNavbar userName={userInfo?.name} />
 
       <div className="px-6 py-6 max-w-[1200px] mx-auto">
 
@@ -616,6 +579,8 @@ const TargetingIntel: React.FC = () => {
         }
       `}</style>
     </div>
+    <Footer />
+    </>
   );
 };
 

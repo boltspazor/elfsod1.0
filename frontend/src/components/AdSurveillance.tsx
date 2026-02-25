@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import {
   TrendingUp,
   TrendingDown,
@@ -1506,21 +1508,27 @@ const AdSurveillance = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            Loading surveillance dashboard...
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Preparing your competitive intelligence
-          </p>
+      <>
+        <Navigation />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-gray-600">
+              Loading surveillance dashboard...
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Preparing your competitive intelligence
+            </p>
+          </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   return (
+    <>
+    <Navigation />
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
       {/* Error Alert */}
       {error && (
@@ -3060,6 +3068,8 @@ const AdSurveillance = () => {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 };
 

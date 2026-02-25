@@ -17,6 +17,9 @@ import {
   Copy,
   Download
 } from 'lucide-react';
+import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
+import SplashScreen from '@/components/SplashScreen';
 
 // TypeScript interfaces based on your schema
 interface SummaryMetrics {
@@ -90,6 +93,7 @@ const AdSurveillance = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSplash, setShowSplash] = useState(true);
   
   // Chart data state
   const [spendTrendData, setSpendTrendData] = useState<number[]>([26000, 19500, 13000, 6500, 0, 0, 0]);
@@ -277,16 +281,24 @@ const AdSurveillance = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading surveillance data...</p>
+      <>
+        <SplashScreen visible={showSplash} onComplete={() => setShowSplash(false)} duration={1500} />
+        <Navigation />
+        <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading surveillance data...</p>
+          </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   return (
+    <>
+    <SplashScreen visible={showSplash} onComplete={() => setShowSplash(false)} duration={1500} />
+    <Navigation />
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-8">
@@ -582,6 +594,8 @@ const AdSurveillance = () => {
         <p className="mt-1">Monitoring {dailyMetrics.length} active ads across {platformDistribution.length} platforms</p>
       </div>
     </div>
+    <Footer />
+    </>
   );
 };
 
