@@ -85,33 +85,39 @@ const MetricCard = ({
 }) => (
   <div
     style={{
-      background: '#1a1a1a',
-      borderRadius: '0.65rem',
-      padding: '14px 16px 14px 16px',
-      marginBottom: '10px',
+      background: '#111',
+      borderRadius: '12px',
+      padding: '16px',
+      marginBottom: '12px',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      minHeight: '110px'
     }}
   >
-    <div style={{ color: '#fff', fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>
+    <div style={{ color: '#fff', fontWeight: 700, fontSize: '15px' }}>
       {title}
     </div>
-    <div style={{ color: '#6b7280', fontSize: '11px', marginBottom: '6px' }}>{subtitle}</div>
-    <div
-      style={{
-        textAlign: 'right',
-        fontSize: '2.25rem',
-        fontWeight: 800,
-        lineHeight: 1.1,
-        ...(gradient
-          ? {
-            background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }
-          : { color: solidColor || '#06B6D4' }),
-      }}
-    >
-      {value}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '16px' }}>
+      <div style={{ color: '#6b7280', fontSize: '12px', paddingBottom: '4px' }}>{subtitle}</div>
+      <div
+        style={{
+          fontSize: '3rem',
+          fontWeight: 800,
+          lineHeight: 1,
+          ...(gradient
+            ? {
+              background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              display: 'inline-block',
+            }
+            : { color: solidColor || '#06B6D4' }),
+        }}
+      >
+        {value}
+      </div>
     </div>
   </div>
 );
@@ -442,13 +448,13 @@ const TargetingIntel: React.FC = () => {
 
                 {/* LEFT PANEL — light gray background */}
                 <div style={{
-                  background: '#c8c8c8',
+                  background: '#d4d4d4',
                   borderRadius: '14px',
                   padding: '20px',
                 }}>
                   <div style={{ marginBottom: '16px' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#111', margin: 0 }}>{competitorName}</h2>
-                    <p style={{ fontSize: '12px', color: '#555', margin: '2px 0 0' }}>Targeting Intelligence Analysis</p>
+                    <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#111', margin: 0, textTransform: 'lowercase', lineHeight: 1 }}>{competitorName}</h2>
+                    <p style={{ fontSize: '13px', color: '#555', margin: '4px 0 0' }}>Targeting Intelligence Analysis</p>
                   </div>
 
                   {/* Primary Age — gradient text */}
@@ -491,7 +497,7 @@ const TargetingIntel: React.FC = () => {
                   border: '1px solid #222',
                   padding: '20px',
                 }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>AI Recommendations</h2>
+                  <h2 style={{ fontSize: '20px', fontWeight: 400, color: '#fff', margin: '0 0 4px' }}>AI Recommendations</h2>
                   <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 16px' }}>Optimized targeting strategies</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <RecoCard
