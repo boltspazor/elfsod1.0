@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import {
@@ -7,84 +7,32 @@ import {
   Activity,
   Target,
   Eye,
-  MousePointer,
-  BarChart3,
   Filter,
   Search,
-  MoreVertical,
-  PlayCircle,
-  Copy,
   Download,
   Wifi,
-  WifiOff,
-  RefreshCw,
   Plus,
   X,
   AlertCircle,
   Calendar,
   Clock,
-  PieChart as PieChartIcon,
-  BarChart as BarChartIcon,
-  LineChart as LineChartIcon,
-  Radar,
-  User,
-  Shield,
-  Zap,
   Users,
   DollarSign,
-  Percent,
   Globe,
   Sparkles,
-  AlertTriangle,
-  Info,
-  ExternalLink,
-  BarChart2,
-  Layers,
-  Target as TargetIcon,
-  PieChart,
-  LineChart,
-  ScatterChart,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  Hash,
-  MapPin,
-  Smartphone,
-  Clock as ClockIcon,
-  Users as UsersIcon,
-  ChevronDown,
-  ChevronUp,
-  Download as DownloadIcon,
-  Share2,
-  BarChart3 as BarChart3Icon,
-  Globe as GlobeIcon,
-  Cpu,
-  TrendingUp as TrendingUpIcon,
   Lightbulb,
-  AlertOctagon,
-  Award,
-  Target as TargetIcon2,
-  ChartBar,
-  ChartLine,
-  ChartPie,
-  ChartArea,
-  ChartScatter,
   Heart,
-  MessageCircle,
   Youtube,
   Facebook,
   Instagram,
   Linkedin,
   Loader2,
-  Clock as ClockIcon2,
-  History,
-  Hash as HashIcon,
   ShoppingBag,
   Shirt,
   Utensils,
   Smartphone as SmartphoneIcon,
   Car,
   Home,
-  TrendingUp as TrendingUpIcon2,
 } from "lucide-react";
 
 // Import Recharts components
@@ -100,21 +48,6 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  LineChart as RechartsLineChart,
-  Line,
-  ComposedChart,
-  ScatterChart as RechartsScatterChart,
-  Scatter,
-  ZAxis,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  AreaChart,
-  Area,
-  RadialBarChart,
-  RadialBar,
-  Treemap,
 } from "recharts";
 
 // Import UPDATED API services with types
@@ -122,14 +55,12 @@ import {
   UsersAPI,
   CompetitorsAPI,
   AdsAPI,
-  PlatformsAPI,
   TrendingAPI,
   PlatformStats,
   TrendingAd as TrendingAdType,
   TrendingSearchResponse,
   parseSpendValue,
   parseImpressionValue,
-  normalizeTrendingAd,
 } from "../services/adsurv";
 
 interface UserInfo {
@@ -265,7 +196,7 @@ const searchSuggestions = [
   {
     id: 7,
     keyword: "Fitness products",
-    icon: <TrendingUpIcon2 className="w-4 h-4" />,
+    icon: <TrendingUp className="w-4 h-4" />,
     category: "Health & Fitness",
   },
   {
@@ -1405,17 +1336,17 @@ const AdSurveillance = () => {
 
   const getStatusBadge = (status: boolean | undefined) => {
     if (status === undefined)
-      return "bg-gray-100 text-gray-800 border-gray-200";
+      return "bg-gray-700 text-gray-300 border-gray-600";
     return status
-      ? "bg-green-100 text-green-800 border-green-200"
-      : "bg-gray-100 text-gray-800 border-gray-200";
+      ? "bg-emerald-900/50 text-emerald-400 border-emerald-700"
+      : "bg-gray-700 text-gray-400 border-gray-600";
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600 bg-green-50";
-    if (score >= 60) return "text-yellow-600 bg-yellow-50";
-    if (score >= 40) return "text-orange-600 bg-orange-50";
-    return "text-red-600 bg-red-50";
+    if (score >= 80) return "text-emerald-400 bg-emerald-900/30";
+    if (score >= 60) return "text-yellow-400 bg-yellow-900/30";
+    if (score >= 40) return "text-orange-400 bg-orange-900/30";
+    return "text-red-400 bg-red-900/30";
   };
 
   // Render JSON data as formatted list
@@ -1432,7 +1363,7 @@ const AdSurveillance = () => {
       return (
         <div className="space-y-2">
           {data.map((item, index) => (
-            <div key={index} className="text-sm text-gray-700">
+            <div key={index} className="text-sm text-gray-300">
               {JSON.stringify(item, null, 2)}
             </div>
           ))}
@@ -1444,8 +1375,8 @@ const AdSurveillance = () => {
       <div className="space-y-1">
         {Object.entries(data).map(([key, value]) => (
           <div key={key} className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">{key}:</span>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm text-gray-400">{key}:</span>
+            <span className="text-sm font-medium text-white">
               {typeof value === "number" ? formatNumber(value) : String(value)}
             </span>
           </div>
@@ -1498,8 +1429,15 @@ const AdSurveillance = () => {
                 />
               ))}
             </Pie>
-            <Tooltip />
-            <Legend />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#1f2937",
+                border: "1px solid #374151",
+                borderRadius: "8px",
+                color: "#f3f4f6",
+              }}
+            />
+            <Legend wrapperStyle={{ color: "#9ca3af" }} />
           </RechartsPieChart>
         </ResponsiveContainer>
       </div>
@@ -1510,10 +1448,10 @@ const AdSurveillance = () => {
     return (
       <>
         <Navigation />
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-[#0a0a0f] p-6 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-600">
+            <div className="w-16 h-16 border-4 border-t-teal-500 border-gray-700 rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-gray-300">
               Loading surveillance dashboard...
             </p>
             <p className="text-sm text-gray-500 mt-2">
@@ -1526,445 +1464,319 @@ const AdSurveillance = () => {
     );
   }
 
+
+
   return (
     <>
     <Navigation />
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-          <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-red-700 text-sm">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
 
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+      {/* ========== HEADER ========== */}
+      <div className="max-w-[1200px] mx-auto px-6 pt-8 pb-2">
+        <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                  AdSurv Intelligence
-                </h1>
-                <p className="text-gray-600">
-                  Real-time competitor advertising surveillance
-                </p>
-              </div>
-            </div>
-
-            {/* User Info */}
-            {userInfo && (
-              <div className="flex items-center gap-2 mt-3 bg-white/50 backdrop-blur-sm rounded-lg p-2 inline-flex">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {userInfo.name?.charAt(0) || "U"}
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {userInfo.name || "User"}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {userInfo.email || ""}
-                  </div>
-                </div>
-              </div>
-            )}
+            <h1 className="text-[28px] font-bold text-white tracking-tight">Competitor Ad Surveillience</h1>
+            <p className="text-[#8a8a8a] text-sm mt-1">Real-time intelligence across all advertising platforms.</p>
           </div>
-
-          {/* Header Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Connection Status */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
-              <div
-                className={`w-2 h-2 rounded-full ${isAuthenticated ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
-              ></div>
-              <span className="text-sm font-medium text-gray-700">
-                {isAuthenticated ? "Connected" : "Not Connected"}
-              </span>
-            </div>
-
-            {/* Calculate Metrics Button */}
-            <button
-              onClick={handleCalculateMetrics}
-              disabled={isCalculatingMetrics || competitors.length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <BarChart2 className="w-4 h-4" />
-              <span>
-                {isCalculatingMetrics ? "Calculating..." : "Calculate Metrics"}
-              </span>
-            </button>
-
-            {/* Add Competitor Button */}
-            <button
-              onClick={() => setShowAddCompetitor(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Competitor</span>
-            </button>
-
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefreshAds}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              <span>Refresh</span>
-            </button>
-
-            {/* Debug Button - Temporary */}
-            <button
-              onClick={() => {
-                if (ads.length > 0) {
-                  console.log("Debug spend calculation for first 5 ads:");
-                  ads.slice(0, 5).forEach((ad, index) => {
-                    console.log(`Ad ${index + 1}:`, {
-                      id: ad.id,
-                      platform: ad.platform,
-                      originalSpend: ad.spend,
-                      parsedSpend: parseSpendValue(ad.spend),
-                      calculatedSpend: calculateAdSpend(ad),
-                      first_seen: ad.first_seen,
-                      last_seen: ad.last_seen,
-                      lifespan: calculateAdLifespan(ad),
-                      is_active: ad.is_active,
-                      format: ad.format
-                    });
-                  });
-                }
-              }}
-              className="px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-            >
-              Debug
-            </button>
-          </div>
+          <button className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors">
+            <Wifi className="w-4 h-4" />
+            Live Database
+          </button>
         </div>
       </div>
 
-      {/* Trending Search Modal */}
+      {/* ========== CONNECTION STATUS BAR ========== */}
+      <div className="max-w-[1200px] mx-auto px-6 mt-3">
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-4 py-2.5 flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="text-sm text-[#ccc]">
+            <span className="font-medium text-white">Connected to Supabase Database</span>
+            {" · "}Found {competitors.length} summary records and {ads.length} daily records
+          </span>
+        </div>
+      </div>
+
+      {/* ========== ERROR BANNER ========== */}
+      {error && (
+        <div className="max-w-[1200px] mx-auto px-6 mt-3">
+          <div className={`px-4 py-3 rounded-lg flex items-center gap-3 ${
+            error.includes("successfully")
+              ? "bg-emerald-900/40 border border-emerald-700/50 text-emerald-300"
+              : "bg-red-900/40 border border-red-700/50 text-red-300"
+          }`}>
+            {error.includes("successfully") ? (
+              <Sparkles className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <span className="text-sm">{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto text-gray-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========== TOOLBAR ========== */}
+      <div className="max-w-[1200px] mx-auto px-6 mt-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAddCompetitor(true)}
+            className="px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add a competitor
+          </button>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666]" />
+            <input
+              type="text"
+              placeholder="Search for campaigns . . ."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-white placeholder-[#666] focus:outline-none focus:ring-1 focus:ring-[#444] focus:border-[#444]"
+            />
+          </div>
+          <select
+            className="px-3 py-2.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-[#ccc] focus:outline-none appearance-none pr-8"
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value as any)}
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+          >
+            <option value="daily">Last 7 days</option>
+            <option value="weekly">Last 30 days</option>
+            <option value="monthly">Last 90 days</option>
+            <option value="all_time">All time</option>
+          </select>
+          <button
+            onClick={() => setShowTrendingSearch(true)}
+            className="px-5 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            Search
+          </button>
+          <button
+            onClick={handleCalculateMetrics}
+            disabled={isCalculatingMetrics}
+            className="px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            {isCalculatingMetrics ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Activity className="w-4 h-4" />
+            )}
+            Check Connection
+          </button>
+          <button
+            onClick={handleRefreshAds}
+            disabled={isRefreshing}
+            className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
+        </div>
+
+        {/* Data View Toggle */}
+        <div className="mt-4 flex items-center gap-4">
+          <span className="text-sm text-[#888]">Data View:</span>
+          <div className="flex bg-[#1a1a1a] rounded-lg p-1 border border-[#333]">
+            <button
+              onClick={() => setDataViewMode("latest")}
+              className={`px-4 py-1.5 text-sm rounded-md flex items-center gap-2 transition-colors ${
+                dataViewMode === "latest"
+                  ? "bg-[#2a2a2a] text-white border border-[#444]"
+                  : "text-[#888] hover:text-white"
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Latest Ads
+            </button>
+            <button
+              onClick={() => setDataViewMode("historical")}
+              className={`px-4 py-1.5 text-sm rounded-md flex items-center gap-2 transition-colors ${
+                dataViewMode === "historical"
+                  ? "bg-[#2a2a2a] text-white border border-[#444]"
+                  : "text-[#888] hover:text-white"
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Historical Data
+            </button>
+          </div>
+          <span className="text-xs text-[#666] flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            {dataViewMode === "latest" ? "Latest data only" : "Historical view"}
+          </span>
+        </div>
+
+        {/* Sub-description */}
+        <p className="text-xs text-[#666] mt-2">• Showing Ads from the most recent data in your database.</p>
+      </div>
+
+      {/* ========== TRENDING SEARCH MODAL ========== */}
       {showTrendingSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Search Trending Content
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Real-time search across social media platforms
-                  </p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#0ea5e9] rounded-xl flex items-center justify-center">
+                    <Search className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Trending Ads Search</h3>
+                    <p className="text-sm text-[#888]">Search across all platforms</p>
+                  </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setShowTrendingSearch(false);
-                    setError(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
+                  onClick={() => { setShowTrendingSearch(false); setError(null); }}
+                  className="p-2 hover:bg-[#2a2a2a] rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-[#888]" />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Search Keyword */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search Keyword *
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={trendingSearchKeyword}
-                      onChange={(e) => setTrendingSearchKeyword(e.target.value)}
-                      placeholder="e.g., fitness shoes, technology, nike"
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
+              <div className="relative mb-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#666]" />
+                <input
+                  type="text"
+                  placeholder="Search trending ads..."
+                  value={trendingSearchKeyword}
+                  onChange={(e) => setTrendingSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleTrendingSearch()}
+                  className="w-full pl-12 pr-4 py-3.5 bg-[#111] border border-[#333] rounded-xl text-white placeholder-[#666] focus:outline-none focus:ring-1 focus:ring-[#444]"
+                />
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-[#888] mb-3">Platforms</p>
+                <div className="flex flex-wrap gap-2">
+                  {["meta", "instagram", "youtube", "tiktok", "reddit", "linkedin"].map((platform) => (
                     <button
-                      onClick={() => handleTrendingSearch()}
-                      disabled={
-                        isSearchingTrending || !trendingSearchKeyword.trim()
-                      }
-                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                      key={platform}
+                      onClick={() => toggleTrendingPlatform(platform)}
+                      className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors border ${
+                        selectedTrendingPlatforms.includes(platform)
+                          ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
+                          : "bg-[#111] border-[#333] text-[#888] hover:border-[#555]"
+                      }`}
                     >
-                      {isSearchingTrending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Searching...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4" />
-                          <span>Search</span>
-                        </>
-                      )}
+                      {platformIcons[platform]}
+                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
                     </button>
-                  </div>
-                </div>
-
-                {/* Platform Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Platforms *
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      "meta",
-                      "instagram",
-                      "youtube",
-                      "reddit",
-                      "linkedin",
-                      "tiktok",
-                    ].map((platform) => (
-                      <button
-                        key={platform}
-                        onClick={() => toggleTrendingPlatform(platform)}
-                        className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center gap-2 transition-all ${
-                          selectedTrendingPlatforms.includes(platform)
-                            ? "border-orange-500 bg-orange-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div
-                          className={`p-2 rounded-full ${
-                            selectedTrendingPlatforms.includes(platform)
-                              ? "bg-orange-100 text-orange-600"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {platformIcons[platform] || (
-                            <Globe className="w-5 h-5" />
-                          )}
-                        </div>
-                        <span className="text-sm font-medium capitalize">
-                          {platform === "meta" ? "Facebook" : platform}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {selectedTrendingPlatforms.includes(platform)
-                            ? "Selected"
-                            : "Click to select"}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Select 1-3 platforms for best results. More platforms = more
-                    API calls.
-                  </p>
-                </div>
-
-                {/* How It Works */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    How Trending Search Works
-                  </h4>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">
-                        1
-                      </div>
-                      <span>
-                        Real-time API calls to platform APIs (Facebook Ad
-                        Library, YouTube, Instagram, etc.)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">
-                        2
-                      </div>
-                      <span>
-                        Parallel search across selected platforms (all at once,
-                        not sequential)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">
-                        3
-                      </div>
-                      <span>
-                        Smart scoring algorithm (engagement, recency, platform
-                        quality)
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs mt-0.5 flex-shrink-0">
-                        4
-                      </div>
-                      <span>
-                        Cross-platform ranking to show top-performing content
-                        across all platforms
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowTrendingSearch(false);
-                    setError(null);
-                  }}
-                  className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleTrendingSearch()}
-                  disabled={
-                    isSearchingTrending ||
-                    !trendingSearchKeyword.trim() ||
-                    selectedTrendingPlatforms.length === 0
-                  }
-                  className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSearchingTrending ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Searching...
-                    </span>
-                  ) : (
-                    "Search Trending Content"
-                  )}
-                </button>
+              <div className="mb-6">
+                <p className="text-sm text-[#888] mb-3">Popular Searches</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {searchSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.id}
+                      onClick={() => handleSuggestionClick(suggestion.keyword)}
+                      className="flex items-center gap-3 p-3 bg-[#111] border border-[#2a2a2a] rounded-lg hover:bg-[#1a1a1a] hover:border-[#444] transition-colors text-left"
+                    >
+                      <div className="text-[#888]">{suggestion.icon}</div>
+                      <div>
+                        <div className="text-sm text-white">{suggestion.keyword}</div>
+                        <div className="text-xs text-[#666]">{suggestion.category}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <button
+                onClick={() => handleTrendingSearch()}
+                disabled={isSearchingTrending || !trendingSearchKeyword.trim() || selectedTrendingPlatforms.length === 0}
+                className="w-full py-3 bg-[#0ea5e9] hover:bg-[#0284c7] disabled:bg-[#333] disabled:text-[#666] text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                {isSearchingTrending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+                {isSearchingTrending ? "Searching..." : "Search Trending Ads"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Competitor Modal */}
+      {/* ========== ADD COMPETITOR MODAL (WHITE - matches screenshot exactly) ========== */}
       {showAddCompetitor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Add New Competitor
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Track their advertising activities
-                  </p>
-                </div>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-bold text-black">Add New Competitor</h3>
                 <button
-                  onClick={() => {
-                    setShowAddCompetitor(false);
-                    setError(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
+                  onClick={() => { setShowAddCompetitor(false); setError(null); }}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Competitor Name *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Competitor Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={newCompetitor.name}
-                    onChange={(e) =>
-                      setNewCompetitor({
-                        ...newCompetitor,
-                        name: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="e.g., Nike Running"
+                    onChange={(e) => setNewCompetitor({ ...newCompetitor, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Website Domain
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Website Domain <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={newCompetitor.domain}
-                    onChange={(e) =>
-                      setNewCompetitor({
-                        ...newCompetitor,
-                        domain: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="e.g., nike.com"
+                    onChange={(e) => setNewCompetitor({ ...newCompetitor, domain: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Industry</label>
                   <input
                     type="text"
                     value={newCompetitor.industry}
-                    onChange={(e) =>
-                      setNewCompetitor({
-                        ...newCompetitor,
-                        industry: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="e.g., Sportswear, E-commerce"
+                    onChange={(e) => setNewCompetitor({ ...newCompetitor, industry: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Estimated Monthly Ad Spend ($)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Monthly Ad Spend ($)</label>
                   <input
                     type="number"
+                    placeholder="Example: 5000"
                     value={newCompetitor.estimated_monthly_spend || ""}
-                    onChange={(e) =>
-                      setNewCompetitor({
-                        ...newCompetitor,
-                        estimated_monthly_spend: e.target.value
-                          ? parseInt(e.target.value)
-                          : 0,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="e.g., 50000"
+                    onChange={(e) => setNewCompetitor({ ...newCompetitor, estimated_monthly_spend: e.target.value ? parseInt(e.target.value) : 0 })}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-end gap-3">
+              <div className="flex items-center justify-between mt-8">
                 <button
-                  onClick={() => {
-                    setShowAddCompetitor(false);
-                    setError(null);
-                  }}
-                  className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => { setShowAddCompetitor(false); setError(null); }}
+                  className="px-6 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddCompetitor}
                   disabled={!newCompetitor.name.trim()}
-                  className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 bg-black hover:bg-gray-900 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  Add Competitor
+                  <Plus className="w-4 h-4" />
+                  Add a competitor
                 </button>
               </div>
             </div>
@@ -1972,1098 +1784,416 @@ const AdSurveillance = () => {
         </div>
       )}
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Summary Metrics */}
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Total Spend */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="text-xs text-gray-500">Monthly</div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {summaryMetrics
-                  ? formatCurrencyShort(summaryMetrics.total_competitor_spend)
-                  : "$0"}
-              </h3>
-              <p className="text-gray-600 text-sm">Total Competitor Spend</p>
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">
-                    Across {competitors.length} competitors
-                  </span>
-                  <button
-                    onClick={() => setActiveChart("financial")}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View details →
-                  </button>
-                </div>
+      {/* ========== MAIN CONTENT ========== */}
+      <div className="max-w-[1200px] mx-auto px-6 mt-6 pb-8">
+
+        {/* ===== 4 METRIC CARDS ===== */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Average Impressions */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Average Impressions</span>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs text-emerald-400">12%</span>
               </div>
             </div>
+            <p className="text-xs text-[#666] mb-2">vs previous spend</p>
+            <div className="text-2xl font-bold text-white text-right">
+              {formatCurrency(summaryMetrics?.total_competitor_spend || 0)}
+            </div>
+          </div>
 
-            {/* Active Campaigns */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Target className="w-5 h-5 text-green-600" />
-                </div>
-                <div className="text-xs text-gray-500">Live</div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {summaryMetrics
-                  ? formatNumber(summaryMetrics.active_campaigns)
-                  : "0"}
-              </h3>
-              <p className="text-gray-600 text-sm">Active Campaigns</p>
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Live monitoring</span>
-                  <button
-                    onClick={() => loadRecentAds()}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Track →
-                  </button>
-                </div>
+          {/* Active Campaigns */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Active Campaigns</span>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs text-emerald-400">8%</span>
               </div>
             </div>
+            <p className="text-xs text-[#666] mb-2">Across all platforms</p>
+            <div className="text-2xl font-bold text-white text-right">
+              {formatNumber(summaryMetrics?.active_campaigns || 0)}
+            </div>
+          </div>
 
-            {/* Total Impressions */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <Eye className="w-5 h-5 text-purple-600" />
-                </div>
-                <div className="text-xs text-gray-500">Reach</div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {summaryMetrics
-                  ? formatNumber(summaryMetrics.total_impressions)
-                  : "0"}
-              </h3>
-              <p className="text-gray-600 text-sm">Total Impressions</p>
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Combined reach</span>
-                  <button
-                    onClick={() => setActiveChart("trends")}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Analyze →
-                  </button>
-                </div>
+          {/* Total Impressions */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Total Impressions</span>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs text-emerald-400">15%</span>
               </div>
             </div>
+            <p className="text-xs text-[#666] mb-2">Combined reach</p>
+            <div className="text-2xl font-bold text-white text-right">
+              {formatNumber(summaryMetrics?.total_impressions || 0)}
+            </div>
+          </div>
 
-            {/* Average CTR */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-orange-50 rounded-lg">
-                  <MousePointer className="w-5 h-5 text-orange-600" />
-                </div>
-                <div className="text-xs text-gray-500">Avg.</div>
+          {/* Average CTR */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Average CTR</span>
+              <div className="flex items-center gap-1">
+                <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-xs text-red-400">2%</span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {summaryMetrics
-                  ? formatPercentage(summaryMetrics.avg_ctr)
-                  : "0%"}
-              </h3>
-              <p className="text-gray-600 text-sm">Avg. CTR</p>
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Industry benchmark</span>
-                  <button
-                    onClick={() => setActiveChart("performance")}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Compare →
-                  </button>
-                </div>
-              </div>
+            </div>
+            <p className="text-xs text-[#666] mb-2">Industry benchmark</p>
+            <div className="text-2xl font-bold text-white text-right">
+              {formatPercentage(summaryMetrics?.avg_ctr || 0)}
             </div>
           </div>
         </div>
 
-        {/* Platform Distribution */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">
-              Platform Distribution
-            </h3>
-            <Globe className="w-5 h-5 text-gray-400" />
+        {/* ===== CHARTS ROW ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
+          {/* 7-Day Competitor Spend Trend */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white italic">7-Day Competitor Spend Trend</h3>
+              <div className="flex bg-[#111] rounded-lg p-0.5 border border-[#333]">
+                {(["daily", "weekly", "monthly"] as const).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      selectedPeriod === period
+                        ? "bg-[#333] text-white"
+                        : "text-[#888] hover:text-white"
+                    }`}
+                  >
+                    {period.charAt(0).toUpperCase() + period.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {platformStats.length > 0 ? (
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={platformStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                    <XAxis dataKey="platform" tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#333" }} />
+                    <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#333" }} tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}`} />
+                    <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
+                    <Bar dataKey="total_spend" radius={[4, 4, 0, 0]}>
+                      {platformStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || "#0ea5e9"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-52 flex items-center justify-center text-[#666] text-sm">No spend data available</div>
+            )}
           </div>
 
-          {platformStats.length > 0 ? (
-            <div className="space-y-4">
-              {platformStats.map((platform, index) => (
-                <div
-                  key={`${platform.platform}-${index}`}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: platform.color }}
-                      />
-                      <span className="text-sm font-medium text-gray-700">
-                        {platform.platform}
-                      </span>
+          {/* Spend by Platform */}
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white italic">Spend by Platform</h3>
+            </div>
+            {platformStats.length > 0 ? (
+              <div className="flex items-center">
+                <div className="h-48 flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie data={platformStats} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="total_spend" nameKey="platform">
+                        {platformStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || "#0ea5e9"} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col gap-3 ml-4">
+                  {platformStats.map((stat) => (
+                    <div key={stat.platform} className="flex items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: stat.color }} />
+                      <span className="text-sm text-[#ccc] capitalize">{stat.platform}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatCurrencyShort(platform.total_spend)}
-                    </span>
+                  ))}
+                  <div className="mt-3 pt-3 border-t border-[#333]">
+                    <p className="text-xs text-[#888]">Total Platform Spend</p>
+                    <p className="text-xl font-bold text-white mt-0.5">
+                      {formatCurrency(platformStats.reduce((sum, s) => sum + s.total_spend, 0))}
+                    </p>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(platform.percentage || 0, 100)}%`,
-                        backgroundColor: platform.color,
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{formatNumber(platform.ad_count)} ads</span>
-                    <span>{formatPercentage(platform.avg_ctr)} CTR</span>
+                </div>
+              </div>
+            ) : (
+              <div className="h-52 flex items-center justify-center text-[#666] text-sm">No platform data available</div>
+            )}
+          </div>
+        </div>
+
+        {/* ===== TRENDING ADS RESULTS ===== */}
+        {showResults && trendingAds.length > 0 && (
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mb-8">
+            <div className="p-5 border-b border-[#2a2a2a]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-[#0ea5e9]" />
+                  <h3 className="text-base font-semibold text-white">Trending Results for &quot;{trendingSearchKeyword}&quot;</h3>
+                  <span className="px-2 py-0.5 text-xs bg-[#0ea5e9]/20 text-[#0ea5e9] rounded-full">{trendingAds.length} results</span>
+                </div>
+                <button onClick={handleNewSearch} className="text-sm text-[#888] hover:text-white transition-colors">New Search</button>
+              </div>
+            </div>
+            <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trendingAds.slice(0, 6).map((ad, index) => (
+                <div key={ad.id || `${ad.platform}-${index}`} className="bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#444] transition-colors">
+                  {(ad.image_url || ad.thumbnail) && (
+                    <div className="relative h-40">
+                      <img
+                        src={proxyImageUrl(ad.image_url || ad.thumbnail || "")}
+                        alt={ad.title || "Trending ad"}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/300x200?text=No+Image"; }}
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-black/70 text-white rounded uppercase">{ad.platform || "unknown"}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-3.5">
+                    <h4 className="text-sm font-medium text-white line-clamp-2 mb-2">{ad.title || ad.description || "Untitled"}</h4>
+                    <div className="flex items-center gap-3 text-xs text-[#666]">
+                      {(ad.views || ad.impressions) && (
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          {formatNumber(typeof (ad.views || ad.impressions) === 'number' ? (ad.views || ad.impressions) as number : 0)}
+                        </span>
+                      )}
+                      {ad.likes && (
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3" />
+                          {formatNumber(typeof ad.likes === 'number' ? ad.likes : 0)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="py-8 text-center">
-              <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">
-                No platform data available
-              </p>
-              <button
-                onClick={handleCalculateMetrics}
-                className="mt-3 text-sm text-blue-600 hover:text-blue-800"
+          </div>
+        )}
+
+        {/* ===== COMPETITORS TABLE ===== */}
+        {metricsSummary.length > 0 && (
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mb-8 overflow-hidden">
+            <div className="p-5 border-b border-[#2a2a2a]">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-[#0ea5e9]" />
+                <h3 className="text-base font-semibold text-white">Competitors Performance</h3>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[#2a2a2a]">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Competitor</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Active Ads</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Monthly Spend</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Avg CTR</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Risk Score</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Opportunity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1f1f1f]">
+                  {metricsSummary.map((summary) => (
+                    <tr key={summary.competitor_id} className="hover:bg-[#222] transition-colors">
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-medium text-white">{summary.competitor_name}</span>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-[#ccc]">{summary.active_ads}</td>
+                      <td className="px-5 py-4 text-sm text-[#ccc]">{formatCurrency(summary.estimated_monthly_spend)}</td>
+                      <td className="px-5 py-4 text-sm text-[#ccc]">{formatPercentage(summary.avg_ctr)}</td>
+                      <td className="px-5 py-4">
+                        <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary.risk_score)}`}>{summary.risk_score}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary.opportunity_score)}`}>{summary.opportunity_score}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ===== LIVE AD FEED ===== */}
+        <div className="mb-6">
+          {/* Live Ad Feed Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-white italic" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Live Ad Feed</h2>
+              <span className="px-3 py-1 text-xs font-medium bg-[#1a1a1a] text-white rounded-full border border-[#333] flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Latest
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <select
+                className="text-sm bg-transparent text-[#888] focus:outline-none cursor-pointer"
+                value={selectedCompany}
+                onChange={(e) => {
+                  setSelectedCompany(e.target.value);
+                  if (e.target.value !== "all") { setSelectedCompetitor(e.target.value); loadRecentAds(e.target.value); }
+                  else { setSelectedCompetitor(null); loadRecentAds(); }
+                }}
               >
-                Calculate metrics →
+                <option value="all">All Companies</option>
+                {competitors.map((comp) => (
+                  <option key={comp.id} value={comp.id}>{comp.name}</option>
+                ))}
+              </select>
+              <button className="flex items-center gap-1.5 text-sm text-[#888] hover:text-white transition-colors">
+                <Filter className="w-4 h-4" />
+                Filter
+              </button>
+              <button className="flex items-center gap-1.5 text-sm text-[#888] hover:text-white transition-colors">
+                <Lightbulb className="w-4 h-4" />
+                Insights
               </button>
             </div>
-          )}
-
-          {platformStats.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Total across platforms</span>
-                <span className="font-semibold text-gray-900">
-                  {formatCurrencyShort(
-                    platformStats.reduce(
-                      (sum, p) => sum + (p.total_spend || 0),
-                      0,
-                    ),
-                  )}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Enhanced Trending Ads Section */}
-      <div className="mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-200">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    Trending Ads & Content
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Discover trending ads across all platforms
-                  </p>
-                </div>
-              </div>
-              {showResults && trendingSearchResult && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                    "{trendingSearchResult.keyword}"
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {formatDate(new Date().toISOString())}
-                  </span>
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="p-5">
-            {!showResults ? (
-              // Initial State: Only search bar and suggestions
-              <>
-                {/* Main Search Bar */}
-                <div className="max-w-3xl mx-auto mb-8">
-                  <div className="relative">
-                    <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      value={trendingSearchKeyword}
-                      onChange={(e) => setTrendingSearchKeyword(e.target.value)}
-                      placeholder="Search any keyword to discover trending ads..."
-                      className="w-full pl-12 pr-32 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && handleTrendingSearch()
-                      }
-                    />
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      <button
-                        onClick={() => handleTrendingSearch()}
-                        disabled={
-                          isSearchingTrending || !trendingSearchKeyword.trim()
-                        }
-                        className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {isSearchingTrending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Searching...</span>
-                          </>
+          {/* Ad Cards */}
+          <div className="space-y-6">
+            {filteredAds.length > 0 ? (
+              filteredAds.slice(0, 10).map((ad, index) => (
+                <div key={ad.id || index}>
+                  {/* Ad Title */}
+                  <h3 className="text-base font-semibold text-white mb-3">{ad.competitor_name} Ad</h3>
+
+                  {/* Ad Card */}
+                  <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden">
+                    <div className="flex">
+                      {/* Left: Image */}
+                      <div className="relative w-[280px] min-h-[280px] flex-shrink-0 bg-[#111]">
+                        {ad.image_url ? (
+                          <img
+                            src={proxyImageUrl(ad.image_url)}
+                            alt={ad.headline}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            referrerPolicy="no-referrer"
+                          />
                         ) : (
-                          <>
-                            <Search className="w-4 h-4" />
-                            <span>Search</span>
-                          </>
+                          <div className="w-full h-full bg-[#111] flex items-center justify-center">
+                            <div className="w-16 h-16 bg-[#2a2a2a] rounded-lg" />
+                          </div>
                         )}
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2 text-center">
-                    Press Enter or click Search to discover trending ads
-                  </p>
-                </div>
-
-                {/* Search History & Suggestions */}
-                <div className="max-w-6xl mx-auto">
-                  {/* Search History */}
-                  {searchHistory.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-2 mb-4">
-                        <History className="w-5 h-5 text-gray-400" />
-                        <h4 className="font-medium text-gray-900">
-                          Recent Searches
-                        </h4>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {searchHistory.map((keyword, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleSuggestionClick(keyword)}
-                            className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors"
-                          >
-                            <ClockIcon2 className="w-4 h-4" />
-                            <span>{keyword}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Popular Suggestions */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <TrendingUpIcon2 className="w-5 h-5 text-orange-500" />
-                      <h4 className="font-medium text-gray-900">
-                        Popular Search Suggestions
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {searchSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.id}
-                          onClick={() =>
-                            handleSuggestionClick(suggestion.keyword)
-                          }
-                          className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-200 rounded-xl text-left group transition-all hover:shadow-md"
-                        >
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-white rounded-lg group-hover:bg-orange-50 transition-colors">
-                              <div className="text-orange-500">
-                                {suggestion.icon}
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h5 className="font-medium text-gray-900 group-hover:text-orange-600">
-                                {suggestion.keyword}
-                              </h5>
-                              <p className="text-xs text-gray-500">
-                                {suggestion.category}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-400 flex items-center gap-1">
-                            <HashIcon className="w-3 h-3" />
-                            Click to search trending ads
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              // Results State: Show trending ads in grid
-              <>
-                {isSearchingTrending ? (
-                  <div className="py-12 text-center">
-                    <div className="w-12 h-12 border-2 border-t-orange-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
-                    <p className="mt-4 text-gray-600">
-                      Searching trending content for "{trendingSearchKeyword}
-                      "...
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Searching across {selectedTrendingPlatforms.length}{" "}
-                      platforms
-                    </p>
-                  </div>
-                ) : trendingAds.length > 0 ? (
-                  <>
-                    {/* Platform Filter */}
-                    <div className="mb-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            Trending ads for "
-                            {trendingSearchResult?.keyword ||
-                              trendingSearchKeyword}
-                            "
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {trendingAds.length} results found • Sorted by
-                            engagement score
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">
-                            Platforms:
+                        {/* Platform Badge */}
+                        <div className="absolute top-3 left-3">
+                          <span className="px-3 py-1 text-[11px] font-bold bg-[#1a1a1a] text-white rounded-md uppercase tracking-wider border border-[#333]">
+                            {ad.platform?.toUpperCase() || "UNKNOWN"}
                           </span>
-                          <div className="flex gap-2">
-                            {["meta", "instagram", "youtube", "tiktok"].map(
-                              (platform) => (
-                                <button
-                                  key={platform}
-                                  onClick={() =>
-                                    toggleTrendingPlatform(platform)
-                                  }
-                                  className={`px-3 py-1.5 text-sm rounded-lg border flex items-center gap-2 ${
-                                    selectedTrendingPlatforms.includes(platform)
-                                      ? "border-orange-500 bg-orange-50 text-orange-700"
-                                      : "border-gray-300 hover:border-gray-400"
-                                  }`}
-                                >
-                                  {platformIcons[platform] || (
-                                    <Globe className="w-4 h-4" />
-                                  )}
-                                  <span className="capitalize">
-                                    {platform === "meta"
-                                      ? "Facebook"
-                                      : platform}
-                                  </span>
-                                </button>
-                              ),
-                            )}
-                          </div>
+                        </div>
+                        {/* Active/Paused Badge */}
+                        <div className="absolute top-3 right-3">
+                          <span className={`px-3 py-1 text-[11px] font-bold rounded-md ${
+                            ad.is_active
+                              ? "bg-emerald-400 text-black"
+                              : "bg-yellow-400 text-black"
+                          }`}>
+                            {ad.is_active ? "Active" : "Paused"}
+                          </span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Trending Ads Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                      {trendingAds.map((ad, index) => (
-                        <div
-                          key={ad.id || `${ad.platform}-${index}`}
-                          className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-gray-200"
-                        >
-                          {/* Image/Video Preview */}
-                          <div className="aspect-video bg-gray-200 relative overflow-hidden">
-                            {ad.image_url || ad.thumbnail ? (
-                              <img
-                                src={
-                                  proxyImageUrl(ad.image_url) || ad.thumbnail
-                                }
-                                alt={ad.title}
-                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src =
-                                    "https://via.placeholder.com/300x200?text=No+Image";
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                                <div className="text-center">
-                                  {ad.video_url ? (
-                                    <PlayCircle className="w-12 h-12 text-gray-500" />
-                                  ) : (
-                                    <ImageIcon className="w-12 h-12 text-gray-500" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            <div className="absolute top-2 left-2">
-                              <span className="px-2 py-1 bg-black/70 text-white text-xs rounded flex items-center gap-1">
-                                {platformIcons[ad.platform] || (
-                                  <Globe className="w-3 h-3" />
-                                )}
-                                <span className="capitalize">
-                                  {ad.platform === "meta"
-                                    ? "Facebook"
-                                    : ad.platform}
-                                </span>
-                              </span>
-                            </div>
-                            <div className="absolute top-2 right-2">
-                              <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded font-bold">
-                                #{ad.rank || index + 1}
-                              </span>
-                            </div>
-                            <div className="absolute bottom-2 left-2">
-                              <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
-                                Score: {ad.score?.toFixed(1) || "N/A"}
-                              </span>
-                            </div>
+                      {/* Right: Details */}
+                      <div className="flex-1 p-5">
+                        <h4 className="text-lg font-semibold text-white mb-1">{ad.headline || "No Title"}</h4>
+                        <p className="text-xs text-[#888] mb-4">{formatDate(ad.last_seen || ad.created_at || ad.first_seen)}</p>
+
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-[#666] italic">Daily Spend</p>
+                            <p className="text-base font-bold text-white">{formatCurrency(ad.spend)}</p>
                           </div>
-
-                          {/* Content */}
-                          <div className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-900 truncate">
-                                {ad.competitor_name ||
-                                  ad.advertiser ||
-                                  ad.channel ||
-                                  ad.owner ||
-                                  "Unknown Source"}
-                              </span>
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-2 h-2 rounded-full mr-1 ${
-                                    ad.engagement_score >= 80
-                                      ? "bg-green-500"
-                                      : ad.engagement_score >= 60
-                                        ? "bg-yellow-500"
-                                        : ad.engagement_score >= 40
-                                          ? "bg-orange-500"
-                                          : "bg-red-500"
-                                  }`}
-                                ></div>
-                                <span className="text-xs text-gray-500">
-                                  {ad.engagement_score}%
-                                </span>
-                              </div>
-                            </div>
-
-                            <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 min-h-[2.5rem]">
-                              {ad.title || ad.headline || "No title"}
-                            </h4>
-
-                            <p className="text-xs text-gray-600 line-clamp-2 mb-3">
-                              {ad.description || "No description"}
+                          <div>
+                            <p className="text-xs text-[#666] italic">Impressions</p>
+                            <p className="text-base font-bold text-white">
+                              {formatNumber(typeof ad.impressions === "number" ? ad.impressions : parseImpressionValue(ad.impressions))}
                             </p>
-
-                            {/* Engagement Metrics */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-1">
-                                  <Eye className="w-3 h-3 text-gray-400" />
-                                  <span className="text-xs text-gray-600">
-                                    {formatNumber(ad.views || ad.impressions)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Heart className="w-3 h-3 text-red-400" />
-                                  <span className="text-xs text-gray-600">
-                                    {formatNumber(ad.likes)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MessageCircle className="w-3 h-3 text-blue-400" />
-                                  <span className="text-xs text-gray-600">
-                                    {formatNumber(ad.comments)}
-                                  </span>
-                                </div>
-                              </div>
-                              {ad.spend &&
-                                typeof ad.spend === "number" &&
-                                ad.spend > 0 && (
-                                  <span className="text-xs font-medium text-green-600">
-                                    {formatCurrencyShort(ad.spend)}
-                                  </span>
-                                )}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-500">
-                                {formatDate(
-                                  ad.created_at ||
-                                    ad.published_at ||
-                                    ad.taken_at,
-                                )}
-                              </span>
-                              {ad.url && ad.url !== "#" && (
-                                <a
-                                  href={ad.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 flex items-center"
-                                >
-                                  <LinkIcon className="w-3 h-3 mr-1" />
-                                  View
-                                </a>
-                              )}
-                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-[#666] italic">CTR</p>
+                            <p className="text-base font-bold text-white">
+                              2.5% <span className="text-xs text-[#666] font-normal">(Industry Average: 2.1%)</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-[#666] italic">Variants</p>
+                            <p className="text-sm text-white">
+                              <span className="font-bold">Creatives</span> <span className="text-[#888]">(A/B Testing)</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-[#666] italic">A/B Tests</p>
+                            <p className="text-sm text-white">
+                              <span className="font-bold">{ad.is_active ? "Active" : "Paused"}</span> <span className="text-[#888]">(In Progress)</span>
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
 
-                    {/* New Search Button */}
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                      <div className="text-center">
-                        <button
-                          onClick={handleNewSearch}
-                          className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 flex items-center gap-2 mx-auto"
-                        >
-                          <Search className="w-4 h-4" />
-                          <span>New Search</span>
-                        </button>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Search for different trending ads
-                        </p>
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-3 mt-5">
+                          <button className="px-4 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
+                            <Eye className="w-3.5 h-3.5" />
+                            Analyze
+                          </button>
+                          <button className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
+                            <DollarSign className="w-3.5 h-3.5" />
+                            Clone Strategy
+                          </button>
+                          <button className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
+                            <Target className="w-3.5 h-3.5" />
+                            Track
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="py-12 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                      <Search className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">
-                      No results found for "{trendingSearchKeyword}"
-                    </h4>
-                    <p className="text-gray-600 mb-6">
-                      Try different keywords or adjust your search
-                    </p>
-                    <button
-                      onClick={handleNewSearch}
-                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90"
-                    >
-                      Try Another Search
-                    </button>
                   </div>
-                )}
-              </>
+                </div>
+              ))
+            ) : (
+              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-16 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-[#222] rounded-full flex items-center justify-center">
+                  <Eye className="w-8 h-8 text-[#444]" />
+                </div>
+                <h4 className="text-lg font-medium text-white mb-2">No Ads Found</h4>
+                <p className="text-[#888] mb-6 max-w-md mx-auto">
+                  {searchQuery || selectedPlatform !== "all" || selectedCompany !== "all"
+                    ? "Try adjusting your search or filter criteria"
+                    : "Start tracking competitors to see their ads"}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => { setSearchQuery(""); setSelectedPlatform("all"); setSelectedCompany("all"); setSelectedCompetitor(null); loadRecentAds(); }}
+                    className="px-4 py-2.5 bg-[#222] hover:bg-[#333] border border-[#333] text-[#ccc] rounded-lg transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                  <button
+                    onClick={() => setShowAddCompetitor(true)}
+                    className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white rounded-lg transition-colors"
+                  >
+                    Add Competitor
+                  </button>
+                </div>
+              </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Competitors Metrics Summary - UPDATED: Uses frontend-calculated metrics */}
-      {metricsSummary.length > 0 && (
-        <div className="mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
-                    <TargetIcon2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      Competitors Performance
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Ranked by opportunity score (calculated in frontend)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-5">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Competitor
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Active Ads
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Monthly Spend
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Avg CTR
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Risk Score
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                        Opportunity Score
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metricsSummary.map((summary, index) => (
-                      <tr
-                        key={summary.competitor_id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-r from-gray-800 to-gray-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                              {summary.competitor_name?.charAt(0) || "C"}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {summary.competitor_name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {formatDate(summary.last_calculated)}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 font-medium">
-                            {formatNumber(summary.active_ads)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 font-medium">
-                            {formatCurrencyShort(
-                              summary.estimated_monthly_spend,
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 font-medium">
-                            {formatPercentage(summary.avg_ctr)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div
-                            className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${getScoreColor(summary.risk_score)}`}
-                          >
-                            {summary.risk_score}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div
-                            className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${getScoreColor(summary.opportunity_score)}`}
-                          >
-                            {summary.opportunity_score}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Competitors List & Live Ad Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        {/* Competitors List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-            <div className="p-5 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">
-                  Tracked Competitors
-                </h3>
-                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                  {competitors.length} total
-                </span>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search competitors..."
-                  className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="p-3">
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {competitors.map((competitor) => (
-                  <div
-                    key={competitor.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedCompetitor === competitor.id
-                        ? "bg-blue-50 border border-blue-200"
-                        : "hover:bg-gray-50"
-                    }`}
-                    onClick={() => {
-                      setSelectedCompetitor(competitor.id);
-                      setSelectedCompany(competitor.id);
-                      loadRecentAds(competitor.id);
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-gray-800 to-gray-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                          {competitor.name?.charAt(0) || "C"}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm">
-                            {competitor.name}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {competitor.industry || "No industry"}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-semibold text-gray-700">
-                          {formatNumber(competitor.ads_count)} ads
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {competitor.last_fetched_at
-                            ? formatDate(competitor.last_fetched_at)
-                            : "Never fetched"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {competitors.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <p className="text-gray-600 text-sm">
-                      No competitors tracked yet
-                    </p>
-                    <button
-                      onClick={() => setShowAddCompetitor(true)}
-                      className="mt-3 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      Add your first competitor →
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Ad Feed */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-            <div className="px-5 py-4 border-b border-gray-200">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Live Ad Feed
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                      {filteredAds.length} ads
-                    </span>
-                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                      {new Date().toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Company Filter */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">Company:</label>
-                    <select
-                      className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={selectedCompany}
-                      onChange={(e) => {
-                        setSelectedCompany(e.target.value);
-                        if (e.target.value !== "all") {
-                          setSelectedCompetitor(e.target.value);
-                          loadRecentAds(e.target.value);
-                        } else {
-                          setSelectedCompetitor(null);
-                          loadRecentAds();
-                        }
-                      }}
-                    >
-                      <option value="all">All Companies</option>
-                      {competitors.map((comp) => (
-                        <option key={comp.id} value={comp.id}>
-                          {comp.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Platform Filter */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">Platform:</label>
-                    <select
-                      className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={selectedPlatform}
-                      onChange={(e) => setSelectedPlatform(e.target.value)}
-                    >
-                      <option value="all">All Platforms</option>
-                      <option value="google">Google</option>
-                      <option value="meta">Meta</option>
-                      <option value="tiktok">TikTok</option>
-                      <option value="linkedin">LinkedIn</option>
-                      <option value="youtube">YouTube</option>
-                      <option value="instagram">Instagram</option>
-                      <option value="twitter">Twitter</option>
-                      <option value="reddit">Reddit</option>
-                      <option value="pinterest">Pinterest</option>
-                    </select>
-                  </div>
-
-                  {/* View Toggle */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    <button
-                      onClick={() => setDataViewMode("latest")}
-                      className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-2 ${
-                        dataViewMode === "latest"
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      <Clock className="w-4 h-4" />
-                      Latest
-                    </button>
-                    <button
-                      onClick={() => setDataViewMode("historical")}
-                      className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-2 ${
-                        dataViewMode === "historical"
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Historical
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Ad List */}
-            <div className="divide-y divide-gray-100">
-              {filteredAds.length > 0 ? (
-                filteredAds.slice(0, 10).map((ad, index) => (
-                  <div
-                    key={ad.id || index}
-                    className="px-5 py-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-gray-800 to-gray-600 rounded-lg flex items-center justify-center text-white font-semibold">
-                          {ad.competitor_name?.charAt(0) || "A"}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h4 className="font-semibold text-gray-900">
-                              {ad.competitor_name}
-                            </h4>
-                            <span
-                              className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadge(ad.is_active)}`}
-                            >
-                              {ad.is_active ? "ACTIVE" : "INACTIVE"}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                              {ad.platform?.toUpperCase() || "UNKNOWN"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(ad.last_seen || ad.created_at)}
-                            </span>
-                          </div>
-                          <h5 className="text-gray-900 font-medium">
-                            {ad.headline || "No Title"}
-                          </h5>
-                        </div>
-                      </div>
-                      <button className="text-gray-400 hover:text-gray-600 p-1">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      {/* Ad Content */}
-                      <div className="md:col-span-2">
-                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                          {ad.description ||
-                            ad.full_text ||
-                            "No description available"}
-                        </p>
-
-                        {/* Image Preview */}
-                        {ad.image_url && (
-                          <div className="mt-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <ImageIcon className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                Ad Creative
-                              </span>
-                            </div>
-                            <div className="relative rounded-lg overflow-hidden border border-gray-200 max-w-xs">
-                              <img
-                                src={proxyImageUrl(ad.image_url)}
-                                alt={ad.headline}
-                                className="w-full h-48 object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src =
-                                    "https://via.placeholder.com/300x200?text=No+Image";
-                                }}
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute bottom-2 right-2">
-                                <a
-                                  href={ad.image_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-2 py-1 bg-black/70 text-white text-xs rounded hover:bg-black"
-                                >
-                                  View Full
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Destination URL */}
-                        {ad.destination_url && (
-                          <div className="mt-3 flex items-center gap-2">
-                            <LinkIcon className="w-4 h-4 text-gray-400" />
-                            <a
-                              href={ad.destination_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-800 truncate"
-                            >
-                              {ad.destination_url}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Metrics Grid */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Spend
-                          </div>
-                          <div className="font-semibold text-gray-900">
-                            {formatCurrency(ad.spend)}
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Impressions
-                          </div>
-                          <div className="font-semibold text-gray-900">
-                            {formatNumber(
-                              typeof ad.impressions === "number"
-                                ? ad.impressions
-                                : parseImpressionValue(ad.impressions),
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">
-                            First Seen
-                          </div>
-                          <div className="font-semibold text-gray-900 text-sm">
-                            {formatDate(ad.first_seen)}
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Last Seen
-                          </div>
-                          <div className="font-semibold text-gray-900 text-sm">
-                            {formatDate(ad.last_seen || ad.created_at)}
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-lg col-span-2">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Actions
-                          </div>
-                          <div className="flex gap-2">
-                            <button className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 flex-1">
-                              Analyze
-                            </button>
-                            <button className="text-xs px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-100 flex-1">
-                              Clone
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-5 py-12 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Eye className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">
-                    No Ads Found
-                  </h4>
-                  <p className="text-gray-600 mb-6">
-                    {searchQuery ||
-                    selectedPlatform !== "all" ||
-                    selectedCompany !== "all"
-                      ? "Try adjusting your search or filter criteria"
-                      : "Start tracking competitors to see their ads"}
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setSelectedPlatform("all");
-                        setSelectedCompany("all");
-                        setSelectedCompetitor(null);
-                        loadRecentAds();
-                     
-                      }}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Clear Filters
-                    </button>
-                    <button
-                      onClick={() => setShowAddCompetitor(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Add Competitor
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
