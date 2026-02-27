@@ -18,31 +18,32 @@ const HBar = ({ label, sub, value, max, color }: {
 }) => {
   const pct = Math.min(100, (value / max) * 100);
   return (
-    <div className="flex items-center gap-3 mb-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1">
-          <span className="text-xs text-white font-medium truncate">{label}</span>
-          {sub && <span className="text-[10px] text-gray-400">{sub}</span>}
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '18px' }}>
+      {/* Left spacer — creates empty left half like reference */}
+      <div style={{ flex: 1 }} />
+      {/* Right cluster: indicator + label + percentage + bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+        <div style={{ minWidth: 60, flexShrink: 0 }}>
+          <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+          {sub && <span style={{ fontSize: '10px', color: '#6b7280', marginLeft: 4, whiteSpace: 'nowrap' }}>{sub}</span>}
         </div>
-      </div>
-      <div className="w-16 text-right text-xs text-gray-300 font-semibold shrink-0">
-        {value.toFixed(1)}%
-      </div>
-      <div className="w-48 bg-[#2a2a2a] rounded-full h-1.5 shrink-0">
-        <div className="h-1.5 rounded-full transition-all duration-1000"
-          style={{ width: `${pct}%`, backgroundColor: color }} />
+        <div style={{ width: 44, textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+          {value.toFixed(1)}%
+        </div>
+        <div style={{ width: 200, background: '#2a2a2a', borderRadius: 999, height: 4, flexShrink: 0 }}>
+          <div style={{ width: `${pct}%`, height: 4, borderRadius: 999, background: color, transition: 'width 1s ease' }} />
+        </div>
       </div>
     </div>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NeonCard — cyberpunk gradient border wrapper
-// Technique: 1px gradient bg + dark inner div = gradient border
+// NeonCard — cyberpunk gradient border wrapper (used for right panel & lower sections)
 // ─────────────────────────────────────────────────────────────────────────────
 const NEON_GRADIENT = 'linear-gradient(135deg, #06B6D4 0%, #A855F7 50%, #EC4899 100%)';
-const NEON_GLOW = '0 0 8px rgba(6,182,212,0.3), 0 0 18px rgba(168,85,247,0.15)';
-const NEON_GLOW_HO = '0 0 16px rgba(6,182,212,0.6), 0 0 32px rgba(168,85,247,0.4), 0 0 56px rgba(236,72,153,0.2)';
+
 
 const NeonCard = ({ children, className = '', innerClass = '', radius = '0.75rem' }: {
   children: React.ReactNode;
@@ -53,67 +54,127 @@ const NeonCard = ({ children, className = '', innerClass = '', radius = '0.75rem
   <div
     className={`neon-card-wrapper ${className}`}
     style={{
-      background: NEON_GRADIENT, padding: '1px', borderRadius: radius,
-      boxShadow: NEON_GLOW, transition: 'box-shadow 0.35s ease'
+      border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: radius,
+      background: '#111',
     }}
-    onMouseEnter={e => (e.currentTarget.style.boxShadow = NEON_GLOW_HO)}
-    onMouseLeave={e => (e.currentTarget.style.boxShadow = NEON_GLOW)}
   >
-    <div style={{ background: '#111', borderRadius: `calc(${radius} - 1px)` }}
-      className={`w-full h-full ${innerClass}`}>
+    <div className={`w-full h-full ${innerClass}`}>
       {children}
     </div>
   </div>
 );
 
+
 // ─────────────────────────────────────────────────────────────────────────────
-// MetricCard — left panel stat card
+// MetricCard — dark card inside the light left panel
+// Each card has a dark (#1a1a1a) background, title at top-left, value at bottom-right
 // ─────────────────────────────────────────────────────────────────────────────
-const MetricCard = ({ title, subtitle, value, color }: {
-  title: string; subtitle: string; value: string; color: string;
+const MetricCard = ({
+  title,
+  subtitle,
+  value,
+  gradient = false,
+  solidColor,
+}: {
+  title: string;
+  subtitle: string;
+  value: string;
+  gradient?: boolean;
+  solidColor?: string;
 }) => (
-  <NeonCard className="mb-3" innerClass="p-4">
-    <div className="font-semibold text-white text-sm mb-1">{title}</div>
-    <div className="text-xs text-gray-400 mb-3">{subtitle}</div>
-    <div className="text-right text-4xl font-bold" style={{ color }}>{value}</div>
-  </NeonCard>
+  <div
+    style={{
+      background: '#1a1a1a',
+      borderRadius: '0.65rem',
+      padding: '14px 16px 14px 16px',
+      marginBottom: '10px',
+    }}
+  >
+    <div style={{ color: '#fff', fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>
+      {title}
+    </div>
+    <div style={{ color: '#6b7280', fontSize: '11px', marginBottom: '6px' }}>{subtitle}</div>
+    <div
+      style={{
+        textAlign: 'right',
+        fontSize: '2.25rem',
+        fontWeight: 800,
+        lineHeight: 1.1,
+        ...(gradient
+          ? {
+            background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }
+          : { color: solidColor || '#06B6D4' }),
+      }}
+    >
+      {value}
+    </div>
+  </div>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RecoCard — AI recommendation card
+// RecoCard — AI recommendation card (dark border, rounded, inside right panel)
 // ─────────────────────────────────────────────────────────────────────────────
 const RecoCard = ({ title, body }: { title: string; body: React.ReactNode }) => (
-  <NeonCard innerClass="p-4 flex flex-col gap-2">
-    <p className="font-bold text-white text-sm">{title}</p>
-    <p className="text-xs text-gray-300 leading-relaxed">{body}</p>
-  </NeonCard>
+  <div
+    style={{
+      border: '1px solid rgba(255,255,255,0.55)',
+      borderRadius: '14px',
+      padding: '20px 18px 18px',
+      background: '#111',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end',
+      minHeight: '190px',
+      gap: '8px',
+    }}
+  >
+    <p style={{ fontWeight: 700, color: '#fff', fontSize: '15px', margin: 0 }}>{title}</p>
+    <p style={{ color: '#9ca3af', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{body}</p>
+  </div>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GenderBlock — gender distribution row
+// GenderBlock
 // ─────────────────────────────────────────────────────────────────────────────
 const GenderBlock = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <NeonCard className="mb-2" innerClass="p-3">
-    <div className="text-xs text-gray-300 font-medium mb-1">{label}</div>
-    <div className="text-3xl font-bold text-right" style={{ color }}>{value}%</div>
+  <NeonCard className="mb-2" innerClass="" radius="0.5rem">
+    <div style={{ padding: '10px 14px 12px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{label}</div>
+      <div style={{ fontSize: '2rem', fontWeight: 800, textAlign: 'right', color }}>{value}%</div>
+    </div>
   </NeonCard>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CostCard — binding strategy cost row
+// CostCard
 // ─────────────────────────────────────────────────────────────────────────────
 const CostCard = ({ title, sub, value, valueColor = '#06B6D4' }: {
   title: string; sub: string; value: string; valueColor?: string;
 }) => (
-  <NeonCard className="mb-3" innerClass="p-4">
-    <div className="font-bold text-white text-sm">{title}</div>
-    <div className="text-xs text-gray-500 mt-0.5 mb-3">{sub}</div>
-    <div className="text-4xl font-bold text-right" style={{ color: valueColor }}>{value}</div>
+  <NeonCard className="mb-3" innerClass="">
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '16px 18px',
+    }}>
+      <div>
+        <div style={{ fontWeight: 700, color: '#fff', fontSize: '15px' }}>{title}</div>
+        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: 3 }}>{sub}</div>
+      </div>
+      <div style={{
+        fontSize: '2.4rem', fontWeight: 800, color: valueColor,
+        letterSpacing: '-0.5px',
+      }}>{value}</div>
+    </div>
   </NeonCard>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// StatMiniCard — audience shared / engagement rate box
+// StatMiniCard
 // ─────────────────────────────────────────────────────────────────────────────
 const StatMiniCard = ({ value, label, color }: { value: string; label: string; color: string }) => (
   <NeonCard innerClass="p-4 text-center">
@@ -150,22 +211,14 @@ const LoadingScreen = ({ userName }: { userName?: string }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bar chart decoration for Binding Strategy
+// Bar chart for Binding Strategy
 // ─────────────────────────────────────────────────────────────────────────────
-const ActivityChart = () => {
-  const heights = [20, 15, 10, 8, 9, 25, 40, 65, 80, 70, 60, 55, 50, 60, 70, 75, 80, 90, 85, 60, 45, 35, 30, 22];
-  return (
-    <div className="bg-[#0d0d0d] rounded-xl p-3 mb-4 h-28 flex items-end gap-0.5 overflow-hidden">
-      {heights.map((h, i) => (
-        <div key={i} className="flex-1 rounded-t"
-          style={{
-            height: `${h}%`,
-            backgroundColor: (i >= 3 && i <= 5) ? '#22C55E' : (i >= 18 && i <= 20) ? '#EF4444' : '#2a2a2a'
-          }} />
-      ))}
-    </div>
-  );
-};
+const ActivityChart = () => (
+  <div style={{
+    background: '#0d0d0d', borderRadius: '12px',
+    marginBottom: '16px', height: '112px',
+  }} />
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -264,151 +317,382 @@ const TargetingIntel: React.FC = () => {
   // ── Page ─────────────────────────────────────────────────────────────────
   return (
     <>
-    <Navigation />
-    <div className="min-h-screen bg-black text-white">
+      <Navigation />
+      <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
 
-      <div className="px-6 py-6 max-w-[1200px] mx-auto">
+        <div className="px-6 py-6 max-w-[1200px] mx-auto">
 
-        {/* PAGE HEADER */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Targeting Intelligence</h1>
-            <p className="text-gray-400 text-sm mt-1">AI-powered audience insights and targeting strategies</p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleRefresh} disabled={refreshing}
-              className="flex items-center gap-2 border border-[#333] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#1a1a1a] transition-colors">
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            <button onClick={handleExport}
-              className="flex items-center gap-2 bg-[#1a8cff] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#0070e0] transition-colors">
-              <Download className="w-3.5 h-3.5" />
-              Export
-            </button>
-          </div>
-        </div>
-
-        {/* STATUS BADGES */}
-        <div className="flex flex-wrap gap-3 mb-5">
-          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
-            <Shield className="w-3.5 h-3.5 text-gray-300" />
-            <span className="text-sm text-white">{userInfo?.name || 'Ravi Kumar'}</span>
-            <span className="bg-[#22C55E] text-black text-[10px] font-bold px-2 py-0.5 rounded">Authenticated</span>
-          </div>
-          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
-            <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-yellow-400'}`} />
-            <span className="text-sm text-white">Live Data</span>
-            <span className="border border-[#444] text-gray-300 text-[10px] px-2 py-0.5 rounded">{dataSource}</span>
-          </div>
-          <div className="flex items-center gap-2 border border-[#333] rounded-lg px-3 py-1.5 bg-[#111]">
-            <Cpu className="w-3.5 h-3.5 text-gray-300" />
-            <span className="text-sm text-white">AI Confidence:</span>
-            <span className="text-sm font-bold text-white">{overallConf}%</span>
-          </div>
-        </div>
-
-        {/* TAB NAVIGATION */}
-        <div className="border-b border-[#222] mb-6">
-          <div className="flex">
-            {tabs.map((tab, i) => {
-              const key = tabKeys[i];
-              const active = activeTab === key;
-              return (
-                <button key={tab} onClick={() => setActiveTab(key)}
-                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${active ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white'
-                    }`}>
-                  {tab}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── OVERVIEW TAB ─────────────────────────────────────────────── */}
-        {activeTab === 'overview' && (
-          <>
-            {/* Row 1 */}
-            <div className="grid grid-cols-3 gap-5 mb-5">
-              {/* Left panel */}
-              <NeonCard className="col-span-1" innerClass="p-5" radius="1rem">
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold text-white">{competitorName}</h2>
-                  <p className="text-gray-400 text-xs">Targeting Intelligence Analysis</p>
-                </div>
-                <MetricCard title="Primary Age" subtitle="Age:" value={ageRange} color="#F59E0B" />
-                <MetricCard title="Purchase Intent" subtitle={purchaseConf} value={purchaseIntent} color="#06B6D4" />
-                <MetricCard title="Mobile Share" subtitle={iosShare} value={mobileShare} color="#F59E0B" />
-                <MetricCard title="Peak CPM" subtitle="6pm - 9pm" value={peakCpm} color="#06B6D4" />
-              </NeonCard>
-
-              {/* Right panel */}
-              <NeonCard className="col-span-2" innerClass="p-5" radius="1rem">
-                <h2 className="text-xl font-bold text-white mb-1">AI Recommendations</h2>
-                <p className="text-gray-400 text-xs mb-4">Optimized targeting strategies</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <RecoCard title="Focus Audience" body={<>Prioritize <strong>25-34 age group</strong> with mobile-first approach. iOS users show 65% higher engagement</>} />
-                  <RecoCard title="Optimal Timing" body={<>Schedule ads during <strong>3 am - 6 am window</strong> for 40% lower CPC. Avoid peak evening hours for cost efficiency.</>} />
-                  <RecoCard title="Interest Targeting" body={<>Allocate <strong>60% of budget</strong> to "Fitness &amp; Running" and "Health &amp; Wellness" interest clusters showing 92%+ affinity.</>} />
-                  <RecoCard title="AI Insights" body={<>Focus <strong>60% of budget</strong> on awareness to fill top funnel. Strong retargeting opportunity observed</>} />
-                </div>
-              </NeonCard>
+          {/* PAGE HEADER */}
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Targeting Intelligence</h1>
+              <p className="text-gray-400 text-sm mt-1">AI-powered audience insights and targeting strategies</p>
             </div>
+            <div className="flex gap-2">
+              {/* Refresh — outlined white button */}
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  border: '1px solid #555', borderRadius: '8px',
+                  background: 'transparent', color: '#fff',
+                  fontSize: '13px', fontWeight: 500,
+                  padding: '7px 14px', cursor: 'pointer',
+                }}
+              >
+                <RefreshCw style={{ width: 14, height: 14 }} className={refreshing ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+              {/* Export — teal/cyan filled button */}
+              <button
+                onClick={handleExport}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  border: 'none', borderRadius: '8px',
+                  background: '#0ea5e9', color: '#fff',
+                  fontSize: '13px', fontWeight: 500,
+                  padding: '7px 14px', cursor: 'pointer',
+                }}
+              >
+                <Download style={{ width: 14, height: 14 }} />
+                Export
+              </button>
+            </div>
+          </div>
 
-            {/* Row 2: Audience Demographics */}
-            <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
-                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Updated Today</span>
-              </div>
-              <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
-                  <span className="text-xs text-gray-500">Percentage</span>
+          {/* STATUS BADGES */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            {/* Ravi Kumar / Authenticated */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid #333', borderRadius: '8px',
+              padding: '6px 12px', background: '#111',
+            }}>
+              <Shield style={{ width: 14, height: 14, color: '#9ca3af' }} />
+              <span style={{ fontSize: '13px', color: '#fff' }}>{userInfo?.name || 'Ravi Kumar'}</span>
+              <span style={{
+                background: '#22C55E', color: '#000',
+                fontSize: '10px', fontWeight: 700,
+                padding: '2px 7px', borderRadius: '4px',
+              }}>Authenticated</span>
+            </div>
+            {/* Live Data */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid #333', borderRadius: '8px',
+              padding: '6px 12px', background: '#111',
+            }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: connectionStatus === 'connected' ? '#4ade80' : '#facc15',
+              }} />
+              <span style={{ fontSize: '13px', color: '#fff' }}>Live Data</span>
+              <span style={{
+                border: '1px solid #444', color: '#d1d5db',
+                fontSize: '10px', padding: '2px 7px', borderRadius: '4px',
+              }}>{dataSource}</span>
+            </div>
+            {/* AI Confidence */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              border: '1px solid #333', borderRadius: '8px',
+              padding: '6px 12px', background: '#111',
+            }}>
+              <Cpu style={{ width: 14, height: 14, color: '#9ca3af' }} />
+              <span style={{ fontSize: '13px', color: '#fff' }}>AI Confidence:</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{overallConf}%</span>
+            </div>
+          </div>
+
+          {/* TAB NAVIGATION */}
+          <div style={{ borderBottom: '1px solid #222', marginBottom: '24px' }}>
+            <div style={{ display: 'flex' }}>
+              {tabs.map((tab, i) => {
+                const key = tabKeys[i];
+                const active = activeTab === key;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(key)}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: active ? '2px solid #fff' : '2px solid transparent',
+                      color: active ? '#fff' : '#6b7280',
+                      cursor: 'pointer',
+                      transition: 'color 0.2s',
+                    }}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── OVERVIEW TAB ─────────────────────────────────────────────── */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Row 1: Left light panel + Right dark AI panel */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', marginBottom: '20px' }}>
+
+                {/* LEFT PANEL — light gray background */}
+                <div style={{
+                  background: '#c8c8c8',
+                  borderRadius: '14px',
+                  padding: '20px',
+                }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#111', margin: 0 }}>{competitorName}</h2>
+                    <p style={{ fontSize: '12px', color: '#555', margin: '2px 0 0' }}>Targeting Intelligence Analysis</p>
+                  </div>
+
+                  {/* Primary Age — gradient text */}
+                  <MetricCard
+                    title="Primary Age"
+                    subtitle="Age:"
+                    value={ageRange}
+                    gradient={true}
+                  />
+
+                  {/* Purchase Intent — gradient text */}
+                  <MetricCard
+                    title="Purchase Intent"
+                    subtitle={purchaseConf}
+                    value={purchaseIntent}
+                    gradient={true}
+                  />
+
+                  {/* Mobile Share — gradient text */}
+                  <MetricCard
+                    title="Mobile Share"
+                    subtitle={iosShare}
+                    value={mobileShare}
+                    gradient={true}
+                  />
+
+                  {/* Peak CPM — gradient text */}
+                  <MetricCard
+                    title="Peak CPM"
+                    subtitle="6pm - 9pm"
+                    value={peakCpm}
+                    gradient={true}
+                  />
                 </div>
-                {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+
+                {/* RIGHT PANEL — dark with AI Recommendations */}
+                <div style={{
+                  background: '#111',
+                  borderRadius: '14px',
+                  border: '1px solid #222',
+                  padding: '20px',
+                }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>AI Recommendations</h2>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 16px' }}>Optimized targeting strategies</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <RecoCard
+                      title="Focus Audience"
+                      body={<>Prioritize <strong>25-34 age group</strong> with mobile-first approach. iOS users show 65% higher engagement</>}
+                    />
+                    <RecoCard
+                      title="Optimal Timing"
+                      body={<>Schedule ads during <strong>3 am - 6 am window</strong> for 40% lower CPC. Avoid peak evening hours for cost efficiency.</>}
+                    />
+                    <RecoCard
+                      title="Interest Targeting"
+                      body={<>Allocate <strong>60% of budget</strong> to "Fitness &amp; Running" and "Health &amp; Wellness" interest clusters showing 92%+ affinity.</>}
+                    />
+                    <RecoCard
+                      title="AI Insights"
+                      body={<>Focus <strong>60% of budget</strong> on awareness to fill top funnel. Strong retargeting opportunity observed</>}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
+
+              {/* Row 2: Audience Demographics */}
+              <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
+                  {/* Solid teal "Updated Today" pill */}
+                  <span style={{
+                    background: '#0d9488',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '4px 12px',
+                    borderRadius: '999px',
+                  }}>Updated Today</span>
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
                     <span className="text-xs text-gray-500">Percentage</span>
                   </div>
-                  <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
-                  <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
-                  <GenderBlock label="Others" value={otherVal} color="#A855F7" />
+                  {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
                 </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
-                  <div className="flex items-center justify-center h-[80%]">
-                    <div className="text-center">
-                      <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
-                      <div className="text-gray-400 text-sm">{purchaseConf}</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
+                      <span className="text-xs text-gray-500">Percentage</span>
+                    </div>
+                    <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
+                    <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
+                    <GenderBlock label="Others" value={otherVal} color="#A855F7" />
+                  </div>
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
+                    <div className="flex items-center justify-center h-[80%]">
+                      <div className="text-center">
+                        <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
+                        <div className="text-gray-400 text-sm">{purchaseConf}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </NeonCard>
+              </NeonCard>
 
-            {/* Row 3: Interest Clusters */}
-            <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
-                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
-              </div>
-              <div className="bg-[#0d0d0d] rounded-xl p-4">
-                {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
-              </div>
-            </NeonCard>
+              {/* Row 3: Interest Clusters */}
+              <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
+                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+                </div>
+              </NeonCard>
 
-            {/* Row 4: Competitor Overlap + Binding Strategy */}
-            <div className="grid grid-cols-2 gap-5 mb-5">
-              <div className="flex flex-col gap-4">
-                {/* Competitor Overlap */}
+              {/* Row 4: Competitor Overlap + Binding Strategy */}
+              <div className="grid grid-cols-2 gap-5 mb-5">
+                <div className="flex flex-col gap-4">
+                  {/* Competitor Overlap */}
+                  <NeonCard innerClass="p-5" radius="1rem">
+                    <h2 className="text-base font-bold text-white mb-4">Competitor Overlap</h2>
+                    <div className="text-center mb-3">
+                      <div style={{
+                        fontSize: '3.75rem', fontWeight: 800, textAlign: 'center',
+                        background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                      }}>58%</div>
+                      <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
+                    </div>
+                    <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
+                      <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
+                    </div>
+                  </NeonCard>
+                  {/* Data Information */}
+                  <NeonCard innerClass="p-5" radius="1rem">
+                    <h2 className="text-base font-bold text-white mb-3">Data Information</h2>
+                    <div className="space-y-2 text-xs text-gray-400">
+                      {[
+                        ['Last Calculated', data?.last_calculated_at ? new Date(data.last_calculated_at).toLocaleDateString() : 'Today'],
+                        ['Updated', data?.updated_at ? new Date(data.updated_at).toLocaleDateString() : 'Today'],
+                        ['Created', data?.created_at ? new Date(data.created_at).toLocaleDateString() : 'Today'],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex justify-between">
+                          <span>{k}</span><span className="text-white">{v}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between">
+                        <span>Analysis Type</span><span className="text-[#06B6D4]">AI Predictive</span>
+                      </div>
+                    </div>
+                  </NeonCard>
+                </div>
+
+                {/* Binding Strategy */}
+                <NeonCard innerClass="p-5" radius="1rem">
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
+                    <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
+                  </div>
+                  <ActivityChart />
+                  <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                  <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
+                  <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
+                </NeonCard>
+              </div>
+            </>
+          )}
+
+          {/* ── DEMOGRAPHICS TAB ─────────────────────────────────────────── */}
+          {activeTab === 'demographics' && (
+            <div className="space-y-5">
+              <NeonCard innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
+                  <span style={{
+                    background: '#0d9488', color: '#fff',
+                    fontSize: '11px', fontWeight: 600,
+                    padding: '4px 12px', borderRadius: '999px',
+                  }}>Updated Today</span>
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
+                    <span className="text-xs text-gray-500">Percentage</span>
+                  </div>
+                  {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
+                      <span className="text-xs text-gray-500">Percentage</span>
+                    </div>
+                    <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
+                    <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
+                    <GenderBlock label="Others" value={otherVal} color="#A855F7" />
+                  </div>
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
+                    <div className="flex items-center justify-center h-40">
+                      <div className="text-center">
+                        <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
+                        <div className="text-gray-400 text-sm">{purchaseConf}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </NeonCard>
+            </div>
+          )}
+
+          {/* ── INTERESTS TAB ────────────────────────────────────────────── */}
+          {activeTab === 'interests' && (
+            <div className="space-y-5">
+              <NeonCard innerClass="p-5" radius="1rem">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
+                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
+                </div>
+                <div className="bg-[#0d0d0d] rounded-xl p-4">
+                  {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+                </div>
+              </NeonCard>
+            </div>
+          )}
+
+          {/* ── STRATEGY TAB ─────────────────────────────────────────────── */}
+          {activeTab === 'strategy' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-5">
                 <NeonCard innerClass="p-5" radius="1rem">
                   <h2 className="text-base font-bold text-white mb-4">Competitor Overlap</h2>
                   <div className="text-center mb-3">
-                    <div className="text-6xl font-bold text-[#06B6D4]">58%</div>
+                    <div style={{
+                      fontSize: '3.75rem', fontWeight: 800, textAlign: 'center',
+                      background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
+                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                    }}>58%</div>
                     <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
                   </div>
                   <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
@@ -417,169 +701,64 @@ const TargetingIntel: React.FC = () => {
                     <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
                   </div>
                 </NeonCard>
-                {/* Data Information */}
                 <NeonCard innerClass="p-5" radius="1rem">
-                  <h2 className="text-base font-bold text-white mb-3">Data Information</h2>
-                  <div className="space-y-2 text-xs text-gray-400">
-                    {[
-                      ['Last Calculated', data?.last_calculated_at ? new Date(data.last_calculated_at).toLocaleDateString() : 'Today'],
-                      ['Updated', data?.updated_at ? new Date(data.updated_at).toLocaleDateString() : 'Today'],
-                      ['Created', data?.created_at ? new Date(data.created_at).toLocaleDateString() : 'Today'],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex justify-between">
-                        <span>{k}</span><span className="text-white">{v}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between">
-                      <span>Analysis Type</span><span className="text-[#06B6D4]">AI Predictive</span>
-                    </div>
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
+                    <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
                   </div>
+                  <ActivityChart />
+                  <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                  <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
+                  <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
                 </NeonCard>
               </div>
-
-              {/* Binding Strategy */}
-              <NeonCard innerClass="p-5" radius="1rem">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
-                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
-                </div>
-                <ActivityChart />
-                <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
-                <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
-                <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
-              </NeonCard>
             </div>
-          </>
-        )}
+          )}
 
-        {/* ── DEMOGRAPHICS TAB ─────────────────────────────────────────── */}
-        {activeTab === 'demographics' && (
-          <div className="space-y-5">
-            <NeonCard innerClass="p-5" radius="1rem">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-white">Audience Demographics</h2>
-                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Updated Today</span>
+          {/* ── FOOTER ───────────────────────────────────────────────────── */}
+          <div className="border-t border-[#1a1a1a] mt-6 pt-5">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-gray-400 text-xs">
+                  Targeting Intelligence for {competitorName} - Last Analysis: {lastAnalysis}
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Personalized insights for {userInfo?.name || 'Ravi Kumar'} · {allData.length} competitor{allData.length !== 1 ? 's' : ''} tracked
+                </p>
               </div>
-              <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
-                  <span className="text-xs text-gray-500">Percentage</span>
-                </div>
-                {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+              <div className="flex gap-2">
+                <button onClick={handleRefresh} disabled={refreshing}
+                  className="flex items-center gap-2 border border-[#333] text-gray-300 text-xs px-3 py-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors">
+                  <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh Data
+                </button>
+                <span className="border border-[#333] text-gray-400 text-xs px-3 py-1.5 rounded-lg">v1 · AI-Powered</span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-gray-300 font-medium">Gender Distribution</span>
-                    <span className="text-xs text-gray-500">Percentage</span>
-                  </div>
-                  <GenderBlock label="Male" value={maleVal} color="#06B6D4" />
-                  <GenderBlock label="Female" value={femaleVal} color="#F59E0B" />
-                  <GenderBlock label="Others" value={otherVal} color="#A855F7" />
-                </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  <span className="text-sm text-gray-300 font-medium block mb-4">Purchase Intent Analysis</span>
-                  <div className="flex items-center justify-center h-40">
-                    <div className="text-center">
-                      <div className="text-5xl font-bold text-[#06B6D4] mb-2">{purchaseIntent}</div>
-                      <div className="text-gray-400 text-sm">{purchaseConf}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </NeonCard>
-          </div>
-        )}
-
-        {/* ── INTERESTS TAB ────────────────────────────────────────────── */}
-        {activeTab === 'interests' && (
-          <div className="space-y-5">
-            <NeonCard innerClass="p-5" radius="1rem">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
-                <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
-              </div>
-              <div className="bg-[#0d0d0d] rounded-xl p-4">
-                {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
-              </div>
-            </NeonCard>
-          </div>
-        )}
-
-        {/* ── STRATEGY TAB ─────────────────────────────────────────────── */}
-        {activeTab === 'strategy' && (
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-5">
-              <NeonCard innerClass="p-5" radius="1rem">
-                <h2 className="text-base font-bold text-white mb-4">Competitor Overlap</h2>
-                <div className="text-center mb-3">
-                  <div className="text-6xl font-bold text-[#06B6D4]">58%</div>
-                  <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
-                </div>
-                <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
-                  <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
-                </div>
-              </NeonCard>
-              <NeonCard innerClass="p-5" radius="1rem">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
-                  <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
-                </div>
-                <ActivityChart />
-                <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
-                <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
-                <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
-              </NeonCard>
             </div>
-          </div>
-        )}
-
-        {/* ── FOOTER ───────────────────────────────────────────────────── */}
-        <div className="border-t border-[#1a1a1a] mt-6 pt-5">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-gray-400 text-xs">
-                Targeting Intelligence for {competitorName} - Last Analysis: {lastAnalysis}
+            <div className="text-center mt-4">
+              <p className="text-gray-500 text-xs">
+                Data last Updated:{' '}
+                {data?.updated_at
+                  ? new Date(data.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  + ' at ' + new Date(data.updated_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                  : 'January 7, 2026 at 06:35 PM'}
               </p>
-              <p className="text-gray-400 text-xs mt-1">
-                Personalized insights for {userInfo?.name || 'Ravi Kumar'} · {allData.length} competitor{allData.length !== 1 ? 's' : ''} tracked
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleRefresh} disabled={refreshing}
-                className="flex items-center gap-2 border border-[#333] text-gray-300 text-xs px-3 py-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors">
-                <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh Data
-              </button>
-              <span className="border border-[#333] text-gray-400 text-xs px-3 py-1.5 rounded-lg">v1 · AI-Powered</span>
+              <p className="text-gray-500 text-xs mt-0.5">AI-Powered insights update every 24 hours</p>
             </div>
           </div>
-          <div className="text-center mt-4">
-            <p className="text-gray-500 text-xs">
-              Data last Updated:{' '}
-              {data?.updated_at
-                ? new Date(data.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                + ' at ' + new Date(data.updated_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                : 'January 7, 2026 at 06:35 PM'}
-            </p>
-            <p className="text-gray-500 text-xs mt-0.5">AI-Powered insights update every 24 hours</p>
-          </div>
+
         </div>
 
-      </div>
-
-      {/* Global keyframes */}
-      <style>{`
+        {/* Global keyframes */}
+        <style>{`
         @keyframes loadbar {
           0%   { width: 0%;   margin-left: 0; }
           50%  { width: 60%;  margin-left: 20%; }
           100% { width: 0%;   margin-left: 100%; }
         }
       `}</style>
-    </div>
-    <Footer />
+      </div>
+      <Footer />
     </>
   );
 };
