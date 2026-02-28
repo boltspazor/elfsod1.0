@@ -483,32 +483,32 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
         </h3>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
-            <div className="bg-gray-900 rounded-2xl p-4 h-full">
+          <div className="rounded-3xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
+            <div className="bg-gray-900 rounded-3xl p-4 h-full">
               <p className="text-sm text-gray-400 mb-1">Est. Impressions</p>
               <p className="text-xl font-bold text-white">{currentProjections.daily.impressions}</p>
               <p className="text-xs text-emerald-400 mt-1">per day</p>
             </div>
           </div>
 
-          <div className="rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
-            <div className="bg-gray-900 rounded-2xl p-4 h-full">
+          <div className="rounded-3xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
+            <div className="bg-gray-900 rounded-3xl p-4 h-full">
               <p className="text-sm text-gray-400 mb-1">Est. Clicks</p>
               <p className="text-xl font-bold text-white">{currentProjections.daily.clicks}</p>
               <p className="text-xs text-emerald-400 mt-1">per day</p>
             </div>
           </div>
 
-          <div className="rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
-            <div className="bg-gray-900 rounded-2xl p-4 h-full">
+          <div className="rounded-3xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
+            <div className="bg-gray-900 rounded-3xl p-4 h-full">
               <p className="text-sm text-gray-400 mb-1">Est. Conversions</p>
               <p className="text-xl font-bold text-white">{currentProjections.daily.conversions}</p>
               <p className="text-xs text-emerald-400 mt-1">per day</p>
             </div>
           </div>
 
-          <div className="rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
-            <div className="bg-gray-900 rounded-2xl p-4 h-full">
+          <div className="rounded-3xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
+            <div className="bg-gray-900 rounded-3xl p-4 h-full">
               <p className="text-sm text-gray-400 mb-1">Target CPA</p>
               <p className="text-xl font-bold text-white">{currentProjections.daily.cpa}</p>
               <p className="text-xs text-cyan-400 mt-1">optimizing</p>
@@ -517,8 +517,8 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
         </div>
 
         {/* Campaign Summary */}
-        <div className="mt-6 rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
-          <div className="bg-gray-900 rounded-2xl p-6">
+        <div className="mt-6 rounded-3xl p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500">
+          <div className="bg-gray-900 rounded-3xl p-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
               <Target className="w-8 h-8 text-cyan-400" />
