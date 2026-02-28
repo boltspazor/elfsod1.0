@@ -1,18 +1,36 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&family=Stack+Sans+Notch:wght@200..700&display=swap');
+
+/* Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&family=Stack+Sans+Notch:wght@200..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:wght@300;400;500;600;700;800&display=swap");
+
 @custom-variant dark (&:is(.dark *));
+
+/* Apply globally */
+:root {
+  font-family: "Montserrat Alternates", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
 
 /* Custom surveillance dashboard styles */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: "Mulish", sans-serif;
+    /* keep your tailwind base colors */
+    @apply bg-background text-foreground;
+    /* GLOBAL FONT */
+    font-family: "Montserrat Alternates", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Optional: use Mulish anywhere with class="font-mulish" */
+  .font-mulish {
+    font-family: "Mulish", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   }
 }
 
@@ -24,7 +42,7 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   /* Custom scrollbar for surveillance dashboard */
   .scrollbar-surveillance::-webkit-scrollbar {
     width: 6px;
@@ -36,34 +54,34 @@
   .scrollbar-surveillance::-webkit-scrollbar-thumb {
     @apply bg-gray-400 rounded-full hover:bg-gray-500;
   }
-  
+
   /* Chart gradients */
   .bg-gradient-chart-blue {
     background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
   }
-  
+
   .bg-gradient-chart-green {
     background: linear-gradient(180deg, #10B981 0%, #059669 100%);
   }
-  
+
   .bg-gradient-chart-purple {
     background: linear-gradient(180deg, #8B5CF6 0%, #7C3AED 100%);
   }
-  
+
   .bg-gradient-chart-orange {
     background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
   }
-  
+
   /* Glass morphism for cards */
   .glass-card {
     @apply bg-white/80 backdrop-blur-sm border border-white/20;
   }
-  
+
   /* Loading animation */
   .loading-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
+
   @keyframes pulse {
     0%, 100% {
       opacity: 1;
@@ -72,7 +90,7 @@
       opacity: 0.5;
     }
   }
-  
+
   /* Shimmer effect */
   .shimmer {
     background: linear-gradient(
@@ -84,7 +102,7 @@
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
-  
+
   @keyframes shimmer {
     0% {
       background-position: -200% 0;
@@ -102,7 +120,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  
+
   /* Color palette for surveillance dashboard */
   --color-surveillance-primary: #2563eb;
   --color-surveillance-secondary: #7c3aed;
@@ -111,14 +129,14 @@
   --color-surveillance-warning: #f59e0b;
   --color-surveillance-danger: #ef4444;
   --color-surveillance-info: #3b82f6;
-  
+
   /* Chart colors */
   --color-chart-1: #3b82f6;  /* Blue */
   --color-chart-2: #10b981;  /* Green */
   --color-chart-3: #8b5cf6;  /* Purple */
   --color-chart-4: #f59e0b;  /* Orange */
   --color-chart-5: #ef4444;  /* Red */
-  
+
   /* Background colors */
   --color-background: oklch(0.985 0 0);
   --color-foreground: oklch(0.145 0 0);
