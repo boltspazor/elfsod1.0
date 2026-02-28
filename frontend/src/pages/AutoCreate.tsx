@@ -13,11 +13,11 @@ export type CampaignGoal = 'awareness' | 'consideration' | 'conversions' | 'rete
 
 /* accent colours per step, matching the image Next button colours */
 const NEXT_COLORS: Record<number, string> = {
-  0: '#00e5d4', // cyan  – Campaign Goal
-  1: '#8b6fff', // purple – Creative Assets
-  2: '#c944ff', // purple – Copy & Messaging
-  3: '#00e5d4', // cyan  – Audience
-  4: '#00e5d4', // cyan  – Budget & Testing
+  0: '#8b5cf6', // violet-500 – Campaign Goal
+  1: '#8b5cf6', // violet-500 – Creative Assets
+  2: '#8b5cf6', // violet-500 – Copy & Messaging
+  3: '#8b5cf6', // violet-500 – Audience
+  4: '#8b5cf6', // violet-500 – Budget & Testing
 };
 
 const AutoCreate: React.FC = () => {
