@@ -11,14 +11,14 @@ import logoFooter from "./SocialIcons/LogoFooter.png";
 
 export default function Footer() {
   return (
-    <footer className="relative w-full bg-white text-black px-4 sm:px-6 md:px-8 lg:px-16 xl:px-24 pt-12 sm:pt-16 md:pt-20 pb-8 sm:pb-10 md:pb-14 overflow-hidden border-t border-gray-200 mb-16 lg:mb-0">
+    <footer className="relative w-full bg-gray-500 text-black px-4 sm:px-6 md:px-8 lg:px-16 xl:px-24 pt-12 sm:pt-16 md:pt-20 pb-8 sm:pb-10 md:pb-14 overflow-hidden border-t border-gray-200 mb-16 lg:mb-0">
 
       {/* ===================== TOP CONTENT GRID ===================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 md:gap-12">
 
         {/* ---------- LEFT DESCRIPTION ---------- */}
         <div className="space-y-4 sm:space-y-6 max-w-sm">
-          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-800 leading-relaxed">
             Your autonomous advertising operating system.
             <br />
             Build smarter campaigns AI-Powered Insights.
@@ -62,7 +62,7 @@ export default function Footer() {
         {/* ---------- PRODUCT ---------- */}
         <div>
           <h4 className="font-semibold mb-4">Product</h4>
-          <ul className="space-y-3 text-gray-600">
+          <ul className="space-y-3 text-gray-800">
             <li className="hover:text-black cursor-pointer">Features</li>
             <li className="hover:text-black cursor-pointer">Pricing</li>
             <li className="hover:text-black cursor-pointer">Integrations</li>
@@ -74,7 +74,7 @@ export default function Footer() {
         {/* ---------- COMPANY ---------- */}
         <div>
           <h4 className="font-semibold mb-4">Company</h4>
-          <ul className="space-y-3 text-gray-600">
+          <ul className="space-y-3 text-gray-800">
             <li className="hover:text-black cursor-pointer">About Us</li>
             <li className="hover:text-black cursor-pointer">Careers</li>
             <li className="hover:text-black cursor-pointer">Blog</li>
@@ -87,7 +87,7 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-4">Get In Touch</h4>
 
-          <ul className="space-y-4 text-gray-600">
+          <ul className="space-y-4 text-gray-800">
 
             <li className="flex items-center gap-3">
               <div className="bg-gray-100 p-1.5 rounded-full">
@@ -131,7 +131,7 @@ export default function Footer() {
       <div className="mt-20 border-t border-gray-300" />
 
       {/* ===================== BOTTOM BAR ===================== */}
-      <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-600 gap-4">
+      <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-800 gap-4">
         <span>© 2025 Elfsod. All Rights Reserved.</span>
 
         <div className="flex gap-6">
