@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Loader2 } from 'lucide-react';
+import { GENAI_API_URL } from '../config';
 
 interface ChatInputProps {
   value: string;
@@ -44,7 +45,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:5002/genai_call', {
+      const response = await fetch(`${GENAI_API_URL}/genai_call`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +85,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       console.error('Error calling API:', error);
       
       // Pass error message to parent
-      onResponseReceived('I apologize, but I encountered an error connecting to the server. Please make sure the backend is running on http://localhost:5002 and try again.');
+      onResponseReceived(`I apologize, but I encountered an error connecting to the server. Please make sure the backend is running on ${GENAI_API_URL} and try again.`);
     } finally {
       setIsLoading(false);
     }

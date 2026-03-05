@@ -1,5 +1,6 @@
 // src/components/auto-create/CopyMessagingStep.tsx
 import React, { useState, useEffect } from 'react';
+import { AUTOCREATE_API_URL } from '../../config';
 
 interface CopyMessagingStepProps {
   campaignId?: string;
@@ -17,7 +18,7 @@ const TONE_COLORS: Record<string, string> = {
   Urgent: 'linear-gradient(135deg,#ff4fcb,#8b6fff)',
 };
 
-const API_BASE_URL = 'http://localhost:5050/api';
+const API_BASE_URL = `${AUTOCREATE_API_URL}/api`;
 
 const CopyMessagingStep: React.FC<CopyMessagingStepProps> = ({
   campaignId: propCampaignId,

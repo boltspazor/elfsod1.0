@@ -1,6 +1,7 @@
 // src/components/auto-create/CampaignGoalStep.tsx
 import React, { useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { AUTOCREATE_API_URL } from '../../config';
 
 interface CampaignGoalStepProps {
   selectedGoal: 'awareness' | 'consideration' | 'conversions' | 'retention' | null;
@@ -81,7 +82,7 @@ const CampaignGoalStep: React.FC<CampaignGoalStepProps> = ({
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch('http://localhost:5050/api/campaign-goal', {
+      const res = await fetch(`${AUTOCREATE_API_URL}/api/campaign-goal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ goal: goalId, user_id: userId, platforms: selectedPlatforms }),

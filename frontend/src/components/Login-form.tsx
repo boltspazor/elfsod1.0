@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { useNavigate } from "react-router-dom"
 import googleIcon from "./SocialIcons/google-svgrepo-com.svg"
 import appleIcon from "./SocialIcons/apple-173-svgrepo-com.svg"
+import { AUTH_API_URL } from "../config"
 
 
 export function LoginForm({
@@ -33,7 +34,7 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5003/login", {
+      const response = await fetch(`${AUTH_API_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

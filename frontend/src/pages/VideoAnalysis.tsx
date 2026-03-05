@@ -25,15 +25,15 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config";
 
 /* -------------------- Supabase -------------------- */
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL || "https://hkgcyrheviatmdflbxqu.supabase.co";
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhrZ2N5cmhldmlhdG1kZmxieHF1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjQwMzM0MSwiZXhwIjoyMDgxOTc5MzQxfQ.1KdXtpd4amyR7nOBZ4DNrE48fngV3tCHoLIqjxdrMu0";
-
-const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
+// NOTE: This page uses the same Supabase project as the rest of the app.
+// The credentials come from environment variables – see .env / .env.example.
+// ⚠️  Never use a service_role key in frontend code – it bypasses Row Level
+//     Security and grants full database access to anyone who reads the bundle.
+//     If you need elevated access, proxy the request through your backend.
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* -------------------- Types -------------------- */
 interface InfluencerName {

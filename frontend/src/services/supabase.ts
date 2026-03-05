@@ -1,5 +1,6 @@
 // src/services/supabase.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config';
 
 class SupabaseService {
   private static instance: SupabaseClient | null = null;
@@ -9,8 +10,8 @@ class SupabaseService {
       return this.instance;
     }
 
-    const url = 'https://syhypngkvalsakepxbtu.supabase.co';
-    const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8';
+    const url = SUPABASE_URL;
+    const key = SUPABASE_ANON_KEY;
 
     console.log('🔍 Checking environment variables:', {
       hasUrl: !!url,

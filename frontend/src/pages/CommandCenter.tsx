@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Zap, Eye, Sparkles, Plus, Mic, Send, Loader2 } from 'lucide-react';
 import Navigation from '../components/Navigation';
+import { GENAI_API_URL } from '../config';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface Message {
@@ -129,7 +130,7 @@ const CommandCenter: React.FC = () => {
     setMessages(prev => [...prev, { id: typingId, type: 'bot', content: '__typing__', timestamp: '' }]);
 
     try {
-      const res = await fetch('http://127.0.0.1:5002/genai_call', {
+      const res = await fetch(`${GENAI_API_URL}/genai_call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

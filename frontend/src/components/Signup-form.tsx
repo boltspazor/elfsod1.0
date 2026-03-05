@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { useNavigate } from "react-router-dom"
 import googleIcon from "./SocialIcons/google-svgrepo-com.svg"
 import appleIcon from "./SocialIcons/apple-173-svgrepo-com.svg"
+import { AUTH_API_URL } from "../config"
 
 export function SignupForm({
   className,
@@ -34,7 +35,7 @@ export function SignupForm({
     setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5003/signup", {
+      const response = await fetch(`${AUTH_API_URL}/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 // GenerateAdPopup.tsx - FIXED VERSION with immediate image display
 import React, { useState, useEffect } from 'react';
 import { colors } from '../styles/colors';
+import { IMAGE_GEN_API_URL } from '../config';
 
 interface GenerateAdPopupProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
 
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:5002/check_local_image/${taskId}`);
+        const response = await fetch(`${IMAGE_GEN_API_URL}/check_local_image/${taskId}`);
         const data = await response.json();
 
         console.log('Local image check response:', data);
@@ -131,7 +132,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
 
         try {
           // Check if local copy exists
-          const response = await fetch(`http://localhost:5002/check_local_image/${taskId}`);
+          const response = await fetch(`${IMAGE_GEN_API_URL}/check_local_image/${taskId}`);
           const data = await response.json();
 
           if (data.success && data.status === 'available_locally') {
@@ -191,7 +192,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
       // Construct enhanced prompt
       const enhancedPrompt = `${prompt}`;
 
-      const response = await fetch('http://localhost:5002/image_gen', {
+      const response = await fetch(`${IMAGE_GEN_API_URL}/image_gen`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
