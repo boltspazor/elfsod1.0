@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import { HeroParallax } from "./hero-parallax";
 
 export const products = [

@@ -7,7 +7,7 @@ interface CTASectionProps {
   onWatchDemo?: () => void;
 }
 
-export const CTASection = ({ onGetStarted, onWatchDemo }: CTASectionProps) => {
+export const CTASection = ({ onWatchDemo }: CTASectionProps) => {
   const handleGetStarted = async () => {
     // Simulate API call
     return new Promise((resolve) => {

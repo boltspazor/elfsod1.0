@@ -221,9 +221,9 @@ const searchSuggestions = [
 
 const AdSurveillance = () => {
   // User state
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [_userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [_isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Competitors state
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -262,7 +262,7 @@ const AdSurveillance = () => {
   const [dataViewMode, setDataViewMode] = useState<"latest" | "historical">(
     "latest",
   );
-  const [expandedSections, setExpandedSections] = useState<
+  const [_expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
     financial: true,
@@ -274,18 +274,18 @@ const AdSurveillance = () => {
   });
 
   // Analytics state
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+  const [_analyticsData, _setAnalyticsData] = useState<AnalyticsData | null>(
     null,
   );
-  const [activeChart, setActiveChart] = useState("overview");
+  const [_activeChart, _setActiveChart] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Trending ads state
   const [trendingAds, setTrendingAds] = useState<TrendingAdWithEngagement[]>(
     [],
   );
-  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
-  const [trendingSearchResult, setTrendingSearchResult] =
+  const [_isLoadingTrending, setIsLoadingTrending] = useState(false);
+  const [_trendingSearchResult, setTrendingSearchResult] =
     useState<TrendingSearchResponse | null>(null);
   const [trendingSearchKeyword, setTrendingSearchKeyword] = useState("");
   const [selectedTrendingPlatforms, setSelectedTrendingPlatforms] = useState<
@@ -546,7 +546,7 @@ const AdSurveillance = () => {
   // NEW: Calculate competitor metrics summary
   const calculateCompetitorMetricsSummary = (
     ads: AdData[],
-    competitors: Competitor[],
+    _competitors: Competitor[],
   ): CompetitorMetricsSummary[] => {
     const competitorMap: Record<
       string,
@@ -1205,6 +1205,7 @@ const AdSurveillance = () => {
   };
 
   // Toggle section expansion
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -1411,9 +1412,9 @@ const AdSurveillance = () => {
               paddingAngle={5}
               dataKey="count"
               nameKey="platform"
-              label={({ platform, count }) => `${platform}: ${count}`}
+              label={({ name, value }: any) => `${name}: ${value}`}
             >
-              {chartData.map((entry, index) => (
+              {chartData.map((_entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={

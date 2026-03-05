@@ -476,7 +476,7 @@ const AdDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white overflow-visible">
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in {
           from {
             transform: translateX(100%);

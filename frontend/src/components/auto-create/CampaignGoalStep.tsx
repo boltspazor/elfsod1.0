@@ -36,7 +36,7 @@ const goals = [
 ];
 
 /* Bottom-right toggle shape – matching reference image */
-const ToggleIcon = ({ active }: { active: boolean }) => (
+const _ToggleIcon = ({ active }: { active: boolean }) => (
   <div style={{
     position: 'absolute',
     bottom: 16,

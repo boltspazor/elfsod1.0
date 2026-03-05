@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Navigation from '../components/Navigation';
 import AdCarousel from '../components/AdCarousel';
 import AdDetailModal from '../components/AdDetailModal';
-import QuickFilters from '../components/QuickFilters';
 import Footer from '../components/Footer';
 import AnimatedTileGrid from '../components/AnimatedTileGrid';
 

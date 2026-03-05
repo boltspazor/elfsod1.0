@@ -873,7 +873,7 @@ export interface CompetitorMetricsSummary {
   last_calculated: string;
 }
 
-export const calculateCompetitorMetricsSummary = (ads: AdData[], competitors: Competitor[]): CompetitorMetricsSummary[] => {
+export const calculateCompetitorMetricsSummary = (ads: AdData[], _competitors: Competitor[]): CompetitorMetricsSummary[] => {
   const competitorMap: Record<string, {
     competitor_id: string;
     competitor_name: string;

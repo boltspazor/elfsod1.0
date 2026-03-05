@@ -7,7 +7,6 @@ import {
   Loader2,
   AlertTriangle,
   Target,
-  MessageSquare,
   Palette,
   Clock,
   Heart,
@@ -15,14 +14,12 @@ import {
   TrendingUp,
   BarChart3,
   PlayCircle,
-  Image as ImageIcon,
   Type,
   AlertCircle,
   CheckCircle,
   XCircle,
   Percent,
   Layers,
-  Film,
   Award,
 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";

@@ -12,9 +12,9 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [_debugInfo, setDebugInfo] = useState<string>('');
   const [imageHistory, setImageHistory] = useState<Array<{ url: string, prompt: string, timestamp: Date }>>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [_isLoadingHistory, _setIsLoadingHistory] = useState(false);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>('16:9');
   const [selectedStyle, setSelectedStyle] = useState<string>('photorealistic');
   const [isAdvancedMode, setIsAdvancedMode] = useState(false);
@@ -22,9 +22,9 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
 
   // NEW STATES for immediate display
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'cloudfront_ready' | 'downloading' | 'local_ready'>('idle');
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [_taskId, setTaskId] = useState<string | null>(null);
   const [cloudfrontUrl, setCloudfrontUrl] = useState<string | null>(null);
-  const [localPollInterval, setLocalPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [localPollInterval, setLocalPollInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
   // Load image history from localStorage on component mount
   useEffect(() => {
@@ -71,7 +71,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
   ];
 
   // Start polling for local image
-  const startPollingLocalImage = (taskId: string) => {
+  const _startPollingLocalImage = (taskId: string) => {
     console.log(`🚀 Starting polling for local image with task_id: ${taskId}`);
 
     const pollInterval = setInterval(async () => {
@@ -115,7 +115,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
   };
 
   // NEW: Load image with progressive enhancement
-  const loadImageProgressively = async (imageUrl: string, taskId: string): Promise<string> => {
+  const _loadImageProgressively = async (imageUrl: string, taskId: string): Promise<string> => {
     console.log('🔍 Starting progressive image load for:', imageUrl);
 
     return new Promise((resolve, reject) => {

@@ -36,10 +36,7 @@ const AutoCreate: React.FC = () => {
   const CurrentStepComponent = steps[currentStep].component;
 
   const getStepProps = () => {
-    switch (currentStep) {
-      case 0: return { selectedGoal, setSelectedGoal, selectedPlatforms };
-      default: return { selectedGoal, selectedPlatforms };
-    }
+    return { selectedGoal, setSelectedGoal, selectedPlatforms };
   };
 
   const handleNext = () => {

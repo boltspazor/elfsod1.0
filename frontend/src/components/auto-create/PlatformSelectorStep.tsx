@@ -65,7 +65,7 @@ const PlatformSelectorStep: React.FC<PlatformSelectorStepProps> = ({ onPlatformS
     });
   };
 
-  const handleContinue = () => {
+  const _handleContinue = () => {
     if (selectedPlatforms.length > 0) {
       // The onPlatformSelect callback is already called when platforms change
       // You can add additional logic here if needed

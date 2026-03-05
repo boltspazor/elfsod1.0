@@ -4,10 +4,10 @@ import NavbarLogoImg from "./NavbarIcons/Navbar_logo.png";
 
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+  const [isLoggedIn] = useState(() => {
     return !!localStorage.getItem("token");
   });
-  const [userName, setUserName] = useState<string | null>(() => {
+  const [userName] = useState<string | null>(() => {
     const user = localStorage.getItem("user");
     if (user) {
       try {
