@@ -23,6 +23,19 @@ function optional(value: string | undefined, fallback: string): string {
   return value && value.trim() !== '' ? value.trim() : fallback;
 }
 
+/**
+ * Ensures API URLs are absolute and protocol-qualified.
+ * Prevents values like "auth-service.up.railway.app" from becoming
+ * relative paths under the frontend domain.
+ */
+function normalizeApiUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withProtocol.replace(/\/$/, '');
+}
+
 // ── Supabase ──────────────────────────────────────────────────────────────────
 // optional() so module evaluation never throws even before .env is loaded.
 // validateConfig() surfaces a clear error if either value is absent.
@@ -34,7 +47,9 @@ export const SUPABASE_ANON_KEY = optional(import.meta.env.VITE_SUPABASE_ANON_KEY
 export const API_BASE_URL = optional(import.meta.env.VITE_API_BASE_URL, 'http://localhost:8000');
 
 /** Auth service (login / signup) */
-export const AUTH_API_URL = optional(import.meta.env.VITE_AUTH_API_URL, 'http://localhost:5003');
+export const AUTH_API_URL = normalizeApiUrl(
+  optional(import.meta.env.VITE_AUTH_API_URL, 'http://localhost:5003')
+);
 
 /** GenAI / Command-Center / ChatInput service */
 export const GENAI_API_URL = optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002');
