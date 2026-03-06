@@ -33,7 +33,7 @@ function App() {
         />
       )}
 
-      {/* ✅ App Routes (only show after splash disappears) */}
+      {/* ✅ App Routes (only show after splash disappears.) */}
       {!showSplash && (
         <Router>
           <Routes>
