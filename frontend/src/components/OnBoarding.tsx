@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AUTH_API_URL } from '@/config';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 /* ─── Data ──────────────────────────────────────────────────── */
@@ -311,7 +312,7 @@ const OnboardingPage = () => {
         goals: answers['goals'],
       };
 
-      const res = await fetch('http://localhost:5003/complete-onboarding', {
+      const res = await fetch(`${AUTH_API_URL}/complete-onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
