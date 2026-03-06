@@ -32,8 +32,8 @@ import Footer from "../components/Footer";
 // ⚠️  Never use a service_role key in frontend code – it bypasses Row Level
 //     Security and grants full database access to anyone who reads the bundle.
 //     If you need elevated access, proxy the request through your backend.
-const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || 'https://syhypngkvalsakepxbtu.supabase.co';
-const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8';
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL 
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY 
 const supabase = createClient(SUPA_URL, SUPA_KEY);
 
 /* -------------------- Types -------------------- */
