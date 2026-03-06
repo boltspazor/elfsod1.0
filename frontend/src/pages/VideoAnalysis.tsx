@@ -33,7 +33,7 @@ import Footer from "../components/Footer";
 //     Security and grants full database access to anyone who reads the bundle.
 //     If you need elevated access, proxy the request through your backend.
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL 
-const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY 
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_KEY 
 const supabase = createClient(SUPA_URL, SUPA_KEY);
 
 /* -------------------- Types -------------------- */
