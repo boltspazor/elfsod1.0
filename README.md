@@ -46,7 +46,7 @@ yarn dev
 
 ### Terminal 2
 ```
-cd .\backend\ados-backend\ados-backend\auth-service
+cd backend\ados-backend\authservice
 
 python auth.py
 ```
