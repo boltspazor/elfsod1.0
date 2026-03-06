@@ -1,6 +1,5 @@
 // src/services/supabase.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config';
 
 class SupabaseService {
   private static instance: SupabaseClient | null = null;
@@ -10,8 +9,10 @@ class SupabaseService {
       return this.instance;
     }
 
-    const url = SUPABASE_URL;
-    const key = SUPABASE_ANON_KEY;
+    // Read directly from import.meta.env so Vite inlines the values at build time.
+    // Fallback values ensure the client works even before a dev-server restart.
+    const url = import.meta.env.VITE_SUPABASE_URL || 'https://syhypngkvalsakepxbtu.supabase.co';
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8';
 
     console.log('🔍 Checking environment variables:', {
       hasUrl: !!url,

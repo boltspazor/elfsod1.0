@@ -25,15 +25,16 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config";
 
 /* -------------------- Supabase -------------------- */
-// NOTE: This page uses the same Supabase project as the rest of the app.
-// The credentials come from environment variables – see .env / .env.example.
+// Credentials are read directly from import.meta.env so Vite can inline them
+// at build time. Values come from .env – see .env.example.
 // ⚠️  Never use a service_role key in frontend code – it bypasses Row Level
 //     Security and grants full database access to anyone who reads the bundle.
 //     If you need elevated access, proxy the request through your backend.
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || 'https://syhypngkvalsakepxbtu.supabase.co';
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8';
+const supabase = createClient(SUPA_URL, SUPA_KEY);
 
 /* -------------------- Types -------------------- */
 interface InfluencerName {

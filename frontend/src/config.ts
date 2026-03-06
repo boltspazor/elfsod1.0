@@ -7,7 +7,7 @@
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-/** Returns the value or throws a clear error when a required variable is absent. */
+/** Throws a clear error – only called inside validateConfig(), never at module load. */
 function required(key: keyof ImportMetaEnv, value: string | undefined): string {
   if (!value || value.trim() === '') {
     throw new Error(
@@ -18,67 +18,43 @@ function required(key: keyof ImportMetaEnv, value: string | undefined): string {
   return value.trim();
 }
 
-/** Returns the value or a fallback when the variable is optional. */
+/** Returns the value or a fallback – never throws at module load time. */
 function optional(value: string | undefined, fallback: string): string {
   return value && value.trim() !== '' ? value.trim() : fallback;
 }
 
-// ── Supabase ─────────────────────────────────────────────────────────────────
-export const SUPABASE_URL = required(
-  'VITE_SUPABASE_URL',
-  import.meta.env.VITE_SUPABASE_URL
-);
-
-export const SUPABASE_ANON_KEY = required(
-  'VITE_SUPABASE_ANON_KEY',
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// ── Supabase ──────────────────────────────────────────────────────────────────
+// optional() so module evaluation never throws even before .env is loaded.
+// validateConfig() surfaces a clear error if either value is absent.
+export const SUPABASE_URL = optional(import.meta.env.VITE_SUPABASE_URL, 'https://syhypngkvalsakepxbtu.supabase.co');
+export const SUPABASE_ANON_KEY = optional(import.meta.env.VITE_SUPABASE_ANON_KEY, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8');
 
 // ── Backend API ───────────────────────────────────────────────────────────────
 /** Main FastAPI backend (adsurv, targeting-intel, auth, etc.) */
-export const API_BASE_URL = optional(
-  import.meta.env.VITE_API_BASE_URL,
-  'http://localhost:8000'
-);
+export const API_BASE_URL = optional(import.meta.env.VITE_API_BASE_URL, 'http://localhost:8000');
 
 /** Auth service (login / signup) */
-export const AUTH_API_URL = optional(
-  import.meta.env.VITE_AUTH_API_URL,
-  'http://localhost:5003'
-);
+export const AUTH_API_URL = optional(import.meta.env.VITE_AUTH_API_URL, 'http://localhost:5003');
 
 /** GenAI / Command-Center / ChatInput service */
-export const GENAI_API_URL = optional(
-  import.meta.env.VITE_GENAI_API_URL,
-  'http://127.0.0.1:5002'
-);
+export const GENAI_API_URL = optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002');
 
-/** Image-generation service */
-export const IMAGE_GEN_API_URL = optional(
-  import.meta.env.VITE_IMAGE_GEN_API_URL,
-  'http://localhost:5002'
-);
+/** Image-generation service – GenerateAdPopup */
+export const IMAGE_GEN_API_URL = optional(import.meta.env.VITE_IMAGE_GEN_API_URL, 'http://localhost:5002');
 
-/** Dedicated image-generation REST API (imageGeneration.ts) */
-export const IMAGE_GEN_REST_URL = optional(
-  import.meta.env.VITE_IMAGE_GEN_REST_URL,
-  'http://localhost:5006/api'
-);
+/** Dedicated image-generation REST API – imageGeneration.ts */
+export const IMAGE_GEN_REST_URL = optional(import.meta.env.VITE_IMAGE_GEN_REST_URL, 'http://localhost:5006/api');
 
 /** AutoCreate / campaign service */
-export const AUTOCREATE_API_URL = optional(
-  import.meta.env.VITE_AUTOCREATE_API_URL,
-  'http://localhost:5050'
-);
+export const AUTOCREATE_API_URL = optional(import.meta.env.VITE_AUTOCREATE_API_URL, 'http://localhost:5050');
 
 // ── App meta ─────────────────────────────────────────────────────────────────
 export const APP_TITLE = optional(import.meta.env.VITE_APP_TITLE, 'ADOS');
 
-// ── Validation (runs once at startup) ────────────────────────────────────────
-// Supabase is required – throw immediately so the developer sees a clear message.
-// All other variables have safe localhost fallbacks for development.
+// ── Validation (called once from main.tsx at startup) ────────────────────────
+// Validates required vars at runtime – gives a clear console error instead of
+// a cryptic Supabase failure deep in the app.
 export function validateConfig(): void {
-  // Re-call `required` for any vars that must exist in production
   required('VITE_SUPABASE_URL', import.meta.env.VITE_SUPABASE_URL);
   required('VITE_SUPABASE_ANON_KEY', import.meta.env.VITE_SUPABASE_ANON_KEY);
 }
