@@ -16,11 +16,31 @@ CORS(app)
 # Load secret key from environment or generate one
 SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_urlsafe(32)
 
+def _load_supabase_settings():
+    supabase_url = os.environ.get('SUPABASE_URL', '').strip()
+    supabase_key = (
+        os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '').strip()
+        or os.environ.get('SUPABASE_KEY', '').strip()
+    )
+
+    if not supabase_url:
+        raise RuntimeError('Missing SUPABASE_URL')
+
+    if not supabase_url.startswith('http'):
+        raise RuntimeError(
+            'SUPABASE_URL must be https://<project-ref>.supabase.co (not postgresql://...)'
+        )
+
+    if not supabase_key:
+        raise RuntimeError('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY')
+
+    return supabase_url, supabase_key
+
+
+SUPABASE_URL, SUPABASE_KEY = _load_supabase_settings()
+
 # Initialize Supabase client
-supabase: Client = create_client(
-    os.environ.get('SUPABASE_URL'),
-    os.environ.get('SUPABASE_KEY')
-)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.route('/sign-up', methods=['POST'])
 def signup():
