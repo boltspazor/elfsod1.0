@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -13,34 +13,39 @@ from api_call import image_gen_bp
 app = Flask(__name__)
 
 
-def _parse_frontend_origins(raw_value: str) -> list[str]:
-    """Parse FRONTEND_URL from env and normalize origin values."""
+def _parse_frontend_origins(raw_value: str) -> list:
+    """Parse FRONTEND_URL from env; return both with and without trailing slash."""
     if not raw_value:
         return []
-
     origins = []
     for part in raw_value.split(","):
         candidate = part.strip().strip('"').strip("'").rstrip("/")
         if candidate:
             origins.append(candidate)
-
+            origins.append(candidate + "/")  # allow both forms for CORS match
     return origins
 
 
-# Allowed origins
+# Allowed origins (both with and without trailing slash for frontend)
 cors_origins = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
 ]
 
 frontend_url = os.environ.get("FRONTEND_URL", "")
 cors_origins.extend(_parse_frontend_origins(frontend_url))
-
-# Remove duplicates
 cors_origins = list(dict.fromkeys(cors_origins))
 
+# Set of origins for fast lookup in after_request
+_cors_origins_set = set(cors_origins)
 
-# Enable CORS (simplified and reliable)
+# CORS headers to add when origin is allowed
+CORS_HEADERS = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin",
+    "Access-Control-Max-Age": "3600",
+}
+
 CORS(
     app,
     origins=cors_origins,
@@ -48,8 +53,26 @@ CORS(
     allow_headers=["Content-Type", "Authorization", "Accept", "Origin"],
     expose_headers=["Content-Type"],
     supports_credentials=False,
-    max_age=3600
+    max_age=3600,
 )
+
+
+@app.after_request
+def add_cors_headers(response):
+    """Ensure CORS headers on every response so preflight always passes."""
+    origin = request.headers.get("Origin")
+    if origin and origin in _cors_origins_set:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    for key, value in CORS_HEADERS.items():
+        response.headers[key] = value
+    return response
+
+
+# App-level OPTIONS handlers so preflight always gets CORS headers
+@app.route("/genai_call", methods=["OPTIONS"])
+@app.route("/image_gen", methods=["OPTIONS"])
+def options_preflight():
+    return "", 204
 
 
 # Register blueprints
@@ -121,9 +144,10 @@ if __name__ == "__main__":
     print("🌐 CORS ORIGINS:", cors_origins)
     print("=" * 60)
 
+    port = int(os.environ.get("PORT", "5002"))
     app.run(
         host="0.0.0.0",
-        port=5002,
+        port=port,
         debug=True,
         threaded=True
     )

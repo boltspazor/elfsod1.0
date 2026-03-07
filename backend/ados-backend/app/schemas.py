@@ -519,6 +519,8 @@ class TargIntelUpdate(BaseModel):
 class TargIntelInDB(TargIntelBase):
     id: UUID
     user_id: UUID
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
     gender_ratio: Optional[Dict[str, float]] = None
     geography: Optional[Dict[str, Any]] = None
     interest_clusters: Optional[List[str]] = None
@@ -536,10 +538,20 @@ class TargIntelInDB(TargIntelBase):
     estimated_roas: Optional[float] = None
     engagement_rate: Optional[float] = None
     confidence_scores: Optional[Dict[str, float]] = None
+    is_active: Optional[bool] = None
+    raw_analysis: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     last_calculated_at: Optional[datetime] = None
     
+    class Config:
+        from_attributes = True
+
+
+class TargIntelFull(TargIntelInDB):
+    """Full targeting intel with competitor name — returned by the /all endpoint."""
+    competitor_name: str = ""
+
     class Config:
         from_attributes = True
 

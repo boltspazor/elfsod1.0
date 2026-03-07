@@ -6,7 +6,7 @@ from uuid import UUID
 from app.database import get_db
 from app.models import User, Competitor, TargIntel
 from app.schemas import (
-    TargIntelInDB, TargIntelSummary, TargIntelCalculationRequest,
+    TargIntelInDB, TargIntelSummary, TargIntelFull, TargIntelCalculationRequest,
     BulkTargIntelResponse
 )
 from app.services.targ_intel_calculator import TargIntelCalculator
@@ -142,14 +142,14 @@ async def get_competitor_targeting_intel(
             detail=f"Failed to retrieve targeting intelligence: {str(e)}"
         )
 
-@router.get("/all", response_model=List[TargIntelSummary])
+@router.get("/all", response_model=List[TargIntelFull])
 async def get_all_targeting_intel(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     include_inactive: bool = False
 ):
     """
-    Get targeting intelligence for all user's competitors
+    Get targeting intelligence for all user's competitors (full objects with all fields).
     """
     try:
         # Build query
@@ -166,23 +166,14 @@ async def get_all_targeting_intel(
         
         results = query.all()
         
-        summaries = []
+        intels = []
         for targ_intel, competitor in results:
-            summaries.append(TargIntelSummary(
-                competitor_id=competitor.id,
-                competitor_name=competitor.name,
-                age_range=targ_intel.age_range,
-                primary_gender=targ_intel.primary_gender,
-                primary_location=targ_intel.primary_location,
-                income_level=targ_intel.income_level,
-                funnel_stage=targ_intel.funnel_stage,
-                audience_type=targ_intel.audience_type,
-                bidding_strategy=targ_intel.bidding_strategy,
-                overall_confidence=targ_intel.overall_confidence,
-                last_calculated_at=targ_intel.last_calculated_at
-            ))
+            col_keys = [c.key for c in TargIntel.__table__.columns]
+            intel_dict = {k: getattr(targ_intel, k) for k in col_keys}
+            intel_dict['competitor_name'] = competitor.name
+            intels.append(TargIntelFull(**intel_dict))
         
-        return summaries
+        return intels
         
     except Exception as e:
         logger.error(f"Error getting all targeting intel: {e}")
