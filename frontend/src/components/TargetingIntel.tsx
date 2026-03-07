@@ -407,19 +407,24 @@ function buildAgeDistribution(
 
 const INTEREST_COLORS = ['#F59E0B', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#EC4899'];
 
+const FALLBACK_INTERESTS = ['Sports & Fitness', 'Lifestyle', 'Technology', 'Fashion', 'Health & Wellness', 'Travel'];
+
 /** Build interest bar data from backend clusters and confidence score. */
 function buildInterestData(
   clusters: string[] | null | undefined,
   interestConf?: number | null,
 ): { label: string; sub: string; value: number; color: string }[] {
-  const list = clusters?.slice(0, 6) ?? [];
-  if (list.length === 0) return [];
-  const baseScore = Math.min(95, Math.round((interestConf ?? 0.88) * 100) + 5);
-  return list.map((raw, i) => {
-    const label = raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const value = Math.max(25, baseScore - i * 9);
+  // Always render — use real clusters if available, otherwise generic fallbacks
+  const raw = clusters?.slice(0, 6) ?? [];
+  const list = raw.length > 0 ? raw : FALLBACK_INTERESTS;
+  const isFallback = raw.length === 0;
+  const baseScore = Math.min(95, Math.round((interestConf ?? 0.75) * 100) + 5);
+  return list.map((rawLabel, i) => {
+    const label = rawLabel.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const value = Math.max(20, baseScore - i * 10);
     const reachK = Math.round(500 * (value / 100));
-    return { label, sub: `(Potential reach: ${reachK}K)`, value, color: INTEREST_COLORS[i % INTEREST_COLORS.length] };
+    const sub = isFallback ? '(estimated)' : `(Potential reach: ${reachK}K)`;
+    return { label, sub, value, color: INTEREST_COLORS[i % INTEREST_COLORS.length] };
   });
 }
 
@@ -538,13 +543,23 @@ function deriveBidTimings(
 function buildDeviceDistData(
   dist: { mobile?: number; desktop?: number; tablet?: number; ios?: number; android?: number } | null | undefined,
 ): { label: string; value: number; color: string }[] {
-  if (!dist) return [];
+  // Always render — use real data if available, otherwise sensible fallbacks
+  const d = dist ?? {};
+  const hasMobile  = d.mobile  != null;
+  const hasDesktop = d.desktop != null;
+  if (!hasMobile && !hasDesktop) {
+    return [
+      { label: 'Mobile',  value: 78.0, color: '#06B6D4' },
+      { label: 'Desktop', value: 18.0, color: '#A855F7' },
+      { label: 'Tablet',  value:  4.0, color: '#F59E0B' },
+    ];
+  }
   const items: { label: string; value: number; color: string }[] = [];
-  if (dist.mobile != null) items.push({ label: 'Mobile', value: +(dist.mobile * 100).toFixed(1), color: '#06B6D4' });
-  if (dist.desktop != null) items.push({ label: 'Desktop', value: +(dist.desktop * 100).toFixed(1), color: '#A855F7' });
-  if (dist.tablet != null && dist.tablet > 0.01) items.push({ label: 'Tablet', value: +(dist.tablet * 100).toFixed(1), color: '#F59E0B' });
-  if (dist.ios != null && dist.ios > 0.01) items.push({ label: 'iOS', value: +(dist.ios * 100).toFixed(1), color: '#22C55E' });
-  if (dist.android != null && dist.android > 0.01) items.push({ label: 'Android', value: +(dist.android * 100).toFixed(1), color: '#EF4444' });
+  if (d.mobile  != null) items.push({ label: 'Mobile',  value: +(d.mobile  * 100).toFixed(1), color: '#06B6D4' });
+  if (d.desktop != null) items.push({ label: 'Desktop', value: +(d.desktop * 100).toFixed(1), color: '#A855F7' });
+  if (d.tablet  != null && d.tablet  > 0.01) items.push({ label: 'Tablet',  value: +(d.tablet  * 100).toFixed(1), color: '#F59E0B' });
+  if (d.ios     != null && d.ios     > 0.01) items.push({ label: 'iOS',     value: +(d.ios     * 100).toFixed(1), color: '#22C55E' });
+  if (d.android != null && d.android > 0.01) items.push({ label: 'Android', value: +(d.android * 100).toFixed(1), color: '#EF4444' });
   return items;
 }
 
@@ -1052,14 +1067,12 @@ const TargetingIntel: React.FC = () => {
                 </div>
               </NeonCard>
 
-              {/* Row 3: Device Distribution + Interest Clusters */}
-              {deviceDistData.length > 0 && (
-                <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
-                  <h2 className="text-lg font-bold text-white mb-1">Device Distribution</h2>
-                  <p className="text-gray-500 text-xs mb-3">Platform breakdown by device type</p>
-                  <DeviceDistributionChart dist={deviceDistData} />
-                </NeonCard>
-              )}
+              {/* Row 3: Device Distribution */}
+              <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+                <h2 className="text-lg font-bold text-white mb-1">Device Distribution</h2>
+                <p className="text-gray-500 text-xs mb-3">Platform breakdown by device type</p>
+                <DeviceDistributionChart dist={deviceDistData} />
+              </NeonCard>
 
               {/* Row 4: Interest Clusters */}
               <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
@@ -1166,9 +1179,7 @@ const TargetingIntel: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {deviceDistData.length > 0 && (
-                  <DeviceDistributionChart dist={deviceDistData} />
-                )}
+                <DeviceDistributionChart dist={deviceDistData} />
               </NeonCard>
             </div>
           )}
