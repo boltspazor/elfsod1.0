@@ -1,0 +1,5 @@
+# System packages for Reverse Engineering service (Whisper, ffmpeg, tesseract)
+# Used when Root Directory is backend/ and this file is at repo root.
+# If Railway uses repo root for Nixpacks, place this at repo root.
+[phases.setup]
+nixPkgs = ["ffmpeg", "tesseract"]

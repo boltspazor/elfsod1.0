@@ -25,9 +25,9 @@ Code is ready. Follow these steps in the Railway dashboard.
 
 - **Builder:** Nixpacks (default).
 - **Build Command:**  
-  `pip install -r ml/requirements.txt`
+  `pip install --no-cache-dir appnope==0.1.3 && pip install --no-cache-dir -r ml/requirements.txt`
 
-(If Railway doesn’t show a custom build command, Nixpacks may auto-detect. If the build fails, add a **Nixpacks** or **Build** section and set the command to the line above.)
+This installs `appnope` from PyPI first to avoid a broken conda path during dependency resolution. `face-recognition` is optional (commented out in requirements) so the build succeeds on Railway; face detection is skipped if not installed.
 
 ### Start / Run
 

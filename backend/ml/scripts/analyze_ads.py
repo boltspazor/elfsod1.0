@@ -34,8 +34,12 @@ import pytesseract  # pip install pytesseract
 
 from toon import encode, decode  # pip install python-toon
 
-# Face detection
-import face_recognition  # pip install face-recognition
+# Face detection (optional: skip if not installed, e.g. on Railway without face-recognition)
+try:
+    import face_recognition
+    HAS_FACE_RECOGNITION = True
+except ImportError:
+    HAS_FACE_RECOGNITION = False
 
 # ===========================
 # Paths & Config
@@ -216,6 +220,8 @@ def extract_palette_from_frames(frames: List[Image.Image], k: int = 4) -> List[D
 
 def detect_faces_in_image(image: Image.Image) -> Dict[str, Any]:
     """Detect faces in a single image using face_recognition"""
+    if not HAS_FACE_RECOGNITION:
+        return {"face_count": 0, "faces": [], "error": "face_recognition not installed"}
     try:
         # Convert to RGB if not already (handles all formats)
         if image.mode != 'RGB':
@@ -265,11 +271,19 @@ def detect_faces_in_image(image: Image.Image) -> Dict[str, Any]:
 
 def detect_faces_in_frames(frames: List[Image.Image]) -> Dict[str, Any]:
     """Detect unique faces across all sampled frames (count each person once)"""
+    if not HAS_FACE_RECOGNITION:
+        return {
+            "unique_people_count": 0,
+            "max_faces_in_single_frame": 0,
+            "frames_with_faces": 0,
+            "frames_analyzed": len(frames),
+            "face_detection_by_frame": [],
+        }
     all_faces = []
     unique_face_encodings = []
     unique_face_count = 0
     max_faces_in_frame = 0
-    
+
     for idx, frame in enumerate(frames):
         try:
             # Convert to RGB if not already
