@@ -22,7 +22,10 @@ os.environ["FFMPEG_BINARY"] = imageio_ffmpeg.get_ffmpeg_exe()
 
 import cv2
 import numpy as np
-from moviepy.editor import VideoFileClip
+try:
+    from moviepy import VideoFileClip  # moviepy 2.x
+except ImportError:
+    from moviepy.editor import VideoFileClip  # moviepy 1.x
 from PIL import Image
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
