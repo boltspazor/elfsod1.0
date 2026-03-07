@@ -57,12 +57,12 @@ const COMMAND_CENTER_BASE = optional(import.meta.env.VITE_COMMAND_CENTER_API_URL
 /** GenAI / Command-Center / ChatInput service */
 export const GENAI_API_URL = COMMAND_CENTER_BASE
   ? normalizeApiUrl(COMMAND_CENTER_BASE)
-  : optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002');
+  : normalizeApiUrl(optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002'));
 
 /** Image-generation service – GenerateAdPopup (same service as GenAI) */
 export const IMAGE_GEN_API_URL = COMMAND_CENTER_BASE
   ? normalizeApiUrl(COMMAND_CENTER_BASE)
-  : optional(import.meta.env.VITE_IMAGE_GEN_API_URL, 'http://localhost:5002');
+  : normalizeApiUrl(optional(import.meta.env.VITE_IMAGE_GEN_API_URL, 'http://localhost:5002'));
 
 /** Dedicated image-generation REST API – imageGeneration.ts */
 export const IMAGE_GEN_REST_URL = optional(import.meta.env.VITE_IMAGE_GEN_REST_URL, 'http://localhost:5006/api');

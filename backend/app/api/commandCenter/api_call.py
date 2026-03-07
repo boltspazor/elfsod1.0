@@ -1,16 +1,12 @@
 import os
 from flask import Flask, request, jsonify, Blueprint
 from groq import Groq
-from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Create blueprint instead of Flask app
 image_gen_bp = Blueprint('image_gen', __name__)
-
-# Initialize CORS for this blueprint
-CORS(image_gen_bp)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY")) 
 groq_model = "llama-3.3-70b-versatile"
@@ -102,7 +98,7 @@ Do not deviate from the refusal line for disallowed topics.
 @image_gen_bp.route('/genai_call', methods=['POST', 'OPTIONS'])
 def chat():
     if request.method == 'OPTIONS':
-        return '', 200
+        return jsonify({"status": "ok"}), 200
     data = request.get_json(silent=True) or {}
     user_msg = (data.get("message") or "").strip()
     action = (data.get("action") or "chat").strip()
