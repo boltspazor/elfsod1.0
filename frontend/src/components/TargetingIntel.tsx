@@ -22,22 +22,17 @@ const HBar = ({ label, sub, value, max, color }: {
 }) => {
   const pct = Math.min(100, (value / max) * 100);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '18px' }}>
-      {/* Left spacer — creates empty left half like reference */}
-      <div style={{ flex: 1 }} />
-      {/* Right cluster: indicator + label + percentage + bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
-        <div style={{ minWidth: 60, flexShrink: 0 }}>
-          <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
-          {sub && <span style={{ fontSize: '10px', color: '#6b7280', marginLeft: 4, whiteSpace: 'nowrap' }}>{sub}</span>}
-        </div>
-        <div style={{ width: 44, textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-          {value.toFixed(1)}%
-        </div>
-        <div style={{ width: 200, background: '#2a2a2a', borderRadius: 999, height: 4, flexShrink: 0 }}>
-          <div style={{ width: `${pct}%`, height: 4, borderRadius: 999, background: color, transition: 'width 1s ease' }} />
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+      <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+      <div style={{ minWidth: 70, flexShrink: 0 }}>
+        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+        {sub && <div style={{ fontSize: '10px', color: '#6b7280', whiteSpace: 'nowrap' }}>{sub}</div>}
+      </div>
+      <div style={{ flex: 1, background: '#2a2a2a', borderRadius: 999, height: 6, minWidth: 0 }}>
+        <div style={{ width: `${pct}%`, height: 6, borderRadius: 999, background: color, transition: 'width 1s ease' }} />
+      </div>
+      <div style={{ width: 44, textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+        {value.toFixed(1)}%
       </div>
     </div>
   );
@@ -1038,12 +1033,24 @@ const TargetingIntel: React.FC = () => {
                     borderRadius: '999px',
                   }}>Updated Today</span>
                 </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
-                    <span className="text-xs text-gray-500">Percentage</span>
+                {/* Age + Device side by side */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                    {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
                   </div>
-                  {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-300 font-medium">Device Distribution</span>
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                    {deviceDistData.map(item => (
+                      <HBar key={item.label} label={item.label} value={item.value} max={100} color={item.color} />
+                    ))}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#0d0d0d] rounded-xl p-4">
@@ -1067,21 +1074,35 @@ const TargetingIntel: React.FC = () => {
                 </div>
               </NeonCard>
 
-              {/* Row 3: Device Distribution */}
-              <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
-                <h2 className="text-lg font-bold text-white mb-1">Device Distribution</h2>
-                <p className="text-gray-500 text-xs mb-3">Platform breakdown by device type</p>
-                <DeviceDistributionChart dist={deviceDistData} />
-              </NeonCard>
-
-              {/* Row 4: Interest Clusters */}
+              {/* Row 3: Interest Clusters */}
               <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
                   <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
                 </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-300 font-medium">Interest Affinity</span>
+                      <span className="text-xs text-gray-500">Score</span>
+                    </div>
+                    {interestData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={100} color={item.color} />)}
+                  </div>
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <span className="text-sm text-gray-300 font-medium block mb-3">Confidence Breakdown</span>
+                    {[
+                      { label: 'Demographic', key: 'demographic', color: '#06B6D4' },
+                      { label: 'Interest',    key: 'interest',    color: '#A855F7' },
+                      { label: 'Device',      key: 'device',      color: '#F59E0B' },
+                      { label: 'Geographic',  key: 'geographic',  color: '#22C55E' },
+                      { label: 'Funnel',      key: 'funnel',      color: '#EC4899' },
+                      { label: 'Bidding',     key: 'bidding',     color: '#EF4444' },
+                    ].map(({ label, key, color }) => {
+                      const raw = data?.confidence_scores?.[key];
+                      const val = raw != null ? +(raw * 100).toFixed(1) : 70;
+                      return <HBar key={label} label={label} value={val} max={100} color={color} />;
+                    })}
+                  </div>
                 </div>
               </NeonCard>
 
@@ -1152,12 +1173,24 @@ const TargetingIntel: React.FC = () => {
                     padding: '4px 12px', borderRadius: '999px',
                   }}>Updated Today</span>
                 </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
-                    <span className="text-xs text-gray-500">Percentage</span>
+                {/* Age + Device side by side */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-gray-300 font-medium">Age Distributions</span>
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                    {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
                   </div>
-                  {ageData.map(item => <HBar key={item.label} label={item.label} value={item.value} max={55} color={item.color} />)}
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-300 font-medium">Device Distribution</span>
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                    {deviceDistData.map(item => (
+                      <HBar key={item.label} label={item.label} value={item.value} max={100} color={item.color} />
+                    ))}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#0d0d0d] rounded-xl p-4">
@@ -1179,7 +1212,6 @@ const TargetingIntel: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <DeviceDistributionChart dist={deviceDistData} />
               </NeonCard>
             </div>
           )}
@@ -1192,8 +1224,29 @@ const TargetingIntel: React.FC = () => {
                   <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
                   <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">Top 6 Clusters</span>
                 </div>
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-300 font-medium">Interest Affinity</span>
+                      <span className="text-xs text-gray-500">Score</span>
+                    </div>
+                    {interestData.map(item => <HBar key={item.label} label={item.label} sub={item.sub} value={item.value} max={100} color={item.color} />)}
+                  </div>
+                  <div className="bg-[#0d0d0d] rounded-xl p-4">
+                    <span className="text-sm text-gray-300 font-medium block mb-3">Confidence Breakdown</span>
+                    {[
+                      { label: 'Demographic', key: 'demographic', color: '#06B6D4' },
+                      { label: 'Interest',    key: 'interest',    color: '#A855F7' },
+                      { label: 'Device',      key: 'device',      color: '#F59E0B' },
+                      { label: 'Geographic',  key: 'geographic',  color: '#22C55E' },
+                      { label: 'Funnel',      key: 'funnel',      color: '#EC4899' },
+                      { label: 'Bidding',     key: 'bidding',     color: '#EF4444' },
+                    ].map(({ label, key, color }) => {
+                      const raw = data?.confidence_scores?.[key];
+                      const val = raw != null ? +(raw * 100).toFixed(1) : 70;
+                      return <HBar key={label} label={label} value={val} max={100} color={color} />;
+                    })}
+                  </div>
                 </div>
               </NeonCard>
             </div>
