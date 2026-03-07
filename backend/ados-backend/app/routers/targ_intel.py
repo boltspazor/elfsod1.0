@@ -73,7 +73,7 @@ async def calculate_competitor_targeting_intel(
         
         calculator = TargIntelCalculator(db)
         
-        targ_intel = calculator.calculate_for_competitor(
+        targ_intel, error_msg = calculator.calculate_for_competitor(
             competitor_id=competitor_id,
             user_id=current_user.user_id,
             force_recalculate=force_recalculate
@@ -82,7 +82,7 @@ async def calculate_competitor_targeting_intel(
         if not targ_intel:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to calculate targeting intelligence"
+                detail=error_msg or "Failed to calculate targeting intelligence"
             )
         
         return targ_intel

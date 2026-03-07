@@ -43,8 +43,8 @@ class TargIntelCalculator:
         self.db = db
     
     def calculate_for_competitor(self, competitor_id: UUID, user_id: UUID, 
-                               force_recalculate: bool = False) -> Optional[TargIntel]:
-        """Calculate targeting intelligence for a single competitor"""
+                               force_recalculate: bool = False) -> Tuple[Optional[TargIntel], Optional[str]]:
+        """Calculate targeting intelligence for a single competitor. Returns (targ_intel, error_message)."""
         try:
             # Check if recent calculation exists (within 24 hours)
             if not force_recalculate:
@@ -57,7 +57,7 @@ class TargIntelCalculator:
                 
                 if existing:
                     logger.info(f"Using cached targeting intel for competitor {competitor_id}")
-                    return existing
+                    return (existing, None)
             
             # Get competitor
             competitor = self.db.query(Competitor).filter(
@@ -67,7 +67,7 @@ class TargIntelCalculator:
             
             if not competitor:
                 logger.error(f"Competitor {competitor_id} not found or doesn't belong to user")
-                return None
+                return (None, "Competitor not found or access denied")
             
             # Get latest metrics for this competitor
             metrics = self.db.query(SurvMetrics).filter(
@@ -83,7 +83,12 @@ class TargIntelCalculator:
             if not metrics and not ads:
                 logger.warning(f"No metrics or ads found for competitor {competitor.name}")
                 # Still create basic intel with defaults
-                return self._create_basic_intel(competitor, user_id)
+                try:
+                    return (self._create_basic_intel(competitor, user_id), None)
+                except Exception as e:
+                    logger.error(f"Error creating basic intel for {competitor.name}: {e}", exc_info=True)
+                    self.db.rollback()
+                    return (None, str(e))
             
             # Calculate all metrics using surv_metrics data
             age_data = self._calculate_age_targeting(metrics, ads, competitor)
@@ -167,12 +172,12 @@ class TargIntelCalculator:
             self.db.refresh(targ_intel)
             
             logger.info(f"Calculated targeting intel for {competitor.name} with confidence {overall_confidence:.2f}")
-            return targ_intel
+            return (targ_intel, None)
             
         except Exception as e:
             logger.error(f"Error calculating targeting intel for competitor {competitor_id}: {e}", exc_info=True)
             self.db.rollback()
-            return None
+            return (None, str(e))
     
     def _get_metrics_used(self, metrics: SurvMetrics) -> Dict:
         """Get which metrics were available for calculation"""
@@ -1626,7 +1631,7 @@ class TargIntelCalculator:
             
             for competitor in competitors:
                 try:
-                    targ_intel = self.calculate_for_competitor(
+                    targ_intel, error_msg = self.calculate_for_competitor(
                         competitor.id, user_id, force_recalculate
                     )
                     
@@ -1644,7 +1649,7 @@ class TargIntelCalculator:
                             "competitor_id": str(competitor.id),
                             "competitor_name": competitor.name,
                             "success": False,
-                            "error": "Calculation failed"
+                            "error": error_msg or "Calculation failed"
                         })
                         failed += 1
                         
