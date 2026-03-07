@@ -241,6 +241,7 @@ const TargetingIntel: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
   const [refreshing, setRefreshing] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [lastCalculateMessage, setLastCalculateMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getAuthUserInfo();
@@ -291,12 +292,21 @@ const TargetingIntel: React.FC = () => {
 
   const handleCalculateAll = async () => {
     setCalculating(true);
+    setLastCalculateMessage(null);
     try {
-      await TargetingIntelAPI.refreshAll();
-      await new Promise(r => setTimeout(r, 3000));
+      const result = await TargetingIntelAPI.refreshAll();
+      if (result.message) setLastCalculateMessage(result.message);
+      if (result.total_competitors === 0) {
+        setLastCalculateMessage('No active competitors found. Add competitors in Ad Surveillance and ensure they are active.');
+      } else if (result.calculated !== undefined && result.calculated === 0 && (result.failed ?? 0) > 0 && result.results?.length) {
+        const errors = result.results.filter(r => !r.success).map(r => `${r.competitor_name}: ${r.error || 'failed'}`).join('; ');
+        setLastCalculateMessage(errors || result.message || 'Calculation failed for all competitors.');
+      }
+      await new Promise(r => setTimeout(r, 1500));
       await loadData();
     } catch (e) {
       console.error('Calculate targeting failed:', e);
+      setLastCalculateMessage(e instanceof Error ? e.message : 'Calculation failed');
     } finally {
       setCalculating(false);
     }
@@ -451,6 +461,11 @@ const TargetingIntel: React.FC = () => {
                   ? 'Add competitors in Ad Surveillance first, then refresh their ads. After that you can calculate targeting intelligence here.'
                   : 'Calculate targeting intelligence for your competitors. This may take a minute.'}
               </p>
+              {lastCalculateMessage && (
+                <p style={{ color: '#facc15', fontSize: '13px', marginBottom: '16px', maxWidth: '480px', margin: '0 auto 16px' }}>
+                  {lastCalculateMessage}
+                </p>
+              )}
               {competitors.length > 0 && (
                 <button
                   onClick={handleCalculateAll}

@@ -500,22 +500,29 @@ export async function deleteTargetingIntel(
 }
 
 /**
- * Refresh all targeting intelligence
+ * Refresh all targeting intelligence.
+ * Returns the backend result: { success, message, total_competitors, calculated, failed, results }.
  */
-export async function refreshAllTargetingIntel(): Promise<boolean> {
+export async function refreshAllTargetingIntel(): Promise<{
+  success: boolean;
+  message?: string;
+  total_competitors?: number;
+  calculated?: number;
+  failed?: number;
+  results?: Array<{ competitor_name: string; success: boolean; error?: string }>;
+}> {
   try {
     console.log('🎯 Refreshing all targeting intelligence...');
-    
-    await fetchWithAuth('/api/targ-intel/refresh-all', {
+    const response = await fetchWithAuth('/api/targ-intel/refresh-all', {
       method: 'POST'
     });
-    
-    console.log('✅ All targeting intelligence refreshed');
-    return true;
-    
+    console.log('✅ Refresh response:', response);
+    return typeof response === 'object' && response !== null
+      ? response as { success: boolean; message?: string; total_competitors?: number; calculated?: number; failed?: number; results?: Array<{ competitor_name: string; success: boolean; error?: string }> }
+      : { success: true };
   } catch (error: any) {
     console.error('Error refreshing all targeting intelligence:', error);
-    return false;
+    return { success: false, message: error?.message || 'Refresh failed' };
   }
 }
 
