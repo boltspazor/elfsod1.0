@@ -2300,9 +2300,9 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
 
                         <div className="space-y-3">
                           <div>
-                            <p className="text-xs text-[#666] italic">Daily Spend</p>
+                            <p className="text-xs text-[#666] italic">Est. Spend</p>
                             <p className="text-base font-bold text-white">
-                              {formatCurrency(calculateAdSpend(ad) / Math.max(1, calculateAdLifespan(ad)))}
+                              {formatCurrency(calculateAdSpend(ad))}
                             </p>
                           </div>
                           <div>
