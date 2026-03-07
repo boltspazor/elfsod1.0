@@ -219,6 +219,66 @@ const searchSuggestions = [
   },
 ];
 
+// ── VideoPlayer: tries direct → proxy → fallback link ──────────────────────
+const VideoPlayer: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
+  const [mode, setMode] = React.useState<"direct" | "proxy" | "fallback">("direct");
+
+  // Detect if the URL is a direct video file we can try to embed
+  const isDirectVideo =
+    /\.(mp4|webm|ogg|mov)(\?|$)/i.test(videoUrl) ||
+    videoUrl.includes("video.") ||
+    videoUrl.includes("cdninstagram") ||
+    videoUrl.includes("fbcdn") ||
+    videoUrl.includes("scontent");
+
+  const proxiedUrl = "https://corsproxy.io/?" + encodeURIComponent(videoUrl);
+
+  if (mode === "fallback" || !isDirectVideo) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-10 px-6 bg-[#0a0a0a]">
+        <div className="w-12 h-12 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center">
+          <svg className="w-5 h-5 text-[#0ea5e9]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <p className="text-[#888] text-sm text-center">Video cannot be embedded due to platform restrictions.</p>
+        <a
+          href={videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-medium rounded-lg transition-colors">
+          Open Video in New Tab →
+        </a>
+      </div>
+    );
+  }
+
+  if (mode === "proxy") {
+    return (
+      <video
+        key="proxy"
+        src={proxiedUrl}
+        controls
+        className="w-full max-h-64 object-contain bg-black"
+        crossOrigin="anonymous"
+        onError={() => setMode("fallback")}
+      />
+    );
+  }
+
+  // mode === "direct"
+  return (
+    <video
+      key="direct"
+      src={videoUrl}
+      controls
+      className="w-full max-h-64 object-contain bg-black"
+      crossOrigin="anonymous"
+      onError={() => setMode("proxy")}
+    />
+  );
+};
+
 const AdSurveillance = () => {
   // User state
   const [_userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -298,6 +358,12 @@ const AdSurveillance = () => {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // ============================================
+  // PAGINATION STATE
+  // ============================================
+  const ADS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ============================================
   // ANALYZE / CLONE / TRACK STATE
@@ -1155,6 +1221,7 @@ const AdSurveillance = () => {
     }
 
     setFilteredAds(filtered);
+    setCurrentPage(1);
   }, [ads, searchQuery, selectedPlatform, selectedCompany]);
 
   // Add competitor handler – then auto-refresh ads for the new competitor
@@ -2182,7 +2249,10 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
           {/* Ad Cards */}
           <div className="space-y-6">
             {filteredAds.length > 0 ? (
-              filteredAds.slice(0, 10).map((ad, index) => (
+              <>
+                {filteredAds
+                  .slice((currentPage - 1) * ADS_PER_PAGE, currentPage * ADS_PER_PAGE)
+                  .map((ad, index) => (
                 <div key={ad.id || index}>
                   {/* Ad Title */}
                   <h3 className="text-base font-semibold text-white mb-3">{ad.competitor_name} Ad</h3>
@@ -2278,7 +2348,60 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
+
+                {/* Pagination Bar */}
+                {filteredAds.length > ADS_PER_PAGE && (() => {
+                  const totalPages = Math.ceil(filteredAds.length / ADS_PER_PAGE);
+                  const pages: (number | "...")[] = [];
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    if (currentPage > 3) pages.push("...");
+                    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+                    if (currentPage < totalPages - 2) pages.push("...");
+                    pages.push(totalPages);
+                  }
+                  return (
+                    <div className="flex items-center justify-between pt-4 border-t border-[#2a2a2a] mt-2">
+                      <p className="text-xs text-[#666]">
+                        Showing <span className="text-white font-medium">{(currentPage - 1) * ADS_PER_PAGE + 1}–{Math.min(currentPage * ADS_PER_PAGE, filteredAds.length)}</span> of <span className="text-white font-medium">{filteredAds.length}</span> ads
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => { setCurrentPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                          disabled={currentPage === 1}
+                          className="w-8 h-8 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] hover:bg-[#252525] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-[#888] hover:text-white transition-colors text-sm">
+                          ‹
+                        </button>
+                        {pages.map((p, i) =>
+                          p === "..." ? (
+                            <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-[#555] text-xs">…</span>
+                          ) : (
+                            <button
+                              key={p}
+                              onClick={() => { setCurrentPage(p as number); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                              className={`w-8 h-8 rounded-lg border text-sm font-medium transition-colors ${
+                                currentPage === p
+                                  ? "bg-[#0ea5e9] border-[#0ea5e9] text-white"
+                                  : "border-[#2a2a2a] bg-[#1a1a1a] hover:bg-[#252525] text-[#888] hover:text-white"
+                              }`}>
+                              {p}
+                            </button>
+                          )
+                        )}
+                        <button
+                          onClick={() => { setCurrentPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                          disabled={currentPage === totalPages}
+                          className="w-8 h-8 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] hover:bg-[#252525] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-[#888] hover:text-white transition-colors text-sm">
+                          ›
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             ) : (
               <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-16 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-[#222] rounded-full flex items-center justify-center">
@@ -2348,12 +2471,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
           {(analyzeAd.image_url || analyzeAd.video_url) && (
             <div className="mx-6 mt-6 rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0a0a0a]">
               {analyzeAd.video_url ? (
-                <video src={analyzeAd.video_url} controls className="w-full max-h-56 object-cover" />
+                <VideoPlayer videoUrl={analyzeAd.video_url} />
               ) : (
                 <img
-                  src={analyzeAd.image_url}
+                  src={proxyImageUrl(analyzeAd.image_url)}
                   alt="Ad creative"
                   className="w-full max-h-56 object-cover"
+                  referrerPolicy="no-referrer"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               )}
