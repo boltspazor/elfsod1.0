@@ -12,11 +12,26 @@ from api_call import image_gen_bp
 # Create Flask app
 app = Flask(__name__)
 
+
+def _parse_frontend_origins(raw_value: str) -> list[str]:
+    """Parse FRONTEND_URL from env and normalize origin values."""
+    if not raw_value:
+        return []
+
+    origins = []
+    for part in raw_value.split(','):
+        candidate = part.strip().strip('"').strip("'").rstrip('/')
+        if candidate:
+            origins.append(candidate)
+    return origins
+
 # CORS: localhost + FRONTEND_URL from env (set in Railway for production)
 _cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-_frontend_url = os.environ.get("FRONTEND_URL", "").strip()
-if _frontend_url:
-    _cors_origins.append(_frontend_url.rstrip("/"))
+_frontend_url = os.environ.get("FRONTEND_URL", "")
+_cors_origins.extend(_parse_frontend_origins(_frontend_url))
+
+# De-duplicate while preserving order
+_cors_origins = list(dict.fromkeys(_cors_origins))
 CORS(app,
      resources={r"/*": {
          "origins": _cors_origins,
