@@ -2301,12 +2301,14 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                         <div className="space-y-3">
                           <div>
                             <p className="text-xs text-[#666] italic">Daily Spend</p>
-                            <p className="text-base font-bold text-white">{formatCurrency(ad.spend)}</p>
+                            <p className="text-base font-bold text-white">
+                              {formatCurrency(calculateAdSpend(ad) / Math.max(1, calculateAdLifespan(ad)))}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-[#666] italic">Impressions</p>
                             <p className="text-base font-bold text-white">
-                              {formatNumber(typeof ad.impressions === "number" ? ad.impressions : parseImpressionValue(ad.impressions))}
+                              {formatNumber(calculateAdImpressions(ad))}
                             </p>
                           </div>
                           <div>
