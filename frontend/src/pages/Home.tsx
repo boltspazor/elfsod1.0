@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import AdCarousel from '../components/AdCarousel';
 import AdDetailModal from '../components/AdDetailModal';
 import Footer from '../components/Footer';
 import AnimatedTileGrid from '../components/AnimatedTileGrid';
+import { AUTOCREATE_API_URL } from '../config';
+
+interface PublishedCampaign {
+  id: number;
+  campaign_goal?: string;
+  budget_amount?: number;
+  campaign_duration?: number;
+  budget_type?: string;
+  campaign_status?: string;
+  published_at?: string;
+  created_at?: string;
+  selected_tests?: string[];
+}
 
 const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [selectedAd, setSelectedAd] = useState<any>(null);
   const [relatedAds, setRelatedAds] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('recommended');
+  const [publishedCampaigns, setPublishedCampaigns] = useState<PublishedCampaign[]>([]);
+  const [launchSuccessId, setLaunchSuccessId] = useState<string | null>(null);
+  const isLoggedIn = !!localStorage.getItem('token');
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -18,6 +37,27 @@ const Home: React.FC = () => {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cid = params.get('campaign');
+    if (cid) setLaunchSuccessId(cid);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const token = localStorage.getItem('token') ?? '';
+    fetch(`${AUTOCREATE_API_URL}/api/campaigns/my-campaigns`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then((data: { success?: boolean; campaigns?: PublishedCampaign[] }) => {
+        if (data.success && data.campaigns) {
+          setPublishedCampaigns(data.campaigns.filter(c => c.campaign_status === 'published'));
+        }
+      })
+      .catch(() => { /* silently ignore */ });
+  }, [isLoggedIn]);
 
   // Sample data for all ads
   const allAds = [
@@ -96,6 +136,121 @@ const Home: React.FC = () => {
 
         {/* ✅ ADDED: Animated Tile Grid Section */}
       <AnimatedTileGrid />
+
+      {/* ✅ My Published Campaigns (logged-in only) */}
+      {isLoggedIn && (publishedCampaigns.length > 0 || launchSuccessId) && (
+        <section className="px-6 py-10 max-w-7xl mx-auto">
+          {launchSuccessId && (
+            <div style={{
+              background: 'rgba(0,229,212,0.10)',
+              border: '1px solid rgba(0,229,212,0.4)',
+              borderRadius: 12,
+              padding: '14px 20px',
+              color: '#00e5d4',
+              fontSize: 15,
+              fontWeight: 600,
+              marginBottom: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <span>🚀 Campaign #{launchSuccessId} published successfully!</span>
+              <button
+                onClick={() => navigate('/my-campaigns')}
+                style={{
+                  background: '#00e5d4',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 18px',
+                  color: '#000',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                View All My Campaigns →
+              </button>
+            </div>
+          )}
+
+          {publishedCampaigns.length > 0 && (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="text-gray-100 text-[36px] font-semibold leading-[1] tracking-[-0.03em]"
+                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
+                >
+                  My Published Campaigns
+                </h2>
+                <button
+                  onClick={() => navigate('/my-campaigns')}
+                  className="flex items-center gap-2 text-[16px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
+                >
+                  See All
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {publishedCampaigns.slice(0, 3).map(campaign => (
+                  <div
+                    key={campaign.id}
+                    onClick={() => navigate('/my-campaigns')}
+                    style={{
+
+                      borderRadius: 16,
+                      padding: '20px 24px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.15s',
+                      background: `linear-gradient(#131313, #131313) padding-box,
+                        linear-gradient(135deg, #00e5d4, #8b6fff, #ff4fcb) border-box`,
+                      border: '1px solid transparent',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
+                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                      <span style={{ color: '#8b6fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Campaign #{campaign.id}
+                      </span>
+                      <span style={{
+                        background: 'rgba(0,229,212,0.15)',
+                        color: '#00e5d4',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: '3px 10px',
+                        borderRadius: 20,
+                        border: '1px solid rgba(0,229,212,0.3)',
+                      }}>
+                        Published
+                      </span>
+                    </div>
+                    <p style={{ color: '#fff', fontSize: 16, fontWeight: 600, marginBottom: 8, textTransform: 'capitalize' }}>
+                      {campaign.campaign_goal ?? 'Campaign'} Strategy
+                    </p>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8 }}>
+                      {campaign.budget_amount && (
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                          💰 ${campaign.budget_amount.toLocaleString()}
+                          {campaign.budget_type === 'daily' ? '/day' : ' total'}
+                        </span>
+                      )}
+                      {campaign.campaign_duration && (
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                          📅 {campaign.campaign_duration} days
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {/* Background Effects */}
       <div className="pointer-events-none fixed inset-0">

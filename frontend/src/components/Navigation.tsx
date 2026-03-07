@@ -108,6 +108,19 @@ const Navigation: React.FC = () => {
                 Logout
               </button>
 
+              <button
+                onClick={() => navigate('/my-campaigns')}
+                className="px-5 py-2 rounded-full font-semibold text-white transition-all hover:scale-105"
+                style={{
+                  background: `linear-gradient(#1f1f1f, #1f1f1f) padding-box,
+                    linear-gradient(90deg, #22d3ee, #a855f7, #ec4899) border-box`,
+                  border: '2px solid transparent',
+                  fontSize: 14,
+                }}
+              >
+                My Published Ads
+              </button>
+
               <span className="text-white">
                 Hello, {userName}
               </span>

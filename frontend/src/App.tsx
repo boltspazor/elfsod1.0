@@ -19,6 +19,7 @@ import BookingPage from './pages/BookingPage';
 
 /* ✅ NEW PAGE IMPORT */
 import TargetingIntel from './pages/targetingIntel';
+import MyCampaigns from './pages/MyCampaigns';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -134,6 +135,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TargetingIntel />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/my-campaigns"
+              element={
+                <ProtectedRoute>
+                  <MyCampaigns />
                 </ProtectedRoute>
               }
             />

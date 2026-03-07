@@ -1,5 +1,5 @@
 // BudgetTestingStep.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { DollarSign, Calendar, TrendingUp, Zap, BarChart3, Target, Save, Loader, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AUTOCREATE_API_URL } from '../../config';
@@ -33,6 +33,10 @@ interface Projections {
   expected_roas?: string;
 }
 
+export interface BudgetTestingRef {
+  saveAndGetCampaignId: () => Promise<string | null>;
+}
+
 interface BudgetTestingStepProps {
   campaignId?: string;
   onSave?: (campaignId: string) => void;
@@ -52,7 +56,7 @@ interface BudgetTestingStepProps {
   };
 }
 
-const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingStepProps) => {
+const BudgetTestingStep = forwardRef<BudgetTestingRef, BudgetTestingStepProps>(({ campaignId, onSave, initialData }, ref) => {
   const [budgetType, setBudgetType] = useState<string>('daily');
   const [budget, setBudget] = useState<number>(500);
   const [duration, setDuration] = useState<number>(14);
@@ -174,20 +178,24 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
     }
   };
 
-  const saveBudgetTestingData = async () => {
+  useImperativeHandle(ref, () => ({
+    saveAndGetCampaignId: () => saveBudgetTestingData(),
+  }));
+
+  const saveBudgetTestingData = async (): Promise<string | null> => {
     if (!token) {
       setError('Not authenticated. Please login first.');
-      return;
+      return null;
     }
 
     if (budget < 0) {
       setError('Budget amount must be greater than or equal to 0');
-      return;
+      return null;
     }
 
     if (duration < 1) {
       setError('Campaign duration must be at least 1 day');
-      return;
+      return null;
     }
 
     setSaving(true);
@@ -236,12 +244,15 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
         if (onSave) {
           onSave(data.campaign_id);
         }
+        return data.campaign_id as string;
       } else {
         setError(data.error || 'Failed to save budget and testing data');
+        return null;
       }
     } catch (error) {
       console.error('Error saving budget data:', error);
       setError('Failed to connect to server');
+      return null;
     } finally {
       setSaving(false);
     }
@@ -553,6 +564,8 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
       </div>
     </div>
   );
-};
+});
+
+BudgetTestingStep.displayName = 'BudgetTestingStep';
 
 export default BudgetTestingStep;
