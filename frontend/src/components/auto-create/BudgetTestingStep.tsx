@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Calendar, TrendingUp, Zap, BarChart3, Target, Save, Loader, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AUTOCREATE_API_URL } from '../../config';
 
 interface TestingOption {
   id: string;
@@ -105,7 +106,7 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
 
   const loadTestingOptions = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/budget-testing/testing-options');
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/budget-testing/testing-options`);
       const data = await response.json();
       setTestingOptions(data.testing_options);
     } catch (error) {
@@ -121,7 +122,7 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
 
   const loadBudgetRecommendations = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/budget-testing/budget-recommendations');
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/budget-testing/budget-recommendations`);
       const data = await response.json();
       
       // Only update if we get valid recommendations
@@ -147,7 +148,7 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:5050/api/budget-testing/projections', {
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/budget-testing/projections`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -219,7 +220,7 @@ const BudgetTestingStep = ({ campaignId, onSave, initialData }: BudgetTestingSte
         });
       }
 
-      const response = await fetch('http://localhost:5050/api/budget-testing/save', {
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/budget-testing/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

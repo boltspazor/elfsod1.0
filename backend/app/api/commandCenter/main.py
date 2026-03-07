@@ -12,10 +12,14 @@ from api_call import image_gen_bp
 # Create Flask app
 app = Flask(__name__)
 
-# Enable CORS - SINGLE CONFIGURATION ONLY
-CORS(app, 
+# CORS: localhost + FRONTEND_URL from env (set in Railway for production)
+_cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_frontend_url = os.environ.get("FRONTEND_URL", "").strip()
+if _frontend_url:
+    _cors_origins.append(_frontend_url.rstrip("/"))
+CORS(app,
      resources={r"/*": {
-         "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+         "origins": _cors_origins,
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
          "expose_headers": ["Content-Type"],

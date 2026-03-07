@@ -3,8 +3,10 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
+from config import settings
+
 app = Flask(__name__)
-CORS(app, origins=["*"])
+CORS(app, origins=settings.CORS_ORIGINS)
 
 # Import blueprints
 from audience_step import audience_bp

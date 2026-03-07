@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   /** Auth service – login / signup (default: :5003) */
   readonly VITE_AUTH_API_URL?: string;
+  /** Command Center – GenAI + image gen (single base URL for both) */
+  readonly VITE_COMMAND_CENTER_API_URL?: string;
   /** GenAI / Command-Center / ChatInput (default: 127.0.0.1:5002) */
   readonly VITE_GENAI_API_URL?: string;
   /** Image-generation service – GenerateAdPopup (default: :5002) */

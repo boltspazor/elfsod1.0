@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, MapPin, Search, Save, AlertCircle, CheckCircle,Heart, Loader, Dumbbell, Trophy, Shirt, Cpu, Briefcase } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AUTOCREATE_API_URL } from '../../config';
 
 interface Interest {
   id: string;
@@ -90,8 +91,8 @@ const AudienceStep = ({ campaignId, onSave, initialData }: AudienceStepProps) =>
       console.log('Loading preset data...');
       
       const [interestsRes, locationsRes] = await Promise.all([
-        fetch('http://localhost:5006/api/audience/preset-interests'),
-        fetch('http://localhost:5006/api/audience/preset-locations')
+        fetch(`${AUTOCREATE_API_URL}/api/audience/preset-interests`),
+        fetch(`${AUTOCREATE_API_URL}/api/audience/preset-locations`)
       ]);
 
       const interestsData = await interestsRes.json();
@@ -215,7 +216,7 @@ const AudienceStep = ({ campaignId, onSave, initialData }: AudienceStepProps) =>
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5006/api/audience/insights', {
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/audience/insights`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -291,7 +292,7 @@ const AudienceStep = ({ campaignId, onSave, initialData }: AudienceStepProps) =>
         payload.campaign_id = campaignId;
       }
 
-      const response = await fetch('http://localhost:5006/api/audience/targeting', {
+      const response = await fetch(`${AUTOCREATE_API_URL}/api/audience/targeting`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -24,7 +24,7 @@ class Settings:
     # Groq API (for copy messaging)
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     
-    # CORS Configuration
+    # CORS Configuration: base list + FRONTEND_URL from env (set in Railway for production)
     CORS_ORIGINS = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -32,5 +32,8 @@ class Settings:
         "http://127.0.0.1:5173",
         "http://192.0.0.2:5173",
     ]
+    _frontend_url = os.getenv("FRONTEND_URL", "").strip()
+    if _frontend_url:
+        CORS_ORIGINS.append(_frontend_url.rstrip("/"))
 
 settings = Settings()

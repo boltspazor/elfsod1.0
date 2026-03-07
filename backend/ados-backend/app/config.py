@@ -29,13 +29,19 @@ class Settings:
     GOOGLE_MAX_ENRICHMENT: int = int(os.getenv("GOOGLE_MAX_ENRICHMENT", "3"))
     FETCH_TIMEOUT: int = int(os.getenv("FETCH_TIMEOUT", "30"))
 
-    # CORS - Parse comma-separated string
-    ALLOWED_ORIGINS: List[str] = [
-        origin.strip()
-        for origin in os.getenv(
+    # CORS - Parse comma-separated ALLOWED_ORIGINS, then append FRONTEND_URL if set (Railway production)
+    _origins_from_env = [
+        o.strip() for o in os.getenv(
             "ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5003"
         ).split(",")
+        if o.strip()
     ]
+    _frontend_url = os.getenv("FRONTEND_URL", "").strip()
+    if _frontend_url:
+        _frontend_origin = _frontend_url.rstrip("/")
+        if _frontend_origin not in _origins_from_env:
+            _origins_from_env.append(_frontend_origin)
+    ALLOWED_ORIGINS: List[str] = _origins_from_env
 
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")

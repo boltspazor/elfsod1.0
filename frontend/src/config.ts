@@ -51,17 +51,26 @@ export const AUTH_API_URL = normalizeApiUrl(
   optional(import.meta.env.VITE_AUTH_API_URL, 'http://localhost:5003')
 );
 
-/** GenAI / Command-Center / ChatInput service */
-export const GENAI_API_URL = optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002');
+/** Command Center base URL – when set, used for both GenAI and image gen */
+const COMMAND_CENTER_BASE = optional(import.meta.env.VITE_COMMAND_CENTER_API_URL, '').trim();
 
-/** Image-generation service – GenerateAdPopup */
-export const IMAGE_GEN_API_URL = optional(import.meta.env.VITE_IMAGE_GEN_API_URL, 'http://localhost:5002');
+/** GenAI / Command-Center / ChatInput service */
+export const GENAI_API_URL = COMMAND_CENTER_BASE
+  ? normalizeApiUrl(COMMAND_CENTER_BASE)
+  : optional(import.meta.env.VITE_GENAI_API_URL, 'http://127.0.0.1:5002');
+
+/** Image-generation service – GenerateAdPopup (same service as GenAI) */
+export const IMAGE_GEN_API_URL = COMMAND_CENTER_BASE
+  ? normalizeApiUrl(COMMAND_CENTER_BASE)
+  : optional(import.meta.env.VITE_IMAGE_GEN_API_URL, 'http://localhost:5002');
 
 /** Dedicated image-generation REST API – imageGeneration.ts */
 export const IMAGE_GEN_REST_URL = optional(import.meta.env.VITE_IMAGE_GEN_REST_URL, 'http://localhost:5006/api');
 
 /** AutoCreate / campaign service */
-export const AUTOCREATE_API_URL = optional(import.meta.env.VITE_AUTOCREATE_API_URL, 'http://localhost:5050');
+export const AUTOCREATE_API_URL = normalizeApiUrl(
+  optional(import.meta.env.VITE_AUTOCREATE_API_URL, 'http://localhost:5050')
+);
 
 // ── App meta ─────────────────────────────────────────────────────────────────
 export const APP_TITLE = optional(import.meta.env.VITE_APP_TITLE, 'ADOS');
