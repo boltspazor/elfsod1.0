@@ -4,6 +4,7 @@ import { RefreshCw, Download, Shield, Cpu, Brain } from 'lucide-react';
 import TargetingIntelAPI, {
   type TargetingIntelData,
   fetchAllTargetingIntel,
+  fetchCompetitors,
   getAuthUserInfo
 } from '../services/targetingIntel';
 import Navigation from '@/components/Navigation';
@@ -232,11 +233,14 @@ const ActivityChart = () => (
 const TargetingIntel: React.FC = () => {
   const [data, setData] = useState<TargetingIntelData | null>(null);
   const [allData, setAllData] = useState<TargetingIntelData[]>([]);
+  const [competitors, setCompetitors] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState<{ user_id: string; email: string; name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'demographics' | 'interests' | 'strategy'>('overview');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
   const [refreshing, setRefreshing] = useState(false);
+  const [calculating, setCalculating] = useState(false);
 
   useEffect(() => {
     const user = getAuthUserInfo();
@@ -249,17 +253,53 @@ const TargetingIntel: React.FC = () => {
     try {
       const conn = await TargetingIntelAPI.testConnection();
       setConnectionStatus(conn.connected ? 'connected' : 'disconnected');
-      const records = await fetchAllTargetingIntel();
+      const [records, comps] = await Promise.all([
+        fetchAllTargetingIntel(),
+        fetchCompetitors(),
+      ]);
       setAllData(records);
-      setData(records[0] || null);
-    } catch { /* fallback to mock */ }
-    finally { setLoading(false); }
+      setCompetitors(comps);
+      if (records.length > 0) {
+        const selectedId = selectedCompetitorId && records.some(r => r.competitor_id === selectedCompetitorId)
+          ? selectedCompetitorId
+          : records[0].competitor_id;
+        setSelectedCompetitorId(selectedId);
+        setData(records.find(r => r.competitor_id === selectedId) || records[0]);
+      } else {
+        setData(null);
+        if (comps.length > 0 && !selectedCompetitorId) setSelectedCompetitorId(comps[0].id);
+      }
+    } catch {
+      setAllData([]);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  };
+
+  const handleCompetitorChange = (competitorId: string) => {
+    setSelectedCompetitorId(competitorId);
+    const record = allData.find(r => r.competitor_id === competitorId);
+    setData(record || null);
+  };
+
+  const handleCalculateAll = async () => {
+    setCalculating(true);
+    try {
+      await TargetingIntelAPI.refreshAll();
+      await new Promise(r => setTimeout(r, 3000));
+      await loadData();
+    } catch (e) {
+      console.error('Calculate targeting failed:', e);
+    } finally {
+      setCalculating(false);
+    }
   };
 
   const handleExport = () => {
@@ -329,11 +369,36 @@ const TargetingIntel: React.FC = () => {
         <div className="px-6 py-6 max-w-[1200px] mx-auto">
 
           {/* PAGE HEADER */}
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
             <div>
               <h1 className="text-3xl font-bold text-white">Targeting Intelligence</h1>
               <p className="text-gray-400 text-sm mt-1">AI-powered audience insights and targeting strategies</p>
             </div>
+            {competitors.length > 0 && (
+              <select
+                value={selectedCompetitorId || ''}
+                onChange={(e) => handleCompetitorChange(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #333',
+                  background: '#111',
+                  color: '#fff',
+                  fontSize: '14px',
+                  minWidth: '180px',
+                }}
+              >
+                {allData.length > 0
+                  ? allData.map((r) => (
+                      <option key={r.competitor_id} value={r.competitor_id}>
+                        {r.competitor_name || r.competitor_id?.slice(0, 8)}
+                      </option>
+                    ))
+                  : competitors.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+              </select>
+            )}
             <div className="flex gap-2">
               {/* Refresh — outlined white button */}
               <button
@@ -367,7 +432,61 @@ const TargetingIntel: React.FC = () => {
             </div>
           </div>
 
-          {/* STATUS BADGES */}
+          {/* EMPTY STATE: No targeting data yet */}
+          {!loading && !data && (
+            <div style={{
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: '16px',
+              padding: '48px 32px',
+              textAlign: 'center',
+              marginBottom: '24px',
+            }}>
+              <Brain style={{ width: 48, height: 48, color: '#444', margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>
+                No targeting intelligence yet
+              </h3>
+              <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '24px', maxWidth: '420px', margin: '0 auto 24px' }}>
+                {competitors.length === 0
+                  ? 'Add competitors in Ad Surveillance first, then refresh their ads. After that you can calculate targeting intelligence here.'
+                  : 'Calculate targeting intelligence for your competitors. This may take a minute.'}
+              </p>
+              {competitors.length > 0 && (
+                <button
+                  onClick={handleCalculateAll}
+                  disabled={calculating}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#0ea5e9',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: calculating ? 'wait' : 'pointer',
+                    opacity: calculating ? 0.8 : 1,
+                  }}
+                >
+                  {calculating ? (
+                    <>
+                      <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" />
+                      Calculating…
+                    </>
+                  ) : (
+                    <>
+                      <Cpu style={{ width: 16, height: 16 }} />
+                      Calculate targeting intelligence
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* STATUS BADGES, TABS & CONTENT — only when we have data */}
+          {data && (
+          <>
           <div className="flex flex-wrap gap-3 mb-5">
             {/* Ravi Kumar / Authenticated */}
             <div style={{
@@ -752,6 +871,8 @@ const TargetingIntel: React.FC = () => {
               <p className="text-gray-500 text-xs mt-0.5">AI-Powered insights update every 24 hours</p>
             </div>
           </div>
+          </>
+          )}
 
         </div>
 

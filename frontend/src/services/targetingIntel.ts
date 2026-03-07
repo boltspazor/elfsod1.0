@@ -450,14 +450,12 @@ export async function fetchAllTargetingIntel(
         ...normalizeTargetingData(item),
         competitor_name: item.competitor_name || `Competitor ${item.competitor_id?.substring(0, 8)}`
       }));
-    } else {
-      console.warn('⚠️ No targeting data array returned, using mock data');
-      return [mockTargetingIntelData];
     }
-    
+    console.warn('⚠️ No targeting data array returned');
+    return [];
   } catch (error: any) {
     console.error('Error fetching all targeting intelligence:', error.message || error);
-    return [mockTargetingIntelData];
+    return [];
   }
 }
 
@@ -602,6 +600,20 @@ export async function testTargetingIntelConnection(): Promise<{
   }
 }
 
+/**
+ * Fetch user's competitors (same backend as targeting intel)
+ */
+export async function fetchCompetitors(): Promise<Array<{ id: string; name: string; domain?: string }>> {
+  try {
+    const response = await fetchWithAuth('/api/competitors/');
+    if (Array.isArray(response)) return response;
+    return [];
+  } catch (e) {
+    console.error('Error fetching competitors:', e);
+    return [];
+  }
+}
+
 /* =========================
    Export API Object
 ========================= */
@@ -612,6 +624,7 @@ export const TargetingIntelAPI = {
   getByCompetitor: fetchTargetingIntelByCompetitorId,
   getAll: fetchAllTargetingIntel,
   getDashboard: fetchTargetingDashboard,
+  getCompetitors: fetchCompetitors,
   delete: deleteTargetingIntel,
   refreshAll: refreshAllTargetingIntel,
   testConnection: testTargetingIntelConnection,
