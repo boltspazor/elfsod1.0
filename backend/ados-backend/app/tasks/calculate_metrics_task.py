@@ -1,4 +1,5 @@
 import logging
+import os
 from celery import Celery
 from sqlalchemy.orm import Session
 import uuid
@@ -7,11 +8,12 @@ from typing import List, Optional
 from app.database import SessionLocal
 from app.services.metrics_calculator import MetricsCalculator
 
-# Configure Celery (adjust broker URL as needed)
+# Redis URL from env (Railway sets REDIS_URL when Redis is linked); fallback for local dev
+_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery(
     'ados_tasks',
-    broker='redis://localhost:6379/0',  # Or your Redis URL
-    backend='redis://localhost:6379/0'
+    broker=_redis_url,
+    backend=_redis_url,
 )
 
 logger = logging.getLogger(__name__)
