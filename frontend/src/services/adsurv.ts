@@ -231,12 +231,14 @@ const fetchWithAuth = async (
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { detail?: string | Array<{ loc?: (string | number)[]; msg?: string; type?: string }>; error?: string };
-    const message =
-      Array.isArray(err.detail)
-        ? err.detail.map((d) => d.msg || (d.loc ? `${d.loc.join('.')}: ${d.msg || d.type}` : String(d))).join('; ')
-        : typeof err.detail === 'string'
-          ? err.detail
-          : err.error || err.detail?.toString?.() || `API Error: ${res.status}`;
+    let message: string;
+    if (Array.isArray(err.detail)) {
+      message = err.detail.map((d) => d.msg || (d.loc ? `${d.loc.join('.')}: ${d.msg || d.type}` : String(d))).join('; ');
+    } else if (typeof err.detail === 'string') {
+      message = err.detail;
+    } else {
+      message = err.error || `API Error: ${res.status}`;
+    }
     throw new Error(message || `API Error: ${res.status}`);
   }
 
