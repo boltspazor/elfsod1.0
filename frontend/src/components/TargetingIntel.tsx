@@ -1,6 +1,9 @@
 // src/components/TargetingIntel.tsx
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, Download, Shield, Cpu, Brain } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 import TargetingIntelAPI, {
   type TargetingIntelData,
   fetchAllTargetingIntel,
@@ -218,14 +221,146 @@ const LoadingScreen = ({ userName }: { userName?: string }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bar chart for Binding Strategy
+// BiddingPatternChart — 24-hour CPM activity bar chart
 // ─────────────────────────────────────────────────────────────────────────────
-const ActivityChart = () => (
-  <div style={{
-    background: '#0d0d0d', borderRadius: '12px',
-    marginBottom: '16px', height: '112px',
-  }} />
-);
+const BiddingPatternChart = ({
+  pattern,
+  peakHour,
+  bestHour,
+}: {
+  pattern: { hour: number; label: string; value: number }[];
+  peakHour: number;
+  bestHour: number;
+}) => {
+  if (!pattern.length) return (
+    <div style={{ background: '#0d0d0d', borderRadius: '12px', marginBottom: '16px', height: '140px' }} />
+  );
+  return (
+    <div style={{ background: '#0d0d0d', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden' }}>
+      <div style={{ height: '140px', padding: '0 0 0 0' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={pattern}
+            margin={{ top: 10, right: 8, left: -28, bottom: 4 }}
+            barCategoryGap="12%"
+          >
+            <XAxis
+              dataKey="label"
+              tick={{ fill: '#6b7280', fontSize: 8, fontFamily: "'Poppins', sans-serif" }}
+              axisLine={false}
+              tickLine={false}
+              interval={3}
+            />
+            <YAxis tick={false} axisLine={false} tickLine={false} />
+            <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+              formatter={(v) => [`$${Number(v).toFixed(2)} CPM`]}
+              labelFormatter={(l) => `Hour: ${l}`}
+              contentStyle={{
+                background: '#111',
+                border: '1px solid #333',
+                borderRadius: '8px',
+                fontSize: '11px',
+                color: '#e5e7eb',
+                fontFamily: "'Poppins', sans-serif",
+              }}
+              labelStyle={{ color: '#9ca3af', marginBottom: '2px' }}
+              itemStyle={{ color: '#06B6D4' }}
+            />
+            <Bar dataKey="value" radius={[2, 2, 0, 0]}>
+              {pattern.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={
+                    entry.hour === peakHour ? '#06B6D4'
+                    : entry.hour === bestHour ? '#A855F7'
+                    : '#222'
+                  }
+                  opacity={entry.hour === peakHour || entry.hour === bestHour ? 1 : 0.7}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      {/* legend */}
+      <div style={{
+        display: 'flex', gap: '16px', justifyContent: 'flex-end',
+        padding: '6px 14px 10px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#06B6D4' }} />
+          <span style={{ fontSize: '10px', color: '#6b7280' }}>Peak CPM</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#A855F7' }} />
+          <span style={{ fontSize: '10px', color: '#6b7280' }}>Best Time (low cost)</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DeviceDistributionChart — horizontal bar chart for device breakdown
+// ─────────────────────────────────────────────────────────────────────────────
+const DeviceDistributionChart = ({
+  dist,
+}: {
+  dist: { label: string; value: number; color: string }[];
+}) => {
+  if (!dist.length) return null;
+  return (
+    <div style={{ background: '#0d0d0d', borderRadius: '12px', padding: '16px', marginTop: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <span style={{ fontSize: '13px', color: '#d1d5db', fontWeight: 600 }}>Device Distribution</span>
+        <span style={{ fontSize: '11px', color: '#6b7280' }}>Percentage</span>
+      </div>
+      <ResponsiveContainer width="100%" height={dist.length * 38 + 8}>
+        <BarChart
+          data={dist}
+          layout="vertical"
+          margin={{ top: 0, right: 44, left: 0, bottom: 0 }}
+          barCategoryGap="28%"
+        >
+          <XAxis type="number" domain={[0, 100]} tick={false} axisLine={false} tickLine={false} />
+          <YAxis
+            type="category"
+            dataKey="label"
+            tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 600, fontFamily: "'Poppins', sans-serif" }}
+            axisLine={false}
+            tickLine={false}
+            width={60}
+          />
+          <Tooltip
+            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            formatter={(v) => [`${Number(v).toFixed(1)}%`]}
+            contentStyle={{
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: '8px',
+              fontSize: '11px',
+              color: '#e5e7eb',
+              fontFamily: "'Poppins', sans-serif",
+            }}
+            labelStyle={{ color: '#9ca3af', marginBottom: '2px' }}
+            itemStyle={{ color: '#06B6D4' }}
+          />
+          <Bar
+            dataKey="value"
+            radius={[0, 4, 4, 0]}
+            label={{ position: 'right', fill: '#6b7280', fontSize: 10, formatter: (v: unknown) => `${Number(v).toFixed(1)}%` }}
+            background={{ fill: '#1a1a1a', radius: 4 }}
+          >
+            {dist.map((d, i) => (
+              <Cell key={i} fill={d.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers — derive dynamic display data from backend fields
@@ -341,6 +476,76 @@ function buildRecommendations(d: TargetingIntelData): {
       </>
     ),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// build24HourPattern — synthetic CPM pattern from backend bidding data
+// ─────────────────────────────────────────────────────────────────────────────
+function build24HourPattern(
+  estimatedCpm: number | null | undefined,
+  biddingStrategy: string | null | undefined,
+  funnelStage: string | null | undefined,
+): { hour: number; label: string; value: number }[] {
+  const baseCpm = estimatedCpm ?? 15;
+  const hourlyMultipliers = [
+    0.55, 0.45, 0.40, 0.38, 0.42, 0.52,  // 0–5 AM: low
+    0.68, 0.75, 0.82, 0.85, 0.88, 0.90,  // 6–11 AM: rising
+    0.92, 0.95, 0.93, 0.90, 0.92, 0.97,  // 12–17 PM: steady high
+    1.00, 0.98, 0.95, 0.90, 0.80, 0.70,  // 18–23: peak then decline
+  ];
+  const adjusted = hourlyMultipliers.map((v, h) => {
+    let val = v;
+    if (biddingStrategy === 'target_cost' || biddingStrategy === 'cost_cap') {
+      val = Math.pow(val, 1.35);
+    }
+    if (funnelStage === 'conversion') {
+      if (h >= 11 && h <= 13) val *= 1.15;
+    } else if (funnelStage === 'awareness') {
+      if (h >= 20 && h <= 22) val *= 1.1;
+    }
+    return val;
+  });
+  const maxMult = Math.max(...adjusted);
+  return Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    label: h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`,
+    value: parseFloat((baseCpm * (adjusted[h] / maxMult)).toFixed(2)),
+  }));
+}
+
+/** Derive peak/best hour labels from the 24-hour pattern array. */
+function deriveBidTimings(
+  pattern: { hour: number; value: number }[],
+): { peakHour: number; bestHour: number; peakTimeLabel: string; bestTimeLabel: string } {
+  if (!pattern.length) return { peakHour: 18, bestHour: 3, peakTimeLabel: '6 PM-9 PM', bestTimeLabel: '3 AM-6 AM' };
+  const maxVal = Math.max(...pattern.map(p => p.value));
+  const minVal = Math.min(...pattern.map(p => p.value));
+  const peakHour = pattern.find(p => p.value === maxVal)?.hour ?? 18;
+  const bestHour = pattern.find(p => p.value === minVal)?.hour ?? 3;
+  const fmtRange = (h: number) => {
+    const fmt = (n: number) => {
+      const m = ((n % 24) + 24) % 24;
+      if (m === 0) return '12 AM';
+      if (m === 12) return '12 PM';
+      return m > 12 ? `${m - 12} PM` : `${m} AM`;
+    };
+    return `${fmt(h)}-${fmt(h + 3)}`;
+  };
+  return { peakHour, bestHour, peakTimeLabel: fmtRange(peakHour), bestTimeLabel: fmtRange(bestHour) };
+}
+
+/** Build device distribution bar data from backend device_distribution object. */
+function buildDeviceDistData(
+  dist: { mobile?: number; desktop?: number; tablet?: number; ios?: number; android?: number } | null | undefined,
+): { label: string; value: number; color: string }[] {
+  if (!dist) return [];
+  const items: { label: string; value: number; color: string }[] = [];
+  if (dist.mobile != null) items.push({ label: 'Mobile', value: +(dist.mobile * 100).toFixed(1), color: '#06B6D4' });
+  if (dist.desktop != null) items.push({ label: 'Desktop', value: +(dist.desktop * 100).toFixed(1), color: '#A855F7' });
+  if (dist.tablet != null && dist.tablet > 0.01) items.push({ label: 'Tablet', value: +(dist.tablet * 100).toFixed(1), color: '#F59E0B' });
+  if (dist.ios != null && dist.ios > 0.01) items.push({ label: 'iOS', value: +(dist.ios * 100).toFixed(1), color: '#22C55E' });
+  if (dist.android != null && dist.android > 0.01) items.push({ label: 'Android', value: +(dist.android * 100).toFixed(1), color: '#EF4444' });
+  return items;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -480,6 +685,33 @@ const TargetingIntel: React.FC = () => {
       ? `${(data.engagement_rate * 100).toFixed(1)}%`
       : '4.0x';
   const roasLabel = data?.estimated_roas != null ? 'Est. ROAS' : 'Engagement Rate';
+
+  // 24-hour bidding pattern chart + derived timings
+  const hourlyPattern = build24HourPattern(data?.estimated_cpm, data?.bidding_strategy, data?.funnel_stage);
+  const bidTimings = deriveBidTimings(hourlyPattern);
+  const peakTimeLabel = bidTimings.peakTimeLabel;
+  const bestTimeLabel = bidTimings.bestTimeLabel;
+
+  // Device distribution chart data
+  const deviceDistData = buildDeviceDistData(data?.device_distribution);
+
+  // Competitor overlap — derived from demographic + interest confidence scores
+  const _demographicConf = data?.confidence_scores?.demographic ?? null;
+  const _interestConf = data?.confidence_scores?.interest ?? null;
+  const competitorOverlapPct = (_demographicConf != null && _interestConf != null)
+    ? `${Math.round(((_demographicConf + _interestConf) / 2) * 100)}%`
+    : '58%';
+  const audienceSharedPct = data?.confidence_scores?.geographic != null
+    ? `${Math.round(data.confidence_scores.geographic * 100)}%`
+    : (_demographicConf != null ? `${Math.round(_demographicConf * 100)}%` : '42%');
+  const overlapBrandsText = allData.length > 0
+    ? `${allData.length} Brand${allData.length !== 1 ? 's' : ''} Overlapping`
+    : 'Brand Overlapping';
+  const overlapDescText = data?.primary_interests?.[0]
+    ? `Audience overlaps with ${data.primary_interests[0].replace(/_/g, ' ')} trends`
+    : data?.interest_clusters?.[0]
+      ? `Audience overlaps with ${data.interest_clusters[0].replace(/_/g, ' ')} trends`
+      : 'Audience overlaps with similar interest trends';
 
   const tabs = ['Overview', 'Demographics', 'Interests', 'Strategy'];
   const tabKeys = ['overview', 'demographics', 'interests', 'strategy'] as const;
@@ -741,7 +973,7 @@ const TargetingIntel: React.FC = () => {
                   {/* Peak CPM — gradient text */}
                   <MetricCard
                     title="Peak CPM"
-                    subtitle="6pm - 9pm"
+                    subtitle={peakTimeLabel}
                     value={peakCpm}
                     gradient={true}
                   />
@@ -820,7 +1052,16 @@ const TargetingIntel: React.FC = () => {
                 </div>
               </NeonCard>
 
-              {/* Row 3: Interest Clusters */}
+              {/* Row 3: Device Distribution + Interest Clusters */}
+              {deviceDistData.length > 0 && (
+                <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
+                  <h2 className="text-lg font-bold text-white mb-1">Device Distribution</h2>
+                  <p className="text-gray-500 text-xs mb-3">Platform breakdown by device type</p>
+                  <DeviceDistributionChart dist={deviceDistData} />
+                </NeonCard>
+              )}
+
+              {/* Row 4: Interest Clusters */}
               <NeonCard className="mb-5" innerClass="p-5" radius="1rem">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-white">Interest Clusters &amp; Analysis</h2>
@@ -842,12 +1083,12 @@ const TargetingIntel: React.FC = () => {
                         fontSize: '3.75rem', fontWeight: 800, textAlign: 'center',
                         background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                      }}>58%</div>
-                      <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
+                      }}>{competitorOverlapPct}</div>
+                      <p className="text-gray-400 text-xs mt-1">{overlapBrandsText}</p>
                     </div>
-                    <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
+                    <p className="text-center text-xs text-white font-semibold mb-4">{overlapDescText}</p>
                     <div className="grid grid-cols-2 gap-3">
-                      <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
+                      <StatMiniCard value={audienceSharedPct} label="Audience Shared" color="#06B6D4" />
                       <StatMiniCard value={roasDisplay} label={roasLabel} color="#A855F7" />
                     </div>
                   </NeonCard>
@@ -877,10 +1118,10 @@ const TargetingIntel: React.FC = () => {
                     <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
                     <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
                   </div>
-                  <ActivityChart />
-                  <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                  <BiddingPatternChart pattern={hourlyPattern} peakHour={bidTimings.peakHour} bestHour={bidTimings.bestHour} />
+                  <CostCard title="Peak CPM" sub={peakTimeLabel} value={peakCpm} valueColor="#06B6D4" />
                   <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
-                  <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
+                  <CostCard title="Best Time" sub="Lowest acquisition cost" value={bestTimeLabel} valueColor="#A855F7" />
                 </NeonCard>
               </div>
             </>
@@ -925,6 +1166,9 @@ const TargetingIntel: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                {deviceDistData.length > 0 && (
+                  <DeviceDistributionChart dist={deviceDistData} />
+                )}
               </NeonCard>
             </div>
           )}
@@ -955,12 +1199,12 @@ const TargetingIntel: React.FC = () => {
                       fontSize: '3.75rem', fontWeight: 800, textAlign: 'center',
                       background: 'linear-gradient(90deg, #06B6D4 0%, #A855F7 100%)',
                       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                    }}>58%</div>
-                    <p className="text-gray-400 text-xs mt-1">Branda Overlapping</p>
+                    }}>{competitorOverlapPct}</div>
+                    <p className="text-gray-400 text-xs mt-1">{overlapBrandsText}</p>
                   </div>
-                  <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
+                  <p className="text-center text-xs text-white font-semibold mb-4">{overlapDescText}</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
+                    <StatMiniCard value={audienceSharedPct} label="Audience Shared" color="#06B6D4" />
                     <StatMiniCard value={roasDisplay} label={roasLabel} color="#A855F7" />
                   </div>
                 </NeonCard>
@@ -969,10 +1213,10 @@ const TargetingIntel: React.FC = () => {
                     <h2 className="text-base font-bold text-white">Binding Strategy Analysis</h2>
                     <span className="border border-[#333] text-gray-300 text-xs px-3 py-1 rounded-full">24 hours pattern</span>
                   </div>
-                  <ActivityChart />
-                  <CostCard title="Peak CPM" sub="6 PM-9 PM" value={peakCpm} valueColor="#06B6D4" />
+                  <BiddingPatternChart pattern={hourlyPattern} peakHour={bidTimings.peakHour} bestHour={bidTimings.bestHour} />
+                  <CostCard title="Peak CPM" sub={peakTimeLabel} value={peakCpm} valueColor="#06B6D4" />
                   <CostCard title="Average CPC" sub="Daily average cost per click!" value={avgCpc} valueColor="#A855F7" />
-                  <CostCard title="Best Time" sub="Lowest acquisition cost" value="3AM-6AM" valueColor="#A855F7" />
+                  <CostCard title="Best Time" sub="Lowest acquisition cost" value={bestTimeLabel} valueColor="#A855F7" />
                 </NeonCard>
               </div>
             </div>
