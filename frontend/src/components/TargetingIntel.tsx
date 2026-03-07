@@ -228,6 +228,122 @@ const ActivityChart = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers — derive dynamic display data from backend fields
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AGE_BUCKET_CONFIG = [
+  { label: '18 - 24', color: '#F59E0B' },
+  { label: '25 - 34', color: '#22C55E' },
+  { label: '35 - 44', color: '#A855F7' },
+  { label: '45 - 54', color: '#06B6D4' },
+  { label: '55+',     color: '#EF4444' },
+];
+
+/** Build a bell-curve age distribution centred on the backend's primary age range. */
+function buildAgeDistribution(
+  ageMin: number | null,
+  ageMax: number | null,
+  ageRange: string | null,
+): { label: string; value: number; color: string }[] {
+  let primaryIdx = 1; // default: 25-34
+  if (ageRange) {
+    const r = ageRange.replace(/\s/g, '');
+    if (r.startsWith('18') || r.startsWith('13')) primaryIdx = 0;
+    else if (r.startsWith('25') || r.startsWith('20') || r.startsWith('18-3')) primaryIdx = 1;
+    else if (r.startsWith('35') || r.startsWith('30')) primaryIdx = 2;
+    else if (r.startsWith('45') || r.startsWith('40')) primaryIdx = 3;
+    else if (r.startsWith('55') || r.includes('+')) primaryIdx = 4;
+  } else if (ageMin != null) {
+    if (ageMin < 25) primaryIdx = 0;
+    else if (ageMin < 35) primaryIdx = 1;
+    else if (ageMin < 45) primaryIdx = 2;
+    else if (ageMin < 55) primaryIdx = 3;
+    else primaryIdx = 4;
+  }
+  const CURVE = [35, 25, 17, 12, 7];
+  const weights = AGE_BUCKET_CONFIG.map((_, i) => CURVE[Math.abs(i - primaryIdx)] ?? 5);
+  const total = weights.reduce((a, b) => a + b, 0);
+  return AGE_BUCKET_CONFIG.map((b, i) => ({
+    label: b.label,
+    value: parseFloat(((weights[i] / total) * 100).toFixed(1)),
+    color: b.color,
+  }));
+}
+
+const INTEREST_COLORS = ['#F59E0B', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#EC4899'];
+
+/** Build interest bar data from backend clusters and confidence score. */
+function buildInterestData(
+  clusters: string[] | null | undefined,
+  interestConf?: number | null,
+): { label: string; sub: string; value: number; color: string }[] {
+  const list = clusters?.slice(0, 6) ?? [];
+  if (list.length === 0) return [];
+  const baseScore = Math.min(95, Math.round((interestConf ?? 0.88) * 100) + 5);
+  return list.map((raw, i) => {
+    const label = raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const value = Math.max(25, baseScore - i * 9);
+    const reachK = Math.round(500 * (value / 100));
+    return { label, sub: `(Potential reach: ${reachK}K)`, value, color: INTEREST_COLORS[i % INTEREST_COLORS.length] };
+  });
+}
+
+/** Generate AI recommendation text from real backend field values. */
+function buildRecommendations(d: TargetingIntelData): {
+  focusAudience: React.ReactNode;
+  optimalTiming: React.ReactNode;
+  interestTargeting: React.ReactNode;
+  aiInsights: React.ReactNode;
+} {
+  const ageRng = d.age_range || '25-34';
+  const device = d.primary_device || 'mobile';
+  const iosSharePct = d.device_distribution?.ios != null
+    ? `${(d.device_distribution.ios * 100).toFixed(0)}%` : '65%';
+  const mobileSharePct = d.device_distribution?.mobile != null
+    ? `${(d.device_distribution.mobile * 100).toFixed(0)}%` : '78%';
+  const topInterest = d.interest_clusters?.[0] || 'primary interests';
+  const secondInterest = d.interest_clusters?.[1] || 'secondary interests';
+  const interestConf = d.confidence_scores?.interest;
+  const affinityPct = interestConf ? `${(interestConf * 100).toFixed(0)}%+` : '85%+';
+  const budgetPct = interestConf ? Math.min(80, Math.round(interestConf * 80)) : 60;
+  const funnelStage = d.funnel_stage || 'awareness';
+  const audienceType = d.audience_type || 'broad';
+  const biddingStrat = d.bidding_strategy ? d.bidding_strategy.replace(/_/g, ' ') : 'cost cap';
+  const audienceInsight =
+    audienceType === 'retargeting' ? 'Strong retargeting signals detected' :
+    audienceType === 'lookalike'   ? 'Expand reach with lookalike audiences' :
+                                     'Top-funnel opportunity with broad audience';
+  return {
+    focusAudience: (
+      <>
+        Prioritize <strong>{ageRng} age group</strong> with {device}-first approach.{' '}
+        {device === 'mobile'
+          ? `iOS users account for ${iosSharePct} of traffic`
+          : `${mobileSharePct} mobile penetration detected`}
+      </>
+    ),
+    optimalTiming: (
+      <>
+        Schedule ads during <strong>off-peak hours</strong> for lower CPC.{' '}
+        Current bidding strategy: <strong>{biddingStrat}</strong>.
+        Optimise spend toward lowest-cost windows.
+      </>
+    ),
+    interestTargeting: (
+      <>
+        Allocate <strong>{budgetPct}% of budget</strong> to &ldquo;{topInterest}&rdquo; and &ldquo;{secondInterest}&rdquo;
+        {' '}interest clusters showing {affinityPct} affinity.
+      </>
+    ),
+    aiInsights: (
+      <>
+        Focus on <strong>{funnelStage}</strong> stage targeting. {audienceInsight}
+      </>
+    ),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const TargetingIntel: React.FC = () => {
@@ -325,7 +441,17 @@ const TargetingIntel: React.FC = () => {
 
   // ── Derived display values ───────────────────────────────────────────────
   const ageRange = data?.age_range || '25-34';
-  const purchaseIntent = data?.funnel_stage === 'consideration' ? 'High' : 'High';
+  const purchaseIntent = (() => {
+    if (data?.funnel_stage === 'conversion') return 'High';
+    if (data?.funnel_stage === 'consideration') return 'Medium';
+    if (data?.funnel_stage === 'awareness') return 'Low';
+    if (data?.funnel_score != null) {
+      if (data.funnel_score >= 0.7) return 'High';
+      if (data.funnel_score >= 0.45) return 'Medium';
+      return 'Low';
+    }
+    return 'High';
+  })();
   const purchaseConf = data?.funnel_score != null ? `${(data.funnel_score * 100).toFixed(1)}% Coincidence` : '62.0% Coincidence';
   const mobileShare = data?.device_distribution?.mobile != null
     ? `${(data.device_distribution.mobile * 100).toFixed(1)}%` : '78.0%';
@@ -342,21 +468,18 @@ const TargetingIntel: React.FC = () => {
   const lastAnalysis = data?.last_calculated_at
     ? new Date(data.last_calculated_at).toLocaleString() : '1/07/2026, 5:25:47 PM';
 
-  const ageData = [
-    { label: '18 - 24', value: 15.0, color: '#F59E0B' },
-    { label: '25 - 34', value: 35.0, color: '#22C55E' },
-    { label: '35 - 44', value: 28.0, color: '#A855F7' },
-    { label: '45 - 54', value: 15.0, color: '#06B6D4' },
-    { label: '55+', value: 7.0, color: '#EF4444' },
-  ];
+  // Dynamic distributions — built from backend fields
+  const ageData = buildAgeDistribution(data?.age_min ?? null, data?.age_max ?? null, data?.age_range ?? null);
+  const interestData = buildInterestData(data?.interest_clusters, data?.confidence_scores?.interest);
+  const recommendations = data ? buildRecommendations(data) : null;
 
-  const interestClusters = data?.interest_clusters || ['Fitness & Running', 'Athletic Apparel', 'Health & Wellness', 'Sports Equipment'];
-  const interestData = [
-    { label: interestClusters[0] || 'Fitness & Running', sub: '(Potential reach: 450.0K)', value: 90, color: '#F59E0B' },
-    { label: interestClusters[1] || 'Athletic Apparel', sub: '(Potential reach: 380.0K)', value: 78, color: '#22C55E' },
-    { label: interestClusters[2] || 'Health & Wellness', sub: '(Potential reach: 320.0K)', value: 65, color: '#A855F7' },
-    { label: interestClusters[3] || 'Sports Equipment', sub: '(Potential reach: 290.0K)', value: 59, color: '#06B6D4' },
-  ];
+  // ROAS / engagement rate stat card
+  const roasDisplay = data?.estimated_roas != null
+    ? `${data.estimated_roas.toFixed(1)}x`
+    : data?.engagement_rate != null
+      ? `${(data.engagement_rate * 100).toFixed(1)}%`
+      : '4.0x';
+  const roasLabel = data?.estimated_roas != null ? 'Est. ROAS' : 'Engagement Rate';
 
   const tabs = ['Overview', 'Demographics', 'Interests', 'Strategy'];
   const tabKeys = ['overview', 'demographics', 'interests', 'strategy'] as const;
@@ -636,19 +759,19 @@ const TargetingIntel: React.FC = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <RecoCard
                       title="Focus Audience"
-                      body={<>Prioritize <strong>25-34 age group</strong> with mobile-first approach. iOS users show 65% higher engagement</>}
+                      body={recommendations?.focusAudience}
                     />
                     <RecoCard
                       title="Optimal Timing"
-                      body={<>Schedule ads during <strong>3 am - 6 am window</strong> for 40% lower CPC. Avoid peak evening hours for cost efficiency.</>}
+                      body={recommendations?.optimalTiming}
                     />
                     <RecoCard
                       title="Interest Targeting"
-                      body={<>Allocate <strong>60% of budget</strong> to "Fitness &amp; Running" and "Health &amp; Wellness" interest clusters showing 92%+ affinity.</>}
+                      body={recommendations?.interestTargeting}
                     />
                     <RecoCard
                       title="AI Insights"
-                      body={<>Focus <strong>60% of budget</strong> on awareness to fill top funnel. Strong retargeting opportunity observed</>}
+                      body={recommendations?.aiInsights}
                     />
                   </div>
                 </div>
@@ -725,7 +848,7 @@ const TargetingIntel: React.FC = () => {
                     <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
                     <div className="grid grid-cols-2 gap-3">
                       <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
-                      <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
+                      <StatMiniCard value={roasDisplay} label={roasLabel} color="#A855F7" />
                     </div>
                   </NeonCard>
                   {/* Data Information */}
@@ -838,7 +961,7 @@ const TargetingIntel: React.FC = () => {
                   <p className="text-center text-xs text-white font-semibold mb-4">Audience overlaps with similar athletic trends</p>
                   <div className="grid grid-cols-2 gap-3">
                     <StatMiniCard value="42%" label="Audience Shared" color="#06B6D4" />
-                    <StatMiniCard value="3.2x" label="Engagement Rate" color="#A855F7" />
+                    <StatMiniCard value={roasDisplay} label={roasLabel} color="#A855F7" />
                   </div>
                 </NeonCard>
                 <NeonCard innerClass="p-5" radius="1rem">
