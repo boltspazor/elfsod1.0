@@ -27,6 +27,7 @@ import {
   Instagram,
   Linkedin,
   Loader2,
+  RefreshCw,
   ShoppingBag,
   Shirt,
   Utensils,
@@ -1150,7 +1151,7 @@ const AdSurveillance = () => {
     setFilteredAds(filtered);
   }, [ads, searchQuery, selectedPlatform, selectedCompany]);
 
-  // Add competitor handler
+  // Add competitor handler – then auto-refresh ads for the new competitor
   const handleAddCompetitor = async () => {
     if (!newCompetitor.name.trim()) {
       setError("Competitor name is required");
@@ -1158,7 +1159,7 @@ const AdSurveillance = () => {
     }
 
     try {
-      await CompetitorsAPI.create(newCompetitor);
+      const created = await CompetitorsAPI.create(newCompetitor) as { id?: string; name?: string };
       await loadCompetitors();
       setNewCompetitor({
         name: "",
@@ -1168,6 +1169,26 @@ const AdSurveillance = () => {
       });
       setShowAddCompetitor(false);
       setError(null);
+
+      // Auto-refresh ads for the newly added competitor
+      if (created?.id) {
+        setIsRefreshing(true);
+        try {
+          await AdsAPI.refreshCompetitor(created.id);
+          await new Promise((r) => setTimeout(r, 2500));
+          await loadCompetitors();
+          await loadRecentAds(created.id);
+          setSelectedCompetitor(created.id);
+          setSelectedCompany(created.id);
+          const list = await CompetitorsAPI.list();
+          await calculateFrontendMetrics(list);
+        } catch (refreshErr: any) {
+          console.error("Error refreshing ads for new competitor:", refreshErr);
+          setError(refreshErr?.message || "Competitor added, but ad refresh failed. Use Refresh ads to retry.");
+        } finally {
+          setIsRefreshing(false);
+        }
+      }
     } catch (error: any) {
       console.error("Error adding competitor:", error);
       setError(error.message || "Failed to add competitor");
@@ -1569,11 +1590,16 @@ const AdSurveillance = () => {
           </button>
           <button
             onClick={handleRefreshAds}
-            disabled={isRefreshing}
-            className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+            disabled={isRefreshing || competitors.length === 0}
+            title={competitors.length === 0 ? "Add a competitor first" : selectedCompetitor ? "Refresh ads for selected competitor" : "Refresh ads for all competitors"}
+            className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" />
-            Export
+            {isRefreshing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh ads
           </button>
         </div>
 
@@ -2179,7 +2205,15 @@ const AdSurveillance = () => {
                     ? "Try adjusting your search or filter criteria"
                     : "Start tracking competitors to see their ads"}
                 </p>
-                <div className="flex gap-3 justify-center">
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <button
+                    onClick={handleRefreshAds}
+                    disabled={isRefreshing || competitors.length === 0}
+                    className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    Refresh ads
+                  </button>
                   <button
                     onClick={() => { setSearchQuery(""); setSelectedPlatform("all"); setSelectedCompany("all"); setSelectedCompetitor(null); loadRecentAds(); }}
                     className="px-4 py-2.5 bg-[#222] hover:bg-[#333] border border-[#333] text-[#ccc] rounded-lg transition-colors"
@@ -2188,7 +2222,7 @@ const AdSurveillance = () => {
                   </button>
                   <button
                     onClick={() => setShowAddCompetitor(true)}
-                    className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white rounded-lg transition-colors"
+                    className="px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-white rounded-lg transition-colors"
                   >
                     Add Competitor
                   </button>
