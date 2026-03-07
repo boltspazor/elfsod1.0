@@ -5,18 +5,28 @@ Flask backend for Video Analysis Dashboard
 import os
 import json
 from pathlib import Path
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sys
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure backend/ is on path so "ml" package is importable (for Railway: Root Directory = backend)
+_script_dir = Path(__file__).resolve().parent
+_ml_dir = _script_dir.parent
+_backend_dir = _ml_dir.parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 from ml.scripts.analyze_ads import analyze_video, analyze_image
 from ml.scripts.creative_reverse_engineering import analyze_file
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+
+# CORS: allow FRONTEND_URL in production (e.g. https://elfsod1-0.vercel.app)
+_cors_origins = os.environ.get("FRONTEND_URL", "").strip().split(",")
+_cors_origins = [o.strip().rstrip("/") for o in _cors_origins if o.strip()]
+if not _cors_origins:
+    _cors_origins = ["*"]
+CORS(app, origins=_cors_origins, methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
 # Paths
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -36,10 +46,20 @@ import whisper
 whisper_model = whisper.load_model("small")
 print("[INFO] Whisper model loaded")
 
-@app.route('/')
+@app.route("/")
 def home():
-    """Serve the frontend"""
-    return send_from_directory('..', 'index.html')
+    """Server info / health for Railway"""
+    return jsonify({
+        "service": "reverse-engineering",
+        "status": "running",
+        "endpoints": ["/api/analyze", "/api/analysis/<id>", "/api/recent-analyses", "/health"],
+    })
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check for Railway"""
+    return jsonify({"status": "healthy"}), 200
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_video_endpoint():
@@ -212,6 +232,8 @@ def get_recent_analyses():
         print(f"[ERROR] Failed to get recent analyses: {e}")
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    print("[INFO] Starting Flask server on http://localhost:5000")
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "5000"))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    print(f"[INFO] Starting Flask server on port {port} (debug={debug})")
+    app.run(host="0.0.0.0", port=port, debug=debug)
