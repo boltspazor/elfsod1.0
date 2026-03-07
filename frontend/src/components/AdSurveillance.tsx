@@ -5,7 +5,6 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
-  Target,
   Eye,
   Filter,
   Search,
@@ -299,6 +298,13 @@ const AdSurveillance = () => {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // ============================================
+  // ANALYZE / CLONE / TRACK STATE
+  // ============================================
+  const [analyzeAd, setAnalyzeAd] = useState<AdData | null>(null);
+  const [cloneAd, setCloneAd] = useState<AdData | null>(null);
+  const [cloneCopied, setCloneCopied] = useState(false);
 
   // ============================================
   // CALCULATION HELPER FUNCTIONS
@@ -1192,6 +1198,85 @@ const AdSurveillance = () => {
     } catch (error: any) {
       console.error("Error adding competitor:", error);
       setError(error.message || "Failed to add competitor");
+    }
+  };
+
+  // ============================================
+  // ANALYZE / CLONE / TRACK HANDLERS
+  // ============================================
+
+  const handleAnalyze = (ad: AdData) => {
+    setAnalyzeAd(ad);
+  };
+
+  const handleCloneStrategy = (ad: AdData) => {
+    setCloneAd(ad);
+    setCloneCopied(false);
+  };
+
+  // Build the clone strategy text
+  const buildCloneStrategyText = (ad: AdData): string => {
+    const spend = calculateAdSpend(ad);
+    const impressions = calculateAdImpressions(ad);
+    const lifespan = calculateAdLifespan(ad);
+    const ctr = 2.5;
+    const estimatedClicks = Math.round((impressions * ctr) / 100);
+    const cpc = estimatedClicks > 0 ? spend / estimatedClicks : 0;
+
+    return `AD STRATEGY CLONE — ${ad.competitor_name || "Competitor"} (${ad.platform?.toUpperCase() || "UNKNOWN"})
+${"=".repeat(60)}
+
+📋 ORIGINAL AD DETAILS
+  Headline   : ${ad.headline || "N/A"}
+  Platform   : ${ad.platform?.toUpperCase() || "N/A"}
+  Format     : ${ad.format || "N/A"}
+  Status     : ${ad.is_active ? "Active" : "Paused"}
+  First Seen : ${formatDate(ad.first_seen)}
+  Last Seen  : ${formatDate(ad.last_seen)}
+  Ad Lifespan: ${Math.round(lifespan)} days
+
+📊 PERFORMANCE METRICS
+  Est. Spend      : ${formatCurrency(spend)}
+  Est. Impressions: ${formatNumber(impressions)}
+  Est. CTR        : ${ctr}%
+  Est. Clicks     : ${formatNumber(estimatedClicks)}
+  Est. CPC        : ${formatCurrency(cpc)}
+
+🎯 AD COPY
+${ad.description || ad.full_text || ad.headline || "No copy available."}
+
+🚀 STRATEGY TO REPLICATE
+  1. Platform  : Target ${ad.platform?.toUpperCase() || "same platform"} audience
+  2. Budget    : Start with ~${formatCurrency(Math.round(spend / Math.max(lifespan, 1))) + "/day"}
+  3. Format    : Use ${ad.format || "same format"} creative
+  4. Targeting : Match audience of ${ad.competitor_name || "competitor"}
+  5. Angle     : Mirror the messaging angle — adapt for your brand
+  6. Duration  : Run for at least ${Math.round(lifespan)} days to match lifespan
+  7. CTA       : Replicate call-to-action from original ad copy
+
+💡 KEY INSIGHTS
+  • This ad has been ${ad.is_active ? "running and still active" : "paused — may have ended naturally"}
+  • Estimated daily budget: ${formatCurrency(Math.round(spend / Math.max(lifespan, 1)))}
+  • High-performing format on ${ad.platform || "this platform"}: ${ad.format || "image"}
+  • Destination: ${ad.destination_url || "N/A"}`;
+  };
+
+  const handleCopyCloneStrategy = async (ad: AdData) => {
+    const text = buildCloneStrategyText(ad);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCloneCopied(true);
+      setTimeout(() => setCloneCopied(false), 2500);
+    } catch {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCloneCopied(true);
+      setTimeout(() => setCloneCopied(false), 2500);
     }
   };
 
@@ -2176,17 +2261,17 @@ const AdSurveillance = () => {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-3 mt-5">
-                          <button className="px-4 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
+                          <button
+                            onClick={() => handleAnalyze(ad)}
+                            className="px-4 py-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
                             <Eye className="w-3.5 h-3.5" />
                             Analyze
                           </button>
-                          <button className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
+                          <button
+                            onClick={() => handleCloneStrategy(ad)}
+                            className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
                             <DollarSign className="w-3.5 h-3.5" />
                             Clone Strategy
-                          </button>
-                          <button className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-[#ccc] text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
-                            <Target className="w-3.5 h-3.5" />
-                            Track
                           </button>
                         </div>
                       </div>
@@ -2233,6 +2318,185 @@ const AdSurveillance = () => {
         </div>
       </div>
     </div>
+    {/* ── Analyze Modal ── */}
+    {analyzeAd && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        onClick={() => setAnalyzeAd(null)}>
+        <div
+          className="relative bg-[#111] border border-[#2a2a2a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+          onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[#2a2a2a]">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#0ea5e9]/20 rounded-lg flex items-center justify-center">
+                <Eye className="w-4 h-4 text-[#0ea5e9]" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-lg">Ad Analysis</h2>
+                <p className="text-[#666] text-xs">{analyzeAd.competitor_name} · {analyzeAd.platform}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAnalyzeAd(null)}
+              className="w-8 h-8 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] flex items-center justify-center text-[#888] hover:text-white transition-colors">
+              ✕
+            </button>
+          </div>
+
+          {/* Ad Preview */}
+          {(analyzeAd.image_url || analyzeAd.video_url) && (
+            <div className="mx-6 mt-6 rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0a0a0a]">
+              {analyzeAd.video_url ? (
+                <video src={analyzeAd.video_url} controls className="w-full max-h-56 object-cover" />
+              ) : (
+                <img
+                  src={analyzeAd.image_url}
+                  alt="Ad creative"
+                  className="w-full max-h-56 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Metrics Grid */}
+          <div className="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Est. Spend</p>
+              <p className="text-white font-bold text-lg">{formatCurrency(calculateAdSpend(analyzeAd))}</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Est. Impressions</p>
+              <p className="text-white font-bold text-lg">{formatNumber(calculateAdImpressions(analyzeAd))}</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Ad Lifespan</p>
+              <p className="text-white font-bold text-lg">{calculateAdLifespan(analyzeAd).toFixed(2)}d</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Est. CPC</p>
+              <p className="text-white font-bold text-lg">
+                {formatCurrency(calculateAdImpressions(analyzeAd) > 0 ? calculateAdSpend(analyzeAd) / Math.max(1, calculateAdImpressions(analyzeAd) * 0.02) : 0)}
+              </p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Format</p>
+              <p className="text-white font-bold text-lg capitalize">{analyzeAd.format || "—"}</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+              <p className="text-[#666] text-xs mb-1">Status</p>
+              <p className={`font-bold text-lg ${analyzeAd.is_active ? "text-emerald-400" : "text-[#888]"}`}>
+                {analyzeAd.is_active ? "Active" : "Inactive"}
+              </p>
+            </div>
+          </div>
+
+          {/* Ad Copy */}
+          <div className="px-6 pb-4 space-y-4">
+            {analyzeAd.headline && (
+              <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+                <p className="text-[#666] text-xs mb-2">Headline</p>
+                <p className="text-white text-sm font-medium">{analyzeAd.headline}</p>
+              </div>
+            )}
+            {analyzeAd.description && (
+              <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
+                <p className="text-[#666] text-xs mb-2">Description</p>
+                <p className="text-[#ccc] text-sm leading-relaxed">{analyzeAd.description}</p>
+              </div>
+            )}
+
+            {/* AI Insights */}
+            <div className="bg-[#0ea5e9]/5 border border-[#0ea5e9]/20 rounded-xl p-4 space-y-3">
+              <p className="text-[#0ea5e9] text-xs font-semibold uppercase tracking-wider">AI Insights</p>
+              <div className="space-y-2 text-sm text-[#ccc]">
+                <p>• <span className="text-white font-medium">Longevity:</span> Running for {calculateAdLifespan(analyzeAd).toFixed(2)} days suggests {calculateAdLifespan(analyzeAd) > 14 ? "strong performance — this ad is working well for them" : "it's still in testing phase"}.</p>
+                <p>• <span className="text-white font-medium">Budget Signal:</span> Estimated {formatCurrency(calculateAdSpend(analyzeAd))} in total spend {calculateAdSpend(analyzeAd) > 5000 ? "indicates a high-confidence, scaled campaign" : "suggests a testing or mid-tier budget"}.</p>
+                <p>• <span className="text-white font-medium">Reach:</span> ~{formatNumber(calculateAdImpressions(analyzeAd))} impressions puts this ad {calculateAdImpressions(analyzeAd) > 100000 ? "in wide-reach territory" : "in targeted niche reach"}.</p>
+                <p>• <span className="text-white font-medium">Action:</span> {calculateAdLifespan(analyzeAd) > 14 && calculateAdSpend(analyzeAd) > 2000 ? "High-confidence signal — consider cloning this strategy." : "Monitor for another week before acting."}</p>
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="flex gap-4 text-xs text-[#666]">
+              <span>First seen: <span className="text-[#aaa]">{formatDate(analyzeAd.first_seen)}</span></span>
+              <span>Last seen: <span className="text-[#aaa]">{formatDate(analyzeAd.last_seen)}</span></span>
+            </div>
+
+            {analyzeAd.destination_url && (
+              <a
+                href={analyzeAd.destination_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#0ea5e9] hover:underline">
+                View destination URL →
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Clone Strategy Modal ── */}
+    {cloneAd && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        onClick={() => setCloneAd(null)}>
+        <div
+          className="relative bg-[#111] border border-[#2a2a2a] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+          onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[#2a2a2a]">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-lg">Clone Strategy</h2>
+                <p className="text-[#666] text-xs">{cloneAd.competitor_name} · {cloneAd.platform}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleCopyCloneStrategy(cloneAd)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5 ${
+                  cloneCopied
+                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                    : "bg-[#1a1a1a] hover:bg-[#252525] border-[#333] text-[#ccc]"
+                }`}>
+                {cloneCopied ? "✓ Copied!" : "Copy All"}
+              </button>
+              <button
+                onClick={() => setCloneAd(null)}
+                className="w-8 h-8 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] flex items-center justify-center text-[#888] hover:text-white transition-colors">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Strategy Content */}
+          <div className="p-6 space-y-4">
+            <p className="text-[#888] text-sm">
+              Use this breakdown to replicate the structure and strategy of this ad in your own campaigns.
+            </p>
+            <pre className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-5 text-xs text-[#ccc] leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">
+              {buildCloneStrategyText(cloneAd)}
+            </pre>
+            <button
+              onClick={() => handleCopyCloneStrategy(cloneAd)}
+              className={`w-full py-3 text-sm font-medium rounded-xl border transition-colors flex items-center justify-center gap-2 ${
+                cloneCopied
+                  ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                  : "bg-[#0ea5e9]/10 hover:bg-[#0ea5e9]/20 border-[#0ea5e9]/30 text-[#0ea5e9]"
+              }`}>
+              {cloneCopied ? "✓ Copied to clipboard!" : "Copy Strategy to Clipboard"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <Footer />
     </>
   );
