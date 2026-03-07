@@ -8,7 +8,6 @@ import {
   Eye,
   Filter,
   Search,
-  Download,
   Wifi,
   Plus,
   X,
@@ -33,6 +32,12 @@ import {
   Smartphone as SmartphoneIcon,
   Car,
   Home,
+  History,
+  PlayCircle,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  MessageCircle,
+  Hash as HashIcon,
 } from "lucide-react";
 
 // Import Recharts components
@@ -117,11 +122,11 @@ interface SummaryMetrics {
 }
 
 interface AnalyticsData {
-  competitorSpend: any[];
-  spendRanges: any[];
-  ctrPerformance: any[];
-  spendImpressions: any[];
-  platformCTR: any[];
+  competitorSpend: Record<string, unknown>[];
+  spendRanges: Record<string, unknown>[];
+  ctrPerformance: Record<string, unknown>[];
+  spendImpressions: Record<string, unknown>[];
+  platformCTR: Record<string, unknown>[];
 }
 
 interface TrendingAdWithEngagement extends TrendingAdType {
@@ -281,8 +286,10 @@ const VideoPlayer: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
 
 const AdSurveillance = () => {
   // User state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Competitors state
@@ -322,6 +329,7 @@ const AdSurveillance = () => {
   const [dataViewMode, setDataViewMode] = useState<"latest" | "historical">(
     "latest",
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
@@ -334,9 +342,11 @@ const AdSurveillance = () => {
   });
 
   // Analytics state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_analyticsData, _setAnalyticsData] = useState<AnalyticsData | null>(
     null,
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_activeChart, _setActiveChart] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -344,8 +354,9 @@ const AdSurveillance = () => {
   const [trendingAds, setTrendingAds] = useState<TrendingAdWithEngagement[]>(
     [],
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isLoadingTrending, setIsLoadingTrending] = useState(false);
-  const [_trendingSearchResult, setTrendingSearchResult] =
+  const [trendingSearchResult, setTrendingSearchResult] =
     useState<TrendingSearchResponse | null>(null);
   const [trendingSearchKeyword, setTrendingSearchKeyword] = useState("");
   const [selectedTrendingPlatforms, setSelectedTrendingPlatforms] = useState<
@@ -619,6 +630,7 @@ const AdSurveillance = () => {
   // NEW: Calculate competitor metrics summary
   const calculateCompetitorMetricsSummary = (
     ads: AdData[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _competitors: Competitor[],
   ): CompetitorMetricsSummary[] => {
     const competitorMap: Record<
@@ -695,6 +707,7 @@ const AdSurveillance = () => {
   // Initialize
   useEffect(() => {
     checkAuthAndLoadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check authentication and load initial data
@@ -760,7 +773,7 @@ const AdSurveillance = () => {
         console.log("All ads API response:", adsData);
 
         if (Array.isArray(adsData)) {
-          allAds = adsData.map((ad: any) => {
+          allAds = adsData.map((ad) => {
             // Parse spend and impressions safely
             const parsedSpend = parseSpendValue(ad.spend);
             const parsedImpressions = parseImpressionValue(ad.impressions);
@@ -850,7 +863,7 @@ const AdSurveillance = () => {
           console.log("All ads API response:", data);
 
           if (Array.isArray(data)) {
-            adsData = data.map((ad: any) => {
+            adsData = data.map((ad) => {
               // Parse spend and impressions safely
               const parsedSpend = parseSpendValue(ad.spend);
               const parsedImpressions = parseImpressionValue(ad.impressions);
@@ -1050,9 +1063,9 @@ const AdSurveillance = () => {
 
       // Hide search modal if open
       setShowTrendingSearch(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Trending search error:", error);
-      setError(`Trending search failed: ${error.message}`);
+      setError(`Trending search failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSearchingTrending(false);
     }
@@ -1183,9 +1196,9 @@ const AdSurveillance = () => {
       // Show success message
       setError("Metrics calculated successfully!");
       setTimeout(() => setError(null), 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error calculating metrics:", error);
-      setError(`Failed to calculate metrics: ${error.message}`);
+      setError(`Failed to calculate metrics: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsCalculatingMetrics(false);
     }
@@ -1255,16 +1268,16 @@ const AdSurveillance = () => {
           setSelectedCompany(created.id);
           const list = await CompetitorsAPI.list();
           await calculateFrontendMetrics(list);
-        } catch (refreshErr: any) {
+        } catch (refreshErr: unknown) {
           console.error("Error refreshing ads for new competitor:", refreshErr);
-          setError(refreshErr?.message || "Competitor added, but ad refresh failed. Use Refresh ads to retry.");
+          setError(refreshErr instanceof Error ? refreshErr.message : "Competitor added, but ad refresh failed. Use Refresh ads to retry.");
         } finally {
           setIsRefreshing(false);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error adding competitor:", error);
-      setError(error.message || "Failed to add competitor");
+      setError(error instanceof Error ? error.message : "Failed to add competitor");
     }
   };
 
@@ -1369,9 +1382,9 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
 
       // Recalculate metrics
       await calculateFrontendMetrics(competitors);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error refreshing ads:", error);
-      setError(error.message || "Failed to refresh ads");
+      setError(error instanceof Error ? error.message : "Failed to refresh ads");
     } finally {
       setIsRefreshing(false);
     }
@@ -1441,6 +1454,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     return `${(numValue * 100).toFixed(2)}%`;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const formatDecimal = (
     value: number | string | undefined,
     decimals: number = 2,
@@ -1481,6 +1495,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getStatusColor = (status: string | undefined) => {
     if (!status) return "bg-gray-500";
     switch (status.toLowerCase()) {
@@ -1508,6 +1523,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     return proxyUrl + encodeURIComponent(url);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getStatusBadge = (status: boolean | undefined) => {
     if (status === undefined)
       return "bg-gray-700 text-gray-300 border-gray-600";
@@ -1524,7 +1540,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
   };
 
   // Render JSON data as formatted list
-  const renderJSONData = (data: any, title: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const renderJSONData = (data: Record<string, unknown> | unknown[], title: string) => {
     if (!data || Object.keys(data).length === 0) {
       return (
         <div className="text-gray-500 text-sm italic">
@@ -1560,6 +1577,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
   };
 
   // Render platform distribution chart
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderPlatformDistribution = (data: Record<string, number>) => {
     if (!data || Object.keys(data).length === 0) {
       return (
@@ -1585,7 +1603,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
               paddingAngle={5}
               dataKey="count"
               nameKey="platform"
-              label={({ name, value }: any) => `${name}: ${value}`}
+              label={({ name, value }: { name?: string; value?: number }) => `${name ?? ''}: ${value ?? 0}`}
             >
               {chartData.map((_entry, index) => (
                 <Cell
@@ -1714,7 +1732,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
           <select
             className="px-3 py-2.5 bg-[#1a1a1a] border border-[#333] rounded-lg text-sm text-[#ccc] focus:outline-none appearance-none pr-8"
             value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as any)}
+            onChange={(e) => setSelectedPeriod(e.target.value as "daily" | "weekly" | "monthly" | "all_time")}
             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
           >
             <option value="daily">Last 7 days</option>
@@ -2058,7 +2076,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     <CartesianGrid strokeDasharray="3 3" stroke="#222" />
                     <XAxis dataKey="platform" tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#333" }} />
                     <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#333" }} tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}`} />
-                    <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
+                    <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
                     <Bar dataKey="total_spend" radius={[4, 4, 0, 0]}>
                       {platformStats.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color || "#0ea5e9"} />
@@ -2082,12 +2100,12 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 <div className="h-48 flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsPieChart>
-                      <Pie data={platformStats} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="total_spend" nameKey="platform">
+                      <Pie data={platformStats as unknown as Record<string, unknown>[]} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="total_spend" nameKey="platform">
                         {platformStats.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color || "#0ea5e9"} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
+                      <Tooltip contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} formatter={(value) => [`$${Number(value).toLocaleString()}`, "Spend"]} />
                     </RechartsPieChart>
                   </ResponsiveContainer>
                 </div>
@@ -2112,58 +2130,391 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
           </div>
         </div>
 
-        {/* ===== TRENDING ADS RESULTS ===== */}
-        {showResults && trendingAds.length > 0 && (
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mb-8">
-            <div className="p-5 border-b border-[#2a2a2a]">
-              <div className="flex items-center justify-between">
+        {/* ===== ENHANCED TRENDING ADS SECTION ===== */}
+        <div className="mb-8">
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#2a2a2a]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-[#0ea5e9]" />
-                  <h3 className="text-base font-semibold text-white">Trending Results for &quot;{trendingSearchKeyword}&quot;</h3>
-                  <span className="px-2 py-0.5 text-xs bg-[#0ea5e9]/20 text-[#0ea5e9] rounded-full">{trendingAds.length} results</span>
-                </div>
-                <button onClick={handleNewSearch} className="text-sm text-[#888] hover:text-white transition-colors">New Search</button>
-              </div>
-            </div>
-            <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {trendingAds.slice(0, 6).map((ad, index) => (
-                <div key={ad.id || `${ad.platform}-${index}`} className="bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#444] transition-colors">
-                  {(ad.image_url || ad.thumbnail) && (
-                    <div className="relative h-40">
-                      <img
-                        src={proxyImageUrl(ad.image_url || ad.thumbnail || "")}
-                        alt={ad.title || "Trending ad"}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/300x200?text=No+Image"; }}
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute top-2 left-2">
-                        <span className="px-2 py-0.5 text-[10px] font-bold bg-black/70 text-white rounded uppercase">{ad.platform || "unknown"}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="p-3.5">
-                    <h4 className="text-sm font-medium text-white line-clamp-2 mb-2">{ad.title || ad.description || "Untitled"}</h4>
-                    <div className="flex items-center gap-3 text-xs text-[#666]">
-                      {(ad.views || ad.impressions) && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {formatNumber(typeof (ad.views || ad.impressions) === 'number' ? (ad.views || ad.impressions) as number : 0)}
-                        </span>
-                      )}
-                      {ad.likes && (
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
-                          {formatNumber(typeof ad.likes === 'number' ? ad.likes : 0)}
-                        </span>
-                      )}
-                    </div>
+                  <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">
+                      Trending Ads & Content
+                    </h3>
+                    <p className="text-sm text-[#888]">
+                      Discover trending ads across all platforms
+                    </p>
                   </div>
                 </div>
-              ))}
+                {showResults && trendingSearchResult && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full">
+                      "{trendingSearchResult.keyword}"
+                    </span>
+                    <span className="text-xs text-[#666]">
+                      {formatDate(new Date().toISOString())}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5">
+              {!showResults ? (
+                // Initial State: Only search bar and suggestions
+                <>
+                  {/* Main Search Bar */}
+                  <div className="max-w-3xl mx-auto mb-8">
+                    <div className="relative">
+                      <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-[#666] w-5 h-5" />
+                      <input
+                        type="text"
+                        value={trendingSearchKeyword}
+                        onChange={(e) => setTrendingSearchKeyword(e.target.value)}
+                        placeholder="Search any keyword to discover trending ads..."
+                        className="w-full pl-12 pr-32 py-4 text-lg bg-[#111] border-2 border-[#333] rounded-xl text-white placeholder-[#666] focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleTrendingSearch()
+                        }
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <button
+                          onClick={() => handleTrendingSearch()}
+                          disabled={
+                            isSearchingTrending || !trendingSearchKeyword.trim()
+                          }
+                          className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSearchingTrending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Searching...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Search className="w-4 h-4" />
+                              <span>Search</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-[#666] mt-2 text-center">
+                      Press Enter or click Search to discover trending ads
+                    </p>
+                  </div>
+
+                  {/* Search History & Suggestions */}
+                  <div className="max-w-6xl mx-auto">
+                    {/* Search History */}
+                    {searchHistory.length > 0 && (
+                      <div className="mb-8">
+                        <div className="flex items-center gap-2 mb-4">
+                          <History className="w-5 h-5 text-[#666]" />
+                          <h4 className="font-medium text-white">
+                            Recent Searches
+                          </h4>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {searchHistory.map((keyword, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleSuggestionClick(keyword)}
+                              className="px-4 py-2.5 bg-[#111] hover:bg-[#222] border border-[#333] text-[#ccc] rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                              <Clock className="w-4 h-4" />
+                              <span>{keyword}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Popular Suggestions */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <TrendingUp className="w-5 h-5 text-orange-500" />
+                        <h4 className="font-medium text-white">
+                          Popular Search Suggestions
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {searchSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.id}
+                            onClick={() =>
+                              handleSuggestionClick(suggestion.keyword)
+                            }
+                            className="p-4 bg-gradient-to-br from-[#111] to-[#1a1a1a] hover:from-[#1a1a1a] hover:to-[#222] border border-[#2a2a2a] rounded-xl text-left group transition-all hover:shadow-md hover:border-[#444]"
+                          >
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-[#222] rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                                <div className="text-orange-500">
+                                  {suggestion.icon}
+                                </div>
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-medium text-white group-hover:text-orange-400">
+                                  {suggestion.keyword}
+                                </h5>
+                                <p className="text-xs text-[#666]">
+                                  {suggestion.category}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-xs text-[#555] flex items-center gap-1">
+                              <HashIcon className="w-3 h-3" />
+                              Click to search trending ads
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // Results State: Show trending ads
+                <>
+                  {isSearchingTrending ? (
+                    <div className="py-12 text-center">
+                      <div className="w-12 h-12 border-2 border-t-orange-500 border-[#333] rounded-full animate-spin mx-auto"></div>
+                      <p className="mt-4 text-[#ccc]">
+                        Searching trending content for "{trendingSearchKeyword}"...
+                      </p>
+                      <p className="text-sm text-[#666] mt-2">
+                        Searching across {selectedTrendingPlatforms.length} platforms
+                      </p>
+                    </div>
+                  ) : trendingAds.length > 0 ? (
+                    <>
+                      {/* Platform Filter */}
+                      <div className="mb-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                          <div>
+                            <h4 className="font-medium text-white">
+                              Trending ads for "{trendingSearchResult?.keyword || trendingSearchKeyword}"
+                            </h4>
+                            <p className="text-sm text-[#888]">
+                              {trendingAds.length} results found &bull; Sorted by engagement score
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-[#888]">Platforms:</span>
+                            <div className="flex gap-2">
+                              {["meta", "instagram", "youtube", "tiktok"].map(
+                                (platform) => (
+                                  <button
+                                    key={platform}
+                                    onClick={() => toggleTrendingPlatform(platform)}
+                                    className={`px-3 py-1.5 text-sm rounded-lg border flex items-center gap-2 ${
+                                      selectedTrendingPlatforms.includes(platform)
+                                        ? "border-orange-500 bg-orange-500/20 text-orange-400"
+                                        : "border-[#333] text-[#888] hover:border-[#555]"
+                                    }`}
+                                  >
+                                    {platformIcons[platform] || (
+                                      <Globe className="w-4 h-4" />
+                                    )}
+                                    <span className="capitalize">
+                                      {platform === "meta" ? "Facebook" : platform}
+                                    </span>
+                                  </button>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trending Ads Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {trendingAds.map((ad, index) => (
+                          <div
+                            key={ad.id || `${ad.platform}-${index}`}
+                            className="bg-[#111] rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-[#2a2a2a] hover:border-[#444]"
+                          >
+                            {/* Image/Video Preview */}
+                            <div className="aspect-video bg-[#222] relative overflow-hidden">
+                              {ad.image_url || ad.thumbnail ? (
+                                <img
+                                  src={
+                                    proxyImageUrl(ad.image_url) || ad.thumbnail
+                                  }
+                                  alt={ad.title}
+                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "https://via.placeholder.com/300x200?text=No+Image";
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-[#333] to-[#444] flex items-center justify-center">
+                                  <div className="text-center">
+                                    {ad.video_url ? (
+                                      <PlayCircle className="w-12 h-12 text-[#666]" />
+                                    ) : (
+                                      <ImageIcon className="w-12 h-12 text-[#666]" />
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="absolute top-2 left-2">
+                                <span className="px-2 py-1 bg-black/70 text-white text-xs rounded flex items-center gap-1">
+                                  {platformIcons[ad.platform] || (
+                                    <Globe className="w-3 h-3" />
+                                  )}
+                                  <span className="capitalize">
+                                    {ad.platform === "meta" ? "Facebook" : ad.platform}
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="absolute top-2 right-2">
+                                <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded font-bold">
+                                  #{ad.rank || index + 1}
+                                </span>
+                              </div>
+                              <div className="absolute bottom-2 left-2">
+                                <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
+                                  Score: {ad.score?.toFixed(1) || "N/A"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-white truncate">
+                                  {ad.competitor_name ||
+                                    ad.advertiser ||
+                                    ad.channel ||
+                                    ad.owner ||
+                                    "Unknown Source"}
+                                </span>
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-2 h-2 rounded-full mr-1 ${
+                                      ad.engagement_score >= 80
+                                        ? "bg-green-500"
+                                        : ad.engagement_score >= 60
+                                          ? "bg-yellow-500"
+                                          : ad.engagement_score >= 40
+                                            ? "bg-orange-500"
+                                            : "bg-red-500"
+                                    }`}
+                                  ></div>
+                                  <span className="text-xs text-[#888]">
+                                    {ad.engagement_score}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              <h4 className="text-sm font-medium text-white line-clamp-2 mb-2 min-h-[2.5rem]">
+                                {ad.title || ad.headline || "No title"}
+                              </h4>
+
+                              <p className="text-xs text-[#888] line-clamp-2 mb-3">
+                                {ad.description || "No description"}
+                              </p>
+
+                              {/* Engagement Metrics */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1">
+                                    <Eye className="w-3 h-3 text-[#666]" />
+                                    <span className="text-xs text-[#888]">
+                                      {formatNumber(typeof (ad.views || ad.impressions) === 'number' ? (ad.views || ad.impressions) as number : 0)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Heart className="w-3 h-3 text-red-400" />
+                                    <span className="text-xs text-[#888]">
+                                      {formatNumber(typeof ad.likes === 'number' ? ad.likes : 0)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MessageCircle className="w-3 h-3 text-blue-400" />
+                                    <span className="text-xs text-[#888]">
+                                      {formatNumber(typeof ad.comments === 'number' ? ad.comments : 0)}
+                                    </span>
+                                  </div>
+                                </div>
+                                {ad.spend &&
+                                  typeof ad.spend === "number" &&
+                                  ad.spend > 0 && (
+                                    <span className="text-xs font-medium text-green-400">
+                                      {formatCurrencyShort(ad.spend)}
+                                    </span>
+                                  )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-[#666]">
+                                  {formatDate(
+                                    ad.created_at ||
+                                      ad.published_at ||
+                                      ad.taken_at,
+                                  )}
+                                </span>
+                                {ad.url && ad.url !== "#" && (
+                                  <a
+                                    href={ad.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#0ea5e9] hover:text-[#38bdf8] flex items-center"
+                                  >
+                                    <LinkIcon className="w-3 h-3 mr-1" />
+                                    View
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* New Search Button */}
+                      <div className="mt-8 pt-6 border-t border-[#2a2a2a]">
+                        <div className="text-center">
+                          <button
+                            onClick={handleNewSearch}
+                            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 flex items-center gap-2 mx-auto"
+                          >
+                            <Search className="w-4 h-4" />
+                            <span>New Search</span>
+                          </button>
+                          <p className="text-sm text-[#666] mt-2">
+                            Search for different trending ads
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="py-12 text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-[#222] rounded-full flex items-center justify-center">
+                        <Search className="w-8 h-8 text-[#666]" />
+                      </div>
+                      <h4 className="text-lg font-medium text-white mb-2">
+                        No results found for "{trendingSearchKeyword}"
+                      </h4>
+                      <p className="text-[#888] mb-6">
+                        Try different keywords or adjust your search
+                      </p>
+                      <button
+                        onClick={handleNewSearch}
+                        className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90"
+                      >
+                        Try Another Search
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* ===== COMPETITORS TABLE ===== */}
         {metricsSummary.length > 0 && (
