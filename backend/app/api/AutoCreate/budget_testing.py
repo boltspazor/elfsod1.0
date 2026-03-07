@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 import os
 from dotenv import load_dotenv
 import jwt
+from datetime import datetime
 
 from unified_db import (
     decode_jwt_token,
@@ -179,6 +180,68 @@ def budget_recommendations():
             {"value": 2500, "label": "$2,500", "desc": "Enterprise"}
         ]
     }), 200
+
+
+@budget_testing_bp.route("/api/campaigns/publish", methods=["POST"])
+def publish_campaign():
+    try:
+        data = request.get_json()
+
+        token = data.get("user_id")
+        if not token:
+            return jsonify({"error": "Missing auth token"}), 401
+
+        user_id = decode_jwt_token(token)
+
+        campaign_id = data.get("campaign_id")
+        if not campaign_id:
+            return jsonify({"error": "Missing campaign_id"}), 400
+
+        try:
+            campaign_id = int(campaign_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid campaign_id"}), 400
+
+        response = supabase.table("auto_create").update({
+            "campaign_status": "published",
+            "published_at": datetime.now().isoformat()
+        }).eq("id", campaign_id).eq("user_id", user_id).execute()
+
+        if response.data:
+            return jsonify({
+                "success": True,
+                "campaign_id": campaign_id,
+                "message": "Campaign published successfully"
+            }), 200
+        else:
+            return jsonify({"error": "Campaign not found or access denied"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@budget_testing_bp.route("/api/campaigns/my-campaigns", methods=["GET"])
+def get_my_campaigns():
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        user_id = decode_jwt_token(token)
+
+        response = supabase.table("auto_create") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .execute()
+
+        return jsonify({
+            "success": True,
+            "campaigns": response.data or []
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # --------------------------------------------------
