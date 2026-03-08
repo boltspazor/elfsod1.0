@@ -452,11 +452,20 @@ def generate_assets():
             return jsonify({"success": False, "error": "Campaign not found. Please upload image first."}), 404
         
         campaign = tasks_store[campaign_id]
-        image_data_uri = campaign['image_data']
+        image_data_uri = campaign.get('image_data') or ''
         
         # Validate asset type
         if asset_type not in ['image', 'video']:
             return jsonify({"success": False, "error": "Invalid asset type. Must be 'image' or 'video'"}), 400
+        
+        # Video generation requires an image as reference (Runway image_to_video), not a video
+        if asset_type == 'video':
+            if not image_data_uri or not isinstance(image_data_uri, str):
+                return jsonify({"success": False, "error": "No reference image. Please upload an image (not a video) to generate videos."}), 400
+            if image_data_uri.strip().lower().startswith('data:video/'):
+                return jsonify({"success": False, "error": "Video generation requires an image as reference. Please upload an image (e.g. PNG, JPG), not a video file."}), 400
+            if not image_data_uri.strip().lower().startswith('data:image/'):
+                return jsonify({"success": False, "error": "Reference must be an image (data:image/...). Please upload an image."}), 400
         
         logger.info(f"Starting {asset_type} generation for campaign: {campaign_id}, ad_type: {ad_type}")
         
@@ -523,7 +532,7 @@ def generate_assets():
                 except Exception as e:
                     logger.error(f"Failed image variation {i+1}: {e}")
         else:
-            # Video: keep existing Runway flow
+            # Video: Runway image_to_video (reference must be image)
             for i in range(num_variations):
                 try:
                     prompt_text = generate_trend_aware_prompt(
@@ -553,8 +562,20 @@ def generate_assets():
                     generation_tasks[campaign_id].append(task_info)
                     task_ids.append(task_id)
                     logger.info(f"Created {asset_type} generation task {i+1}: {task_id}")
+                except requests.exceptions.HTTPError as e:
+                    err_msg = e.response.text if e.response is not None else str(e)
+                    logger.error(f"Runway video API error variation {i+1}: {err_msg}")
+                    return jsonify({
+                        "success": False,
+                        "error": "Video generation failed. Ensure RUNWAY_API_KEY is set and the reference is a valid image.",
+                        "detail": err_msg[:200]
+                    }), 500
                 except Exception as e:
-                    logger.error(f"Failed to create variation {i+1}: {e}")
+                    logger.error(f"Failed to create video variation {i+1}: {e}")
+                    return jsonify({
+                        "success": False,
+                        "error": str(e) or "Video generation failed. Use an image (not a video) as reference."
+                    }), 500
         
         if not task_ids:
             return jsonify({"success": False, "error": "Failed to create any generation tasks"}), 500
@@ -577,8 +598,8 @@ def generate_assets():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error generating assets: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error(f"Error generating assets: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e) or "Generation failed"}), 500
 
 @creative_assets_bp.route('/api/check-status/<task_id>', methods=['GET', 'OPTIONS'])
 def check_status(task_id: str):

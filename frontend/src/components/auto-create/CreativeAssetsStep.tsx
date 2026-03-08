@@ -326,25 +326,24 @@ const UploadView = ({
             </div>
 
             <h3 style={{ color: '#fff', fontSize: 20, fontWeight: 700, marginBottom: 10 }}>
-              Upload Your Product {type === 'image' ? 'Image' : 'Video'}
+              {type === 'image' ? 'Upload Your Product Image' : 'Upload an Image (Reference for Video)'}
             </h3>
 
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center', marginBottom: 20, maxWidth: 480 }}>
-              Upload a clear {type === 'image' ? 'image' : 'video'} of your product.
-              Our AI will generate creative ad variations based on your specifications.
+              {type === 'image'
+                ? 'Upload a clear image of your product. Our AI will generate creative ad variations.'
+                : 'Upload a clear image of your product. Video is generated from this image (image-to-video).'}
             </p>
 
             <div style={{ display: 'flex', gap: 48, marginBottom: 28 }}>
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>Clear Photo</span>
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>
-                {type === 'image' ? 'PNG, JPG, WebP' : 'MP4, MOV, WebM'}
-              </span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>Image only</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>PNG, JPG, WebP</span>
             </div>
 
             <input
               ref={fileRef}
               type="file"
-              accept={type === 'image' ? 'image/*' : 'video/*'}
+              accept="image/*"
               style={{ display: 'none' }}
               onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0]); }}
             />
@@ -361,7 +360,7 @@ const UploadView = ({
                 marginTop: 8,
               }}
             >
-              Choose {type === 'image' ? 'Image' : 'Video'}
+              Choose Image
             </button>
 
             {file && (
