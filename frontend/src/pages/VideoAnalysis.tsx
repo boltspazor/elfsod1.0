@@ -432,7 +432,9 @@ const VideoAnalysis: React.FC = () => {
                       Overall Score
                     </div>
                     <div className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 bg-clip-text text-transparent">
-                      {selectedAd.analysis.scores.total_score}/100
+                      {selectedAd.analysis?.scores?.total_score != null
+                        ? `${selectedAd.analysis?.scores?.total_score}/100`
+                        : "—"}
                     </div>
                     <a
                       href={`https://www.facebook.com/ads/library/?id=${selectedAd.ad_archive_id}`}
@@ -454,25 +456,25 @@ const VideoAnalysis: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <ScoreCard
                 title="Visual Quality"
-                score={selectedAd.analysis.scores.visual_score}
+                score={selectedAd.analysis?.scores?.visual_score ?? 0}
                 icon={Eye}
                 description="Color, mood, and visual appeal"
               />
               <ScoreCard
                 title="Text Quality"
-                score={selectedAd.analysis.scores.text_quality_score}
+                score={selectedAd.analysis?.scores?.text_quality_score ?? 0}
                 icon={Type}
                 description="Copy effectiveness and clarity"
               />
               <ScoreCard
                 title="CTA Strength"
-                score={selectedAd.analysis.scores.cta_score}
+                score={selectedAd.analysis?.scores?.cta_score ?? 0}
                 icon={Target}
                 description="Call-to-action effectiveness"
               />
               <ScoreCard
                 title="Value Proposition"
-                score={selectedAd.analysis.scores.value_proposition_score}
+                score={selectedAd.analysis?.scores?.value_proposition_score ?? 0}
                 icon={Award}
                 description="Benefits and urgency"
               />
@@ -565,13 +567,13 @@ const VideoAnalysis: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div
                     className={`p-4 rounded-[32px] border-2 ${
-                      selectedAd.analysis.value_proposition.urgency
+                      selectedAd.analysis?.value_proposition?.urgency
                         ? "bg-red-950/30 border-red-800"
                         : "bg-black/30 border-gray-800"
                     }`}
                   >
                     <div className="flex items-center gap-3 mb-2">
-                      {selectedAd.analysis.value_proposition.urgency ? (
+                      {selectedAd.analysis?.value_proposition?.urgency ? (
                         <CheckCircle className="w-6 h-6 text-red-500" />
                       ) : (
                         <XCircle className="w-6 h-6 text-gray-400" />
@@ -581,18 +583,18 @@ const VideoAnalysis: React.FC = () => {
                       </h3>
                     </div>
                     <p className="text-gray-400">
-                      {selectedAd.analysis.value_proposition.urgency
+                      {selectedAd.analysis?.value_proposition?.urgency
                         ? "Yes - creates urgency/scarcity"
                         : "No urgency indicators found"}
                     </p>
                     <div
                       className={`mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
-                        selectedAd.analysis.value_proposition.urgency
+                        selectedAd.analysis?.value_proposition?.urgency
                           ? "bg-red-900/50 text-red-400"
                           : "bg-gray-800 text-gray-400"
                       }`}
                     >
-                      {selectedAd.analysis.value_proposition.urgency ? (
+                      {selectedAd.analysis?.value_proposition?.urgency ? (
                         <Zap className="w-4 h-4" />
                       ) : (
                         <Clock className="w-4 h-4" />
@@ -600,14 +602,14 @@ const VideoAnalysis: React.FC = () => {
                     </div>
                   </div>
 
-                  {selectedAd.analysis.value_proposition.benefits.length > 0 ? (
+                  {(selectedAd.analysis?.value_proposition?.benefits?.length ?? 0) > 0 ? (
                     <div className="p-4 rounded-[32px] border-2 bg-emerald-950/30 border-emerald-800">
                       <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                         <Heart className="w-5 h-5 text-emerald-400" />
                         Key Benefits Identified
                       </h3>
                       <ul className="space-y-2">
-                        {selectedAd.analysis.value_proposition.benefits.map(
+                        {(selectedAd.analysis?.value_proposition?.benefits ?? []).map(
                           (benefit, idx) => (
                             <li
                               key={idx}
@@ -643,8 +645,8 @@ const VideoAnalysis: React.FC = () => {
                   <MetricCard
                     label="Influencer Detection"
                     value={
-                      selectedAd.analysis.has_influencer
-                        ? `Found ${selectedAd.analysis.influencer_count} influencer(s)`
+                      selectedAd.analysis?.has_influencer
+                        ? `Found ${selectedAd.analysis?.influencer_count ?? 0} influencer(s)`
                         : "No influencers detected"
                     }
                     icon={Users}
@@ -652,20 +654,20 @@ const VideoAnalysis: React.FC = () => {
                   />
                   <MetricCard
                     label="Count"
-                    value={selectedAd.analysis.influencer_count}
+                    value={selectedAd.analysis?.influencer_count ?? 0}
                     icon={Percent}
                     className="bg-purple-950/30 border-purple-800"
                   />
                 </div>
 
-                {selectedAd.analysis.has_influencer &&
-                  selectedAd.analysis.influencer_names.length > 0 && (
+                {selectedAd.analysis?.has_influencer &&
+                  (selectedAd.analysis?.influencer_names?.length ?? 0) > 0 && (
                     <div className="mt-4">
                       <h3 className="text-lg font-semibold text-white mb-3">
                         Detected Influencers
                       </h3>
                       <div className="space-y-3">
-                        {selectedAd.analysis.influencer_names.map((inf, idx) => (
+                        {(selectedAd.analysis?.influencer_names ?? []).map((inf, idx) => (
                           <div
                             key={idx}
                             className="p-4 bg-purple-950/30 rounded-[32px] border border-purple-800"
