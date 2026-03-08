@@ -24,6 +24,9 @@ RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY')
 RUNWAY_BASE_URL = "https://api.dev.runwayml.com"
 RUNWAY_VERSION = "2024-11-06"
 
+# Command Center (same image_gen as GenerateAdPopup / Elfsod 2.0 – reliable text-to-image)
+COMMAND_CENTER_API_URL = os.environ.get('COMMAND_CENTER_API_URL', 'http://localhost:5002').rstrip('/')
+
 # Headers for Runway API
 RUNWAY_HEADERS = {
     "Authorization": f"Bearer {RUNWAY_API_KEY}",
@@ -97,53 +100,67 @@ def save_image_locally(image_data: str, filename: str) -> str:
         logger.error(f"Error saving image: {e}")
         return None
 
+def generate_image_via_command_center(prompt_text: str, aspect_ratio: str = "1344:768"):
+    """
+    Generate image using Command Center /image_gen (same as GenerateAdPopup).
+    Synchronous call – returns when image is ready. Uses gemini_2.5_flash for reliability.
+    """
+    url = f"{COMMAND_CENTER_API_URL}/image_gen"
+    payload = {
+        "message": prompt_text,
+        "aspect_ratio": aspect_ratio,
+        "style": "photorealistic",
+    }
+    try:
+        logger.info(f"Calling Command Center image_gen: {prompt_text[:80]}...")
+        resp = requests.post(url, json=payload, timeout=120)
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        if not resp.ok:
+            err = data.get("error", resp.text or f"HTTP {resp.status_code}")
+            raise RuntimeError(err)
+        if not data.get("success"):
+            raise RuntimeError(data.get("error", "Image generation failed"))
+        task_id = data.get("task_id") or str(uuid.uuid4())
+        data_uri = data.get("data_uri", "")
+        filename = data.get("filename", f"{task_id}.png")
+        if not data_uri:
+            raise RuntimeError("No data_uri in response")
+        return {"task_id": task_id, "data_uri": data_uri, "filename": filename}
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Command Center request error: {e}")
+        raise RuntimeError(str(e))
+
+
 def create_image_generation_task(image_data_uri: str, prompt_text: str, variation_number: int = 1):
     """
     Create image generation task using Runway ML with proper format as per documentation
-    Uses @product to reference the uploaded image in the prompt
+    Uses @product to reference the uploaded image in the prompt.
+    (Used only for video flow; images use generate_image_via_command_center.)
     """
     try:
-        # Prepare request payload according to Runway documentation
-        # Use @product to reference the uploaded image in the prompt
         payload = {
-            "model": "gen4_image",  # Using gen4_image model as per documentation
+            "model": "gen4_image",
             "ratio": "1344:768",
             "promptText": f"@product {prompt_text}",
-            "referenceImages": [
-                {
-                    "uri": image_data_uri,
-                    "tag": "product"
-                }
-            ]
+            "referenceImages": [{"uri": image_data_uri, "tag": "product"}]
         }
-        
         logger.info(f"Creating image generation task with prompt: {prompt_text[:100]}...")
-        
-        # Make API call
         response = requests.post(
             f"{RUNWAY_BASE_URL}/v1/text_to_image",
             headers=RUNWAY_HEADERS,
             json=payload,
             timeout=30
         )
-        
-        # Log the response for debugging
         logger.info(f"Runway API Response Status: {response.status_code}")
-        
         if response.status_code != 200:
             logger.error(f"Runway API Error: {response.text}")
             response.raise_for_status()
-        
         task_data = response.json()
         task_id = task_data.get("id")
-        
         if not task_id:
-            logger.error(f"No task ID returned: {task_data}")
             raise Exception("No task ID returned from Runway API")
-        
         logger.info(f"Image generation task created: {task_id}")
         return task_id
-        
     except Exception as e:
         logger.error(f"Error creating image generation task: {e}")
         raise
@@ -454,53 +471,90 @@ def generate_assets():
             f"Create a stylish promotional image for {ad_type}. Campaign goal: {campaign_goal}. Use contemporary aesthetics and professional composition."
         ]
         
-        for i in range(num_variations):
-            try:
-                # Generate trend-aware prompt
-                prompt_text = generate_trend_aware_prompt(
-                    variation_prompts[i],
-                    ad_type,
-                    campaign_goal
-                )
-                
-                if asset_type == 'image':
-                    task_id = create_image_generation_task(
-                        image_data_uri,
-                        prompt_text,
-                        i + 1
+        if asset_type == 'image':
+            # Use Command Center image_gen (same as GenerateAdPopup) – reliable, no Runway errors
+            for i in range(num_variations):
+                try:
+                    prompt_text = generate_trend_aware_prompt(
+                        variation_prompts[i],
+                        ad_type,
+                        campaign_goal
                     )
-                else:  # video
+                    # Command center is text-to-image only; strip @product reference
+                    prompt_for_cc = prompt_text.replace("@product ", "").strip() or prompt_text
+                    result = generate_image_via_command_center(prompt_for_cc)
+                    task_id = result["task_id"]
+                    data_uri = result["data_uri"]
+                    filename = result["filename"]
+                    asset_id = str(uuid.uuid4())
+                    asset_info = {
+                        "id": asset_id,
+                        "task_id": task_id,
+                        "campaign_id": campaign_id,
+                        "type": "image",
+                        "data_uri": data_uri,
+                        "filename": filename,
+                        "title": f"AI Generated Image {i + 1}",
+                        "prompt": prompt_text,
+                        "score": 80 + (i + 1) * 5,
+                        "status": "completed",
+                    }
+                    if "generated_assets" not in campaign:
+                        campaign["generated_assets"] = []
+                    campaign["generated_assets"].append(asset_info)
+                    tasks_store[campaign_id] = campaign
+                    task_info = {
+                        "task_id": task_id,
+                        "campaign_id": campaign_id,
+                        "user_id": user_id,
+                        "asset_type": "image",
+                        "ad_type": ad_type,
+                        "campaign_goal": campaign_goal,
+                        "status": "completed",
+                        "variation": i + 1,
+                        "started_at": time.time(),
+                        "prompt": prompt_text,
+                    }
+                    if campaign_id not in generation_tasks:
+                        generation_tasks[campaign_id] = []
+                    generation_tasks[campaign_id].append(task_info)
+                    task_ids.append(task_id)
+                    logger.info(f"Image variation {i+1} generated via Command Center: {task_id}")
+                except Exception as e:
+                    logger.error(f"Failed image variation {i+1}: {e}")
+        else:
+            # Video: keep existing Runway flow
+            for i in range(num_variations):
+                try:
+                    prompt_text = generate_trend_aware_prompt(
+                        variation_prompts[i],
+                        ad_type,
+                        campaign_goal
+                    )
                     task_id = create_video_generation_task(
                         image_data_uri,
                         prompt_text,
                         i + 1
                     )
-                
-                # Store task info
-                task_info = {
-                    "task_id": task_id,
-                    "campaign_id": campaign_id,
-                    "user_id": user_id,
-                    "asset_type": asset_type,
-                    "ad_type": ad_type,
-                    "campaign_goal": campaign_goal,
-                    "status": "processing",
-                    "variation": i + 1,
-                    "started_at": time.time(),
-                    "prompt": prompt_text
-                }
-                
-                # Store in generation tasks
-                if campaign_id not in generation_tasks:
-                    generation_tasks[campaign_id] = []
-                generation_tasks[campaign_id].append(task_info)
-                
-                task_ids.append(task_id)
-                logger.info(f"Created {asset_type} generation task {i+1}: {task_id}")
-                
-            except Exception as e:
-                logger.error(f"Failed to create variation {i+1}: {e}")
-                # Continue with other variations even if one fails
+                    task_info = {
+                        "task_id": task_id,
+                        "campaign_id": campaign_id,
+                        "user_id": user_id,
+                        "asset_type": asset_type,
+                        "ad_type": ad_type,
+                        "campaign_goal": campaign_goal,
+                        "status": "processing",
+                        "variation": i + 1,
+                        "started_at": time.time(),
+                        "prompt": prompt_text
+                    }
+                    if campaign_id not in generation_tasks:
+                        generation_tasks[campaign_id] = []
+                    generation_tasks[campaign_id].append(task_info)
+                    task_ids.append(task_id)
+                    logger.info(f"Created {asset_type} generation task {i+1}: {task_id}")
+                except Exception as e:
+                    logger.error(f"Failed to create variation {i+1}: {e}")
         
         if not task_ids:
             return jsonify({"success": False, "error": "Failed to create any generation tasks"}), 500

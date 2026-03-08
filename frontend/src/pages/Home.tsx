@@ -197,6 +197,7 @@ const Home: React.FC = () => {
     setTrendingExampleAds(others.slice(0, 4));
   };
 
+  // Same logic as Ad Surveillance "Trending Ads & Content": use TrendingAPI.search
   const openRecommendedAndFetch = () => {
     setShowRecommendedModal(true);
     setLoadingRecommended(true);
@@ -204,8 +205,13 @@ const Home: React.FC = () => {
     const minLoaderMs = 800;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
     Promise.all([
-      TrendingAPI.getCached().then((data: { categories?: Record<string, TrendingAdType[]>; ads?: TrendingAdType[] }) => {
-        const raw = data?.categories?.recommended ?? data?.ads ?? [];
+      TrendingAPI.search({
+        keyword: 'advertising campaigns',
+        platforms: ['meta', 'instagram', 'youtube'],
+        limit_per_platform: 6,
+        async_mode: false,
+      }).then((result) => {
+        const raw = result?.top_trending ?? [];
         return mapTrendingToAdFormat(raw.slice(0, 20), 'recommended');
       }).catch(() => [] as AdItem[]),
       minDelay,
@@ -213,6 +219,7 @@ const Home: React.FC = () => {
       .finally(() => setLoadingRecommended(false));
   };
 
+  // Same logic as Ad Surveillance: use TrendingAPI.search for trending content
   const openTrendingAndFetch = () => {
     setShowTrendingModal(true);
     setLoadingTrending(true);
@@ -220,8 +227,13 @@ const Home: React.FC = () => {
     const minLoaderMs = 800;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
     Promise.all([
-      TrendingAPI.getCached().then((data: { categories?: Record<string, TrendingAdType[]>; ads?: TrendingAdType[] }) => {
-        const raw = data?.categories?.trending ?? data?.ads ?? [];
+      TrendingAPI.search({
+        keyword: 'trending ads',
+        platforms: ['meta', 'instagram', 'youtube'],
+        limit_per_platform: 6,
+        async_mode: false,
+      }).then((result) => {
+        const raw = result?.top_trending ?? [];
         return mapTrendingToAdFormat(raw.slice(0, 20), 'trending');
       }).catch(() => [] as AdItem[]),
       minDelay,
