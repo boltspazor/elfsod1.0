@@ -53,6 +53,8 @@ const Home: React.FC = () => {
   const [trendingFetchedAds, setTrendingFetchedAds] = useState<AdItem[] | null>(null);
   const [loadingRecommended, setLoadingRecommended] = useState(false);
   const [loadingTrending, setLoadingTrending] = useState(false);
+  const [showRecommendedModal, setShowRecommendedModal] = useState(false);
+  const [showTrendingModal, setShowTrendingModal] = useState(false);
   const isLoggedIn = !!localStorage.getItem('token');
 
   // Map carousel card genres to trending search keywords
@@ -195,7 +197,8 @@ const Home: React.FC = () => {
     setTrendingExampleAds(others.slice(0, 4));
   };
 
-  const fetchRecommendedAndShow = () => {
+  const openRecommendedAndFetch = () => {
+    setShowRecommendedModal(true);
     setLoadingRecommended(true);
     setRecommendedFetchedAds(null);
     TrendingAPI.getCached()
@@ -207,7 +210,8 @@ const Home: React.FC = () => {
       .finally(() => setLoadingRecommended(false));
   };
 
-  const fetchTrendingAndShow = () => {
+  const openTrendingAndFetch = () => {
+    setShowTrendingModal(true);
     setLoadingTrending(true);
     setTrendingFetchedAds(null);
     TrendingAPI.getCached()
@@ -456,47 +460,12 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Recommended: always show hardcoded cards first; on click fetch and show dynamic ads. */}
+    {/* Recommended: always show hardcoded cards; on click open modal overlay and fetch ads. */}
     {selectedCategory === 'recommended' ? (
-      <>
-        {loadingRecommended && (
-          <div className="text-gray-400 text-center py-12">Loading recommended campaigns…</div>
-        )}
-        {!loadingRecommended && recommendedFetchedAds && recommendedFetchedAds.length > 0 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setRecommendedFetchedAds(null)}
-              className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
-            >
-              ← Back to categories
-            </button>
-            <AdCarousel
-              category="recommended"
-              onCardClick={handleCardClick}
-              ads={recommendedFetchedAds}
-            />
-          </>
-        )}
-        {!loadingRecommended && recommendedFetchedAds === null && (
-          <AdCarousel
-            category="recommended"
-            onCardClick={fetchRecommendedAndShow}
-          />
-        )}
-        {!loadingRecommended && recommendedFetchedAds && recommendedFetchedAds.length === 0 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setRecommendedFetchedAds(null)}
-              className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
-            >
-              ← Back to categories
-            </button>
-            <div className="text-gray-400 text-center py-12">No recommended campaigns right now. Try again later.</div>
-          </>
-        )}
-      </>
+      <AdCarousel
+        category="recommended"
+        onCardClick={openRecommendedAndFetch}
+      />
     ) : (
       <AdCarousel
         category={selectedCategory as 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended'}
@@ -530,44 +499,11 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Trending: always show hardcoded cards first; on click fetch and show dynamic ads. */}
-    {loadingTrending && (
-      <div className="text-gray-400 text-center py-12">Loading trending…</div>
-    )}
-    {!loadingTrending && trendingFetchedAds && trendingFetchedAds.length > 0 && (
-      <>
-        <button
-          type="button"
-          onClick={() => setTrendingFetchedAds(null)}
-          className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
-        >
-          ← Back to categories
-        </button>
-        <AdCarousel
-          category="trending"
-          onCardClick={handleCardClick}
-          ads={trendingFetchedAds}
-        />
-      </>
-    )}
-    {!loadingTrending && trendingFetchedAds === null && (
-      <AdCarousel
-        category="trending"
-        onCardClick={fetchTrendingAndShow}
-      />
-    )}
-    {!loadingTrending && trendingFetchedAds && trendingFetchedAds.length === 0 && (
-      <>
-        <button
-          type="button"
-          onClick={() => setTrendingFetchedAds(null)}
-          className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
-        >
-          ← Back to categories
-        </button>
-        <div className="text-gray-400 text-center py-12">No trending campaigns right now. Try again later.</div>
-      </>
-    )}
+    {/* Trending: always show hardcoded cards; on click open modal overlay and fetch ads. */}
+    <AdCarousel
+      category="trending"
+      onCardClick={openTrendingAndFetch}
+    />
   </div>
 </section>
 
@@ -602,6 +538,44 @@ const Home: React.FC = () => {
     />
   </div>
 </section> */}
+
+      {/* Recommended overlay modal: shows fetched ads or empty state */}
+      {showRecommendedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setShowRecommendedModal(false)}>
+          <div className="bg-[#0B0F1A] rounded-[32px] max-w-6xl w-full max-h-[90vh] overflow-auto p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">Recommended Campaigns</h3>
+              <button type="button" onClick={() => setShowRecommendedModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            {loadingRecommended ? (
+              <div className="text-gray-400 text-center py-16">Loading recommended campaigns…</div>
+            ) : recommendedFetchedAds && recommendedFetchedAds.length > 0 ? (
+              <AdCarousel category="recommended" onCardClick={handleCardClick} ads={recommendedFetchedAds} />
+            ) : (
+              <div className="text-gray-400 text-center py-16">No recommended campaigns right now. Try again later.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Trending overlay modal: shows fetched ads or empty state */}
+      {showTrendingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setShowTrendingModal(false)}>
+          <div className="bg-[#0B0F1A] rounded-[32px] max-w-6xl w-full max-h-[90vh] overflow-auto p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">Trending Now</h3>
+              <button type="button" onClick={() => setShowTrendingModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            {loadingTrending ? (
+              <div className="text-gray-400 text-center py-16">Loading trending…</div>
+            ) : trendingFetchedAds && trendingFetchedAds.length > 0 ? (
+              <AdCarousel category="trending" onCardClick={handleCardClick} ads={trendingFetchedAds} />
+            ) : (
+              <div className="text-gray-400 text-center py-16">No trending campaigns right now. Try again later.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Ad Detail Modal */}
       {selectedAd && (

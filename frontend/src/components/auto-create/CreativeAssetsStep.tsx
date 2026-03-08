@@ -37,9 +37,12 @@ async function pollTask(taskId: string): Promise<void> {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) continue;
-    const data = await res.json();
+    const data = await res.json() as { status?: string; error?: string };
     if (data.status === 'completed') return;
-    if (data.status === 'failed') throw new Error('Generation task failed');
+    if (data.status === 'failed') {
+      const msg = data.error && typeof data.error === 'string' ? data.error : 'Generation task failed';
+      throw new Error(msg);
+    }
   }
   throw new Error('Generation timed out after 3 minutes');
 }
