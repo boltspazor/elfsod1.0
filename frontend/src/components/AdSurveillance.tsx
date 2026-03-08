@@ -2251,7 +2251,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                       <div className="mb-8">
                         <div className="flex items-center gap-2 mb-4">
                           <History className="w-5 h-5 text-[#666]" />
-                          <h4 className="font-medium text-white">
+                          <h4 className="666666666666666666666font-medium text-white">
                             Recent Searches
                           </h4>
                         </div>

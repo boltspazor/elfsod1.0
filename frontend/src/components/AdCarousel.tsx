@@ -202,126 +202,126 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
     recommended: [
       {
         id: 1,
-        title: 'Emotional / Storytelling Ads',
+        title: 'Food & Beverages Ads',
         type: 'PROMOTED',
-        image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1769789337/samples/food/dessert.jpg',
         rating: '4.8',
         votes: '234K',
-        tags: ['Digital', 'Social'],
-        genre: 'Drama'
+        tags: ['Food', 'Beverages'],
+        genre: 'food'
       },
       {
         id: 2,
-        title: 'Humorous / Comedy Ads',
+        title: 'Fashion Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1769789343/samples/ecommerce/accessories-bag.jpg',
         rating: '4.6',
         votes: '189K',
-        tags: ['Video', 'Display'],
-        genre: 'Comedy'
+        tags: ['Fashion'],
+        genre: 'Fashion'
       },
       {
         id: 3,
-        title: 'Informative / Educational Ads',
+        title: 'Shoes Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969453/Screenshot_2026-03-08_165507_gzz0bd.png',
         rating: '4.9',
         votes: '312K',
-        tags: ['Social', 'Influencer'],
-        genre: 'Documentary'
+        tags: ['Shoes', 'Footwear'],
+        genre: 'Shoes'
       },
       {
         id: 4,
-        title: 'Lifestyle Ads',
+        title: 'Tech Ads',
         type: null,
         image: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&h=500&fit=crop',
         rating: '4.7',
         votes: '267K',
-        tags: ['Email', 'Digital'],
-        genre: 'Lifestyle'
+        tags: ['Tech'],
+        genre: 'Tech'
       },
       {
         id: 5,
-        title: 'Aspirational / Luxury Ads',
+        title: 'Car Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969454/Screenshot_2026-03-08_165609_kscjlt.png',
         rating: '4.5',
         votes: '198K',
-        tags: ['Social', 'Video'],
-        genre: 'Luxury'
+        tags: ['Cars'],
+        genre: 'Cars'
       },
-      {
-        id: 6,
-        title: 'User-Generated Content (UGC) Ads',
-        type: null,
-        image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=500&fit=crop',
-        rating: '4.8',
-        votes: '289K',
-        tags: ['Display', 'Retargeting'],
-        genre: 'UGC'
-      }
+      // {
+      //   id: 6,
+      //   title: 'User-Generated Content (UGC) Ads',
+      //   type: null,
+      //   image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=500&fit=crop',
+      //   rating: '4.8',
+      //   votes: '289K',
+      //   tags: ['Display', 'Retargeting'],
+      //   genre: 'UGC'
+      // }
     ],
     trending: [
       {
         id: 7,
-        title: 'TikTok Viral Challenges',
+        title: 'Home Decor Ads',
         type: 'PROMOTED',
-        image: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969436/Screenshot_2026-03-08_165633_lraz01.png',
         rating: '4.9',
         votes: '345K',
-        tags: ['Viral', 'Gen-Z'],
-        genre: 'Social Media'
+        tags: ['Home Decor'],
+        genre: 'Home Decor'
       },
       {
         id: 8,
-        title: 'Instagram Reels Campaigns',
+        title: 'Fitness Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1611262588024-d12430b98920?w=400&h=500&fit=crop',
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969425/Screenshot_2026-03-08_165721_lxvqzy.png',
         rating: '4.8',
-        votes: '298K',
-        tags: ['Short-form', 'Visual'],
-        genre: 'Social Media'
+        votes: '234K',
+        tags: ['Health', 'Fitness'],
+        genre: 'Fitness'
       },
       {
         id: 9,
-        title: 'YouTube Shorts Ads',
+        title: 'Beauty Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1591261730799-ee4e6c2d16d7?w=400&h=500&fit=crop',
-        rating: '4.7',
-        votes: '267K',
-        tags: ['Video', 'Mobile'],
-        genre: 'Digital'
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969418/Screenshot_2026-03-08_165743_ocuyhh.png',
+        rating: '4.8',
+        votes: '298K',
+        tags: ['Beauty', 'Fashion'],
+        genre: 'Beauty Ads'
       },
       {
         id: 10,
-        title: 'AR/VR Experience Ads',
+        title: 'Travel Ads',
         type: null,
-        image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop',
-        rating: '4.6',
-        votes: '189K',
-        tags: ['Immersive', 'Tech'],
-        genre: 'Innovation'
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969444/Screenshot_2026-03-08_165801_apeyhr.png',
+        rating: '4.7',
+        votes: '267K',
+        tags: ['Travel'],
+        genre: 'Travel'
       },
       {
         id: 11,
-        title: 'Interactive Story Ads',
+        title: 'E-commerce',
         type: null,
-        image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop',
-        rating: '4.8',
-        votes: '234K',
-        tags: ['Engagement', 'Choose-your-own'],
-        genre: 'Interactive'
+        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1772969424/Screenshot_2026-03-08_165825_cabq1y.png',
+        rating: '4.6',
+        votes: '189K',
+        tags: ['E-Commerce'],
+        genre: 'E-commerce'
       },
-      {
-        id: 12,
-        title: 'Metaverse Brand Experiences',
-        type: null,
-        image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop',
-        rating: '4.5',
-        votes: '156K',
-        tags: ['Virtual', 'Future'],
-        genre: 'Metaverse'
-      }
+      // {
+      //   id: 12,
+      //   title: 'Metaverse Brand Experiences',
+      //   type: null,
+      //   image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop',
+      //   rating: '4.5',
+      //   votes: '156K',
+      //   tags: ['Virtual', 'Future'],
+      //   genre: 'Metaverse'
+      // }
     ],
     top: [
       {
