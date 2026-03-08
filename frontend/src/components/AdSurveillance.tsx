@@ -2136,8 +2136,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
             <div className="px-5 py-4 border-b border-[#2a2a2a]">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
-                    <TrendingUp className="w-5 h-5 text-white" />
+                  <div className="p-2 bg-gradient-to-r  rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-purple-700" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-white">
@@ -2185,7 +2185,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                           disabled={
                             isSearchingTrending || !trendingSearchKeyword.trim()
                           }
-                          className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                          className="px-6 py-2.5 bg-purple-500 text-gray-100 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
                         >
                           {isSearchingTrending ? (
                             <>
@@ -2235,8 +2235,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     {/* Popular Suggestions */}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <TrendingUp className="w-5 h-5 text-orange-500" />
-                        <h4 className="font-medium text-white">
+                        <TrendingUp className="w-5 h-5 text-purple-700" />
+                        <h4 className="font-medium text-purple-700">
                           Popular Search Suggestions
                         </h4>
                       </div>
@@ -2250,13 +2250,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                             className="p-4 bg-gradient-to-br from-[#111] to-[#1a1a1a] hover:from-[#1a1a1a] hover:to-[#222] border border-[#2a2a2a] rounded-xl text-left group transition-all hover:shadow-md hover:border-[#444]"
                           >
                             <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-[#222] rounded-lg group-hover:bg-orange-500/20 transition-colors">
-                                <div className="text-orange-500">
+                              <div className="p-2 bg-[#222] rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                                <div className="text-purple-500">
                                   {suggestion.icon}
                                 </div>
                               </div>
                               <div className="flex-1">
-                                <h5 className="font-medium text-white group-hover:text-orange-400">
+                                <h5 className="font-medium text-white group-hover:text-purple-500">
                                   {suggestion.keyword}
                                 </h5>
                                 <p className="text-xs text-[#666]">
