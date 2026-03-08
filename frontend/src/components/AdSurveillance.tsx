@@ -2274,7 +2274,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <TrendingUp className="w-5 h-5 text-purple-700" />
-                        <h4 className="font-medium text-purple-700">
+                        <h4 className="font-medium text-white">
                           Popular Search Suggestions
                         </h4>
                       </div>
