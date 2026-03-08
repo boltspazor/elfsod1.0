@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 
 interface AdCardProps {
   ad: {
-    id: number;
+    id: number | string;
     title: string;
-    type: string | null;
+    type?: string | null;
     image: string;
     rating: string;
     votes: string;

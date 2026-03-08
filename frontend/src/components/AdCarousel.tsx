@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface CarouselAd {
   id: number | string;
   title: string;
-  type: string | null;
+  type?: string | null;
   image: string;
   rating: string;
   votes: string;
