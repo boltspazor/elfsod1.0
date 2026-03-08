@@ -260,10 +260,15 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
   };
 
   const genre = ad.genre || 'Drama';
+  const genreLower = (typeof genre === 'string' ? genre : '').toLowerCase();
+  const isFashion = genreLower === 'fashion';
 
   const exampleAds = (trendingExampleAds && trendingExampleAds.length > 0)
     ? trendingExampleAds
     : getExampleAdsForGenre(genre);
+
+  const modalTitle = isFashion ? 'Fashion Ads' : ad.title;
+  const sectionTitle = isFashion ? 'Fashion Ads' : `Top ${genre} Campaign Examples`;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -329,7 +334,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp className="w-6 h-6 text-purple-600" />
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Top {genre} Campaign Examples
+                      {sectionTitle}
                     </h2>
                   </div>
                   <div className="grid grid-cols-2 gap-4">

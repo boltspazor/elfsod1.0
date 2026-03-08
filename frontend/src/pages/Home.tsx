@@ -64,11 +64,12 @@ const Home: React.FC = () => {
   const [modalExampleAds, setModalExampleAds] = useState<AdItem[] | null>(null);
   const isLoggedIn = !!localStorage.getItem('token');
 
-  // Map carousel card genres to trending search keywords
+  // Map carousel card genres to trending search keywords (aligned with category modal)
   const genreToKeyword: Record<string, string> = {
-    'food': 'Food ads',
-    'Food': 'Food ads',
-    'Fashion': 'Fashion ads',
+    'food': 'food restaurant ads',
+    'Food': 'food restaurant ads',
+    'fashion': 'fashion clothing brands apparel',
+    'Fashion': 'fashion clothing brands apparel',
     'Shoes': 'Shoes ads',
     'Tech': 'Tech gadgets',
     'Cars': 'Car commercials',
@@ -221,7 +222,7 @@ const Home: React.FC = () => {
 
   const categoryModalTitles: Record<typeof categoryModalKey, string> = {
     recommended: 'Recommended Campaigns',
-    fashion: 'Fashion Campaigns',
+    fashion: 'Fashion Ads',
     sports: 'Sports Campaigns',
     food: 'Food Campaigns',
     trending: 'Trending Now',
@@ -229,9 +230,9 @@ const Home: React.FC = () => {
 
   const categorySearchKeywords: Record<typeof categoryModalKey, string> = {
     recommended: 'advertising campaigns',
-    fashion: 'fashion ads',
-    sports: 'sports ads',
-    food: 'food ads',
+    fashion: 'fashion clothing brands apparel',
+    sports: 'sports ads athletics',
+    food: 'food restaurant ads',
     trending: 'trending ads',
   };
 
