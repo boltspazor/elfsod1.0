@@ -26,12 +26,13 @@ interface AdDetailModalProps {
 }
 
 const VIDEO_EXT = /\.(mp4|webm|ogg|mov)(\?|$)/i;
+const isVideoUrl = (url: string) => VIDEO_EXT.test(url) || /^data:video\//i.test(url);
 function staticThumbnail(item: { image?: string; thumbnail?: string; genre?: string }): string {
   const placeholder = `https://via.placeholder.com/800x400?text=${encodeURIComponent(item.genre || 'Ad')}`;
   const thumb = item.thumbnail?.trim();
   const img = item.image?.trim();
-  if (thumb && !VIDEO_EXT.test(thumb)) return thumb;
-  if (img && !VIDEO_EXT.test(img)) return img;
+  if (thumb && !isVideoUrl(thumb)) return thumb;
+  if (img && !isVideoUrl(img)) return img;
   return placeholder;
 }
 
@@ -280,18 +281,18 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
     ? trendingExampleAds
     : getExampleAdsForGenre(genre);
 
-  // Prefer explicit campaign title (e.g. "Travel Ads") over first ad's title
+  // Prefer explicit campaign title (e.g. "Travel Ads") over first ad's title; fallback to "{Genre} Ads" for categories
   const HARDCODED_CAMPAIGN_NAMES = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
   const isKnownCampaign = typeof genre === 'string' && HARDCODED_CAMPAIGN_NAMES.includes(genre);
-  const modalTitle = (campaignTitle && campaignTitle.trim()) || (isKnownCampaign
-    ? genre
-    : genreLower === 'recommended'
-      ? 'Recommended Campaigns'
-      : genreLower === 'trending'
-        ? 'Trending Now'
-        : isFashion
-          ? 'Fashion Ads'
-          : ad.title);
+  const categoryStyleTitle = genre && typeof genre === 'string' && genre.length > 0
+    ? `${String(genre).replace(/\s+ads?$/i, '').trim()} Ads`
+    : '';
+  const modalTitle = (campaignTitle && campaignTitle.trim())
+    || (isKnownCampaign ? genre : '')
+    || (genreLower === 'recommended' ? 'Recommended Campaigns' : '')
+    || (genreLower === 'trending' ? 'Trending Now' : '')
+    || (isFashion ? 'Fashion Ads' : '')
+    || (categoryStyleTitle || ad.title);
   const sectionTitle = isKnownCampaign || isFashion ? modalTitle : `Top ${genre} Campaign Examples`;
 
   return (

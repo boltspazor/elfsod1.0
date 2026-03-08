@@ -220,6 +220,7 @@ const Home: React.FC = () => {
   };
 
   const handleCardClick = (ad: AdItem) => {
+    setDetailModalCampaignTitle(ad.title || null);
     setSelectedAd(ad);
     document.body.style.overflow = 'hidden';
     const validCategories = ['sports', 'food', 'fashion', 'trending', 'recommended'];
@@ -339,6 +340,7 @@ const Home: React.FC = () => {
         setRecommendedWhiteByCategory(byCategory);
         setRecommendedWhiteAds(flat);
         if (flat.length > 0) {
+          setDetailModalCampaignTitle('Recommended Campaigns');
           setSelectedAd(flat[0]);
           setRelatedAds(flat.slice(1, 4));
           setTrendingExampleAds(flat.slice(0, 8));
@@ -376,6 +378,7 @@ const Home: React.FC = () => {
         const list = filtered.length > 0 ? filtered : ads;
         setRecommendedWhiteAds(list);
         if (list.length > 0) {
+          setDetailModalCampaignTitle(modalTitle);
           setSelectedAd(list[0]);
           setRelatedAds(list.slice(1, 4));
           setTrendingExampleAds(list.slice(0, 8));
@@ -425,6 +428,7 @@ const Home: React.FC = () => {
         setTrendingWhiteByCategory(byCategory);
         setTrendingWhiteAds(flat);
         if (flat.length > 0) {
+          setDetailModalCampaignTitle('Trending Now');
           setSelectedAd(flat[0]);
           setRelatedAds(flat.slice(1, 4));
           setTrendingExampleAds(flat.slice(0, 8));
@@ -462,6 +466,7 @@ const Home: React.FC = () => {
         const list = filtered.length > 0 ? filtered : ads;
         setTrendingWhiteAds(list);
         if (list.length > 0) {
+          setDetailModalCampaignTitle(modalTitle);
           setSelectedAd(list[0]);
           setRelatedAds(list.slice(1, 4));
           setTrendingExampleAds(list.slice(0, 8));
