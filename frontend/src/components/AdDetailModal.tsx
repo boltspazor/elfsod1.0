@@ -1,22 +1,29 @@
 import React from 'react';
-import { X, Star, Clock, Globe, Award, Play, Users, TrendingUp } from 'lucide-react';
+import { X, Star, Clock, Globe, Award, Play, Users, TrendingUp, Loader2 } from 'lucide-react';
 
-interface AdDetailModalProps {
-  ad: {
-    id: number;
-    title: string;
-    type: string | null;
-    image: string;
-    rating: string;
-    votes: string;
-    tags: string[];
-    genre: string;
-  };
-  onClose: () => void;
-  relatedAds: any[]; // Related ads based on genre
+interface AdItem {
+  id: number | string;
+  title: string;
+  type?: string | null;
+  image: string;
+  rating: string;
+  votes: string;
+  tags: string[];
+  genre?: string;
+  engagement?: string;
+  description?: string;
+  url?: string;
 }
 
-const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }) => {
+interface AdDetailModalProps {
+  ad: AdItem;
+  onClose: () => void;
+  relatedAds: AdItem[];
+  trendingExampleAds?: AdItem[];
+  isLoadingTrending?: boolean;
+}
+
+const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, trendingExampleAds, isLoadingTrending }) => {
   // Example ads for each genre (these would be fetched from your backend)
   const getExampleAdsForGenre = (genre: string) => {
     const exampleAdsMap: Record<string, any[]> = {
@@ -253,7 +260,11 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }
     return exampleAdsMap[genre] || exampleAdsMap['Drama'];
   };
 
-  const exampleAds = getExampleAdsForGenre(ad.genre);
+  const genre = ad.genre || 'Drama';
+
+  const exampleAds = (trendingExampleAds && trendingExampleAds.length > 0)
+    ? trendingExampleAds
+    : getExampleAdsForGenre(genre);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -315,7 +326,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="w-5 h-5" />
-                    <span className="font-medium text-purple-600">{ad.genre}</span>
+                    <span className="font-medium text-purple-600">{genre}</span>
                   </div>
                 </div>
               </div>
@@ -363,17 +374,26 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp className="w-6 h-6 text-purple-600" />
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Top {ad.genre} Campaign Examples
+                      Top {genre} Campaign Examples
                     </h2>
                   </div>
+                  {isLoadingTrending && (
+                    <div className="flex items-center gap-2 mb-4 text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Fetching trending {genre} ads...</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     {exampleAds.map((exampleAd) => (
                       <div 
                         key={exampleAd.id} 
                         className="group cursor-pointer overflow-hidden rounded-xl bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
                         onClick={() => {
-                          // Navigate to this ad or open in new tab
-                          window.open(`/ads/${exampleAd.id}`, '_blank');
+                          if (exampleAd.url) {
+                            window.open(exampleAd.url, '_blank', 'noopener,noreferrer');
+                          } else {
+                            window.open(`/ads/${exampleAd.id}`, '_blank');
+                          }
                         }}
                       >
                         {/* Ad Image */}
@@ -444,14 +464,21 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }
               {/* Right Column - Related Ads & Info */}
               <div>
                 <h2 className="text-2xl font-bold mb-4 text-gray-900">Similar Campaigns</h2>
+                {isLoadingTrending && relatedAds.length === 0 && (
+                  <div className="flex items-center gap-2 mb-4 text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading...</span>
+                  </div>
+                )}
                 <div className="space-y-4 mb-8">
                   {relatedAds.map((relatedAd) => (
                     <div 
                       key={relatedAd.id}
                       className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                       onClick={() => {
-                        // You could implement navigation or open another modal
-                        console.log('Navigate to:', relatedAd.id);
+                        if (relatedAd.url) {
+                          window.open(relatedAd.url, '_blank', 'noopener,noreferrer');
+                        }
                       }}
                     >
                       <img
@@ -519,20 +546,20 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds }
 
             {/* About Section */}
             <div className="mt-8 p-6 bg-gray-50 rounded-xl">
-              <h3 className="text-xl font-bold mb-3 text-gray-900">About {ad.genre} Campaigns</h3>
+              <h3 className="text-xl font-bold mb-3 text-gray-900">About {genre} Campaigns</h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                {ad.genre} campaigns are designed to {getGenreDescription(ad.genre)}. 
+                {genre} campaigns are designed to {getGenreDescription(genre)}. 
                 These campaigns typically achieve higher engagement rates by connecting with audiences 
                 on an emotional level and delivering memorable brand experiences.
               </p>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="p-3 bg-white rounded-lg">
                   <h4 className="font-semibold text-gray-900 mb-1">Best For</h4>
-                  <p className="text-sm text-gray-600">{getBestForGenre(ad.genre)}</p>
+                  <p className="text-sm text-gray-600">{getBestForGenre(genre)}</p>
                 </div>
                 <div className="p-3 bg-white rounded-lg">
                   <h4 className="font-semibold text-gray-900 mb-1">Average ROI</h4>
-                  <p className="text-sm text-gray-600">{getAverageROI(ad.genre)}</p>
+                  <p className="text-sm text-gray-600">{getAverageROI(genre)}</p>
                 </div>
               </div>
             </div>

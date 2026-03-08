@@ -3,9 +3,20 @@ import React, { useRef } from 'react';
 import AdCard from './AdCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+interface CarouselAd {
+  id: number | string;
+  title: string;
+  type: string | null;
+  image: string;
+  rating: string;
+  votes: string;
+  tags: string[];
+  genre?: string;
+}
+
 interface AdCarouselProps {
   category: 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended';
-  onCardClick?: (ad: any) => void; // Add this prop
+  onCardClick?: (ad: CarouselAd) => void;
 }
 
 const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
@@ -401,7 +412,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
   };
 
   // Handle card click
-  const handleCardClick = (ad: any) => {
+  const handleCardClick = (ad: CarouselAd) => {
     if (onCardClick) {
       onCardClick(ad);
     }
@@ -422,7 +433,13 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
         style={{ scrollbarWidth: 'none' }}
       >
         {ads.map((ad) => (
-          <div key={ad.id} onClick={() => handleCardClick(ad)}>
+          <div key={ad.id} onClickCapture={(e) => {
+            if (onCardClick) {
+              e.stopPropagation();
+              e.preventDefault();
+              handleCardClick(ad);
+            }
+          }}>
             <AdCard ad={ad} />
           </div>
         ))}

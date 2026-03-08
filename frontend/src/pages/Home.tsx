@@ -6,6 +6,7 @@ import AdDetailModal from '../components/AdDetailModal';
 import Footer from '../components/Footer';
 import AnimatedTileGrid from '../components/AnimatedTileGrid';
 import { AUTOCREATE_API_URL } from '../config';
+import { TrendingAPI, TrendingAd as TrendingAdType } from '../services/adsurv';
 
 interface PublishedCampaign {
   id: number;
@@ -19,16 +20,75 @@ interface PublishedCampaign {
   selected_tests?: string[];
 }
 
+interface AdItem {
+  id: number | string;
+  title: string;
+  type?: string | null;
+  image: string;
+  rating: string;
+  votes: string;
+  tags: string[];
+  genre?: string;
+  engagement?: string;
+  description?: string;
+  url?: string;
+  platform?: string;
+  score?: number;
+}
+
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [selectedAd, setSelectedAd] = useState<any>(null);
-  const [relatedAds, setRelatedAds] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('recommended');
+  const [selectedAd, setSelectedAd] = useState<AdItem | null>(null);
+  const [relatedAds, setRelatedAds] = useState<AdItem[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedCategory, _setSelectedCategory] = useState<string>('recommended');
   const [publishedCampaigns, setPublishedCampaigns] = useState<PublishedCampaign[]>([]);
   const [launchSuccessId, setLaunchSuccessId] = useState<string | null>(null);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+  const [trendingExampleAds, setTrendingExampleAds] = useState<AdItem[]>([]);
   const isLoggedIn = !!localStorage.getItem('token');
+
+  // Map carousel card genres to trending search keywords
+  const genreToKeyword: Record<string, string> = {
+    'food': 'Food ads',
+    'Food': 'Food ads',
+    'Fashion': 'Fashion ads',
+    'Shoes': 'Shoes ads',
+    'Tech': 'Tech gadgets',
+    'Cars': 'Car commercials',
+    'Home Decor': 'Home decor',
+    'Fitness': 'Fitness products',
+    'Beauty Ads': 'Beauty products',
+    'Travel': 'Travel deals',
+    'E-commerce': 'E-commerce',
+    'Sports': 'Sports ads',
+  };
+
+  const formatVotes = (value: number | string | undefined): string => {
+    const num = typeof value === 'string' ? parseInt(value) : (value || 0);
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+    return num.toString();
+  };
+
+  const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
+    return items.map((item, index) => ({
+      id: item.id || `trending-${index}`,
+      title: item.title || item.headline || 'Trending Ad',
+      image: item.image_url || item.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image',
+      rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
+      votes: formatVotes(item.views || item.likes || 0),
+      tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
+      genre,
+      engagement: item.score ? `${Math.min(item.score, 100)}%` : 'N/A',
+      description: item.description || 'Trending ad content',
+      url: item.url,
+      platform: item.platform,
+      score: item.score,
+    }));
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -97,17 +157,39 @@ const Home: React.FC = () => {
     // ... other ads
   ];
 
-  const handleCardClick = (ad: any) => {
+  const handleCardClick = async (ad: AdItem) => {
     setSelectedAd(ad);
-    
-    // Get related ads based on genre
-    const filtered = allAds
-      .filter(item => item.genre === ad.genre && item.id !== ad.id)
-      .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
-      .slice(0, 3);
-    
-    setRelatedAds(filtered);
+    setRelatedAds([]);
+    setTrendingExampleAds([]);
+    setIsLoadingTrending(true);
     document.body.style.overflow = 'hidden';
+
+    const keyword = genreToKeyword[ad.genre || ''] || ad.genre || ad.title;
+
+    try {
+      const result = await TrendingAPI.search({
+        keyword,
+        platforms: ['meta', 'instagram', 'youtube'],
+        limit_per_platform: 5,
+        async_mode: false,
+      });
+
+      if (result.top_trending && Array.isArray(result.top_trending)) {
+        const mapped = mapTrendingToAdFormat(result.top_trending.slice(0, 10), ad.genre || 'Trending');
+        setRelatedAds(mapped.slice(0, 3));
+        setTrendingExampleAds(mapped.slice(0, 4));
+      }
+    } catch (error) {
+      console.error('Error fetching trending ads:', error);
+      // Fallback to static related ads
+      const filtered = allAds
+        .filter(item => item.genre === ad.genre && item.id !== ad.id)
+        .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
+        .slice(0, 3);
+      setRelatedAds(filtered);
+    } finally {
+      setIsLoadingTrending(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -348,7 +430,7 @@ const Home: React.FC = () => {
     </div>
 
     <AdCarousel 
-      category={selectedCategory as any}
+      category={selectedCategory as 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended'}
       onCardClick={handleCardClick}
     />
   </div>
@@ -423,6 +505,8 @@ const Home: React.FC = () => {
           ad={selectedAd}
           onClose={handleCloseModal}
           relatedAds={relatedAds}
+          trendingExampleAds={trendingExampleAds}
+          isLoadingTrending={isLoadingTrending}
         />
       )}
 
