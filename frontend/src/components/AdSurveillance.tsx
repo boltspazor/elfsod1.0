@@ -101,6 +101,7 @@ interface AdData {
   full_text: string;
   destination_url: string;
   image_url: string;
+  thumbnail?: string;
   video_url: string;
   format: string;
   impressions: string | number;
