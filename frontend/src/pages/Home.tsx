@@ -56,6 +56,7 @@ const Home: React.FC = () => {
   const [showTrendingWhiteModal, setShowTrendingWhiteModal] = useState(false);
   const [trendingWhiteAds, setTrendingWhiteAds] = useState<AdItem[] | null>(null);
   const [loadingTrendingWhite, setLoadingTrendingWhite] = useState(false);
+  const [trendingWhiteModalTitle, setTrendingWhiteModalTitle] = useState('Trending Now');
   // Category-specific ads for main section carousel (food / fashion / sports only)
   const [sectionCategoryAds, setSectionCategoryAds] = useState<Record<string, AdItem[] | null>>({});
   const [loadingSectionCategory, setLoadingSectionCategory] = useState<Record<string, boolean>>({});
@@ -99,14 +100,17 @@ const Home: React.FC = () => {
   };
 
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
+    const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(genre || 'Ad')}`;
     return items.map((item, index) => {
       const rawImage = item.image_url || item.thumbnail || '';
       const rawThumb = item.thumbnail || item.image_url || '';
+      const imageUrl = rawImage ? proxyImageUrl(rawImage) : (rawThumb ? proxyImageUrl(rawThumb) : categoryPlaceholder);
+      const thumbUrl = rawThumb ? proxyImageUrl(rawThumb) : (rawImage ? proxyImageUrl(rawImage) : categoryPlaceholder);
       return {
       id: item.id || `trending-${index}`,
       title: item.title || item.headline || 'Trending Ad',
-      image: rawImage ? proxyImageUrl(rawImage) : 'https://via.placeholder.com/400x300?text=No+Image',
-      thumbnail: rawThumb ? proxyImageUrl(rawThumb) : undefined,
+      image: imageUrl,
+      thumbnail: thumbUrl,
       rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
       votes: formatVotes(item.views || item.likes || 0),
       tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
@@ -352,8 +356,9 @@ const Home: React.FC = () => {
       .finally(() => setLoadingRecommendedWhite(false));
   };
 
-  // Trending: same white modal and multi-keyword fetch as Recommended (Shoes, Fashion, Food, Sports)
+  // Trending: mixed fetch (Shoes, Fashion, Food, Sports) when opening generic "Trending"
   const openTrendingWhiteModal = () => {
+    setTrendingWhiteModalTitle('Trending Now');
     setShowTrendingWhiteModal(true);
     setTrendingWhiteAds(null);
     setLoadingTrendingWhite(true);
@@ -413,6 +418,50 @@ const Home: React.FC = () => {
         }
       })
       .finally(() => setLoadingTrendingWhite(false));
+  };
+
+  // When user clicks a specific card in Trending (e.g. "Home Decor Ads"), fetch only that category's ads
+  const openTrendingWhiteModalWithGenre = (genre: string, modalTitle: string) => {
+    const keyword = genreToKeyword[genre] || genre;
+    setTrendingWhiteModalTitle(modalTitle);
+    setShowTrendingWhiteModal(true);
+    setTrendingWhiteAds(null);
+    setLoadingTrendingWhite(true);
+    const minLoaderMs = 600;
+    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    TrendingAPI.search({
+      keyword,
+      platforms: ['meta', 'instagram', 'youtube'],
+      limit_per_platform: 5,
+      async_mode: false,
+    })
+      .then((result) => {
+        const raw = result?.top_trending ?? [];
+        return mapTrendingToAdFormat(raw.slice(0, 20), genre);
+      })
+      .catch(() => [] as AdItem[])
+      .then((ads) => minDelay.then(() => ads))
+      .then((ads) => {
+        const filtered = ads.filter((ad) => (ad.genre || '').toLowerCase() === genre.toLowerCase());
+        const list = filtered.length > 0 ? filtered : ads;
+        setTrendingWhiteAds(list);
+        if (list.length > 0) {
+          setSelectedAd(list[0]);
+          setRelatedAds(list.slice(1, 4));
+          setTrendingExampleAds(list.slice(0, 8));
+          setShowTrendingWhiteModal(false);
+          document.body.style.overflow = 'hidden';
+        }
+      })
+      .finally(() => setLoadingTrendingWhite(false));
+  };
+
+  const handleTrendingCardClick = (ad: AdItem) => {
+    if (ad.genre && genreToKeyword[ad.genre]) {
+      openTrendingWhiteModalWithGenre(ad.genre, ad.title || `${ad.genre} Ads`);
+    } else {
+      openTrendingWhiteModal();
+    }
   };
 
   const openTrendingAndFetch = () => openTrendingWhiteModal();
@@ -596,10 +645,10 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Trending: always show hardcoded cards; on click open modal overlay and fetch ads. */}
+    {/* Trending: on card click open genre-specific modal (e.g. Home Decor Ads → only home decor ads). */}
     <AdCarousel
       category="trending"
-      onCardClick={openTrendingAndFetch}
+      onCardClick={handleTrendingCardClick}
     />
   </div>
 </section>
@@ -669,10 +718,10 @@ const Home: React.FC = () => {
                       >
                         <div className="aspect-video bg-gray-100 relative">
                           <img
-                            src={ad.image}
+                            src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
                             alt={ad.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).src = ad.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                            onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
                           />
                         </div>
                         <div className="p-3">
@@ -709,14 +758,14 @@ const Home: React.FC = () => {
           <div className="relative min-h-screen flex items-center justify-center p-4">
             <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden">
               <div className="flex justify-between items-center px-8 py-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900">Trending Now</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{trendingWhiteModalTitle}</h2>
                 <button type="button" onClick={() => setShowTrendingWhiteModal(false)} className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xl">&times;</button>
               </div>
               <div className="p-6">
                 {loadingTrendingWhite ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-4">
                     <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                    <p className="text-gray-500">Fetching trending campaigns…</p>
+                    <p className="text-gray-500">Fetching campaigns…</p>
                   </div>
                 ) : trendingWhiteAds && trendingWhiteAds.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -735,10 +784,10 @@ const Home: React.FC = () => {
                       >
                         <div className="aspect-video bg-gray-100 relative">
                           <img
-                            src={ad.image}
+                            src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
                             alt={ad.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).src = ad.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                            onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
                           />
                         </div>
                         <div className="p-3">

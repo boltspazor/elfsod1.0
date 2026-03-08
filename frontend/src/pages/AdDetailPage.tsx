@@ -511,9 +511,10 @@ const AdDetailPage: React.FC = () => {
       <div className="relative bg-gradient-to-r from-slate-900 to-slate-800">
         <div className="absolute inset-0">
           <img
-            src={ad.image}
+            src={ad.image || ad.thumbnail || `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`}
             alt={ad.title}
             className="w-full h-full object-cover opacity-20"
+            onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
           />
         </div>
         

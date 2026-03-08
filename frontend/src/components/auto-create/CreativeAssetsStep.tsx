@@ -246,16 +246,20 @@ const UploadView = ({
         }
       }
 
-      // Step 5 — fetch results
+      // Step 5 — fetch results (linked video: backend adds all clips at once, so retry briefly if 0)
       setProgress('Fetching results…');
-      const resultRes = await fetch(`${API}/get-generated-assets/${cid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!resultRes.ok) throw new Error(`Failed to fetch results (${resultRes.status})`);
-
-      const resultData = await resultRes.json() as { assets?: Record<string, string>[] };
-      const raw = resultData.assets ?? [];
+      let raw: Record<string, string>[] = [];
+      const isLinkedVideo = linkedChain && type === 'video';
+      for (let attempt = 0; attempt < (isLinkedVideo ? 6 : 1); attempt++) {
+        const resultRes = await fetch(`${API}/get-generated-assets/${cid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!resultRes.ok) throw new Error(`Failed to fetch results (${resultRes.status})`);
+        const resultData = await resultRes.json() as { assets?: Record<string, string>[] };
+        raw = resultData.assets ?? [];
+        if (raw.length > 0 || !isLinkedVideo) break;
+        await new Promise(r => setTimeout(r, 2000));
+      }
 
       const parsed: GeneratedAsset[] = raw
         .map(a => ({

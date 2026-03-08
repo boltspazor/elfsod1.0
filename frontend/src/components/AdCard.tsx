@@ -24,12 +24,13 @@ interface AdCardProps {
 
 const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
   const navigate = useNavigate();
-  const [imgSrc, setImgSrc] = React.useState(ad.image);
-  const fallbackSrc = ad.thumbnail || ad.image || 'https://via.placeholder.com/400x300?text=No+Image';
+  const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+  const [imgSrc, setImgSrc] = React.useState(ad.image || ad.thumbnail || categoryPlaceholder);
+  const fallbackSrc = ad.thumbnail || ad.image || categoryPlaceholder;
 
   React.useEffect(() => {
-    setImgSrc(ad.image);
-  }, [ad.image]);
+    setImgSrc(ad.image || ad.thumbnail || categoryPlaceholder);
+  }, [ad.image, ad.thumbnail, ad.genre]);
 
   const handleCardAreaClick = () => {
     if (onCardClick) {
@@ -65,7 +66,7 @@ const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
           src={imgSrc}
           alt={ad.title}
           className="absolute inset-0 w-full h-full object-cover"
-          onError={() => setImgSrc(fallbackSrc)}
+          onError={() => setImgSrc((prev) => (prev === fallbackSrc ? categoryPlaceholder : fallbackSrc))}
         />
         <div
           className="absolute inset-0"

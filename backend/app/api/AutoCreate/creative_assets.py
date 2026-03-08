@@ -270,11 +270,16 @@ def create_video_to_video_task(video_uri: str, prompt_text: str) -> str:
 
 def get_output_video_url(task: dict) -> str:
     """Extract output video URL from Runway task result (handles list or dict output)."""
-    output = task.get("output")
+    output = task.get("output") or task.get("result")
     if not output:
+        logger.warning(f"No output/result in task: {list(task.keys())}")
         return None
     if isinstance(output, list) and len(output) > 0:
-        return output[0] if isinstance(output[0], str) else output[0].get("url") or output[0].get("uri")
+        first = output[0]
+        if isinstance(first, str):
+            return first
+        if isinstance(first, dict):
+            return first.get("url") or first.get("uri") or first.get("video")
     if isinstance(output, dict):
         return output.get("video") or output.get("uri") or output.get("url")
     return None
@@ -292,17 +297,21 @@ def run_linked_video_chain(
     """
     Run a linked video sequence in a background thread:
     Clip 1 = image_to_video; Clip 2..N = video_to_video (gen4_aleph) using previous clip output.
-    Each clip starts where the previous ended.
+    Each clip starts where the previous ended. Accumulates all clips and appends to generated_assets
+    only when the full chain is done so the UI shows all 4-5 videos at once.
     """
     global chain_next_task
+    chain_assets = []  # collect all clips; add to campaign only at the end
     try:
         if campaign_id not in chain_next_task:
             chain_next_task[campaign_id] = {}
         prev_output_url = None
         prev_task_id = None
+        last_variation = 0
 
         for i in range(num_clips):
             variation = i + 1
+            last_variation = variation
             prompt_text = generate_video_prompt(ad_type, campaign_goal, variation)
 
             if i == 0:
@@ -345,7 +354,50 @@ def run_linked_video_chain(
                 logger.error(f"Linked video clip {variation} succeeded but no output URL")
                 break
 
-        logger.info(f"Linked video chain finished for campaign {campaign_id} up to clip {variation}")
+            # Collect this clip; we will add all to generated_assets only when the full chain is done
+            try:
+                asset_data = download_and_store_asset(
+                    prev_output_url,
+                    task_id,
+                    "video",
+                    campaign_id,
+                )
+                asset_id = str(uuid.uuid4())
+                asset_info = {
+                    "id": asset_id,
+                    "task_id": task_id,
+                    "campaign_id": campaign_id,
+                    "type": "video",
+                    "data_uri": asset_data["data_uri"],
+                    "filename": asset_data["filename"],
+                    "local_path": asset_data.get("local_path"),
+                    "output_url": asset_data.get("output_url"),
+                    "file_size": asset_data.get("file_size"),
+                    "title": f"AI Generated Video {variation}",
+                    "prompt": prompt_text,
+                    "score": 80 + (variation * 5),
+                    "created_at": time.time(),
+                    "status": "completed",
+                }
+                chain_assets.append(asset_info)
+                task_info["status"] = "completed"
+                task_info["asset_info"] = asset_info
+                logger.info(f"Collected linked video clip {variation}/{num_clips} for campaign {campaign_id}")
+            except Exception as store_err:
+                logger.error(f"Failed to store clip {variation}: {store_err}")
+                # Continue chain
+
+        # Add all clips at once so the UI shows all 4-5 videos together, not one-by-one
+        if chain_assets:
+            campaign = tasks_store.get(campaign_id, {})
+            if "generated_assets" not in campaign:
+                campaign["generated_assets"] = []
+            campaign["generated_assets"].extend(chain_assets)
+            campaign.pop("linked_chain", None)
+            tasks_store[campaign_id] = campaign
+            logger.info(f"Linked video chain finished for campaign {campaign_id}: added {len(chain_assets)} clips at once")
+        else:
+            logger.info(f"Linked video chain finished for campaign {campaign_id} up to clip {last_variation}/{num_clips} (no assets to add)")
     except Exception as e:
         logger.error(f"Linked video chain error: {e}")
         import traceback
@@ -697,7 +749,10 @@ def generate_assets():
 
         if asset_type == 'video':
             # Linked video chain: clip 1 = image_to_video, clip 2..N = video_to_video (gen4_aleph)
-            # Run in background thread; we return the first task_id so frontend can poll
+            # Run in background thread; we return the first task_id so frontend can poll.
+            # Mark campaign so check_status does not store assets one-by-one; thread stores all at once at the end.
+            campaign['linked_chain'] = True
+            tasks_store[campaign_id] = campaign
             linked_video_shared = {"first_task_id": None, "event": threading.Event()}
             thread = threading.Thread(
                 target=run_linked_video_chain,
@@ -864,9 +919,43 @@ def check_status(task_id: str):
         result = poll_task_status(task_id)
         
         if result['success']:
-            # Task completed successfully
+            campaign = tasks_store.get(campaign_id, {})
+            # Linked chain: do not store here; thread will add all clips at once at the end
+            if campaign.get('linked_chain'):
+                resp = {
+                    "success": True,
+                    "status": "completed",
+                    "asset_type": task_info.get('asset_type'),
+                    "task_id": task_id,
+                    "message": f"{task_info.get('asset_type', 'video').capitalize()} generation completed",
+                }
+                if next_task_id is not None:
+                    resp["next_task_id"] = next_task_id
+                return jsonify(resp), 200
+            # Thread may have already stored this (non-linked); avoid double download
+            for asset in campaign.get('generated_assets', []):
+                if asset.get('task_id') == task_id:
+                    resp = {
+                        "success": True,
+                        "status": "completed",
+                        "asset_type": task_info.get('asset_type'),
+                        "task_id": task_id,
+                        "asset": {
+                            "id": asset.get('id'),
+                            "data_uri": asset.get('data_uri'),
+                            "filename": asset.get('filename'),
+                            "type": asset.get('type'),
+                            "file_size": asset.get('file_size'),
+                        },
+                        "variation": task_info.get('variation'),
+                        "message": f"{task_info.get('asset_type', 'video').capitalize()} generation completed",
+                    }
+                    if next_task_id is not None:
+                        resp["next_task_id"] = next_task_id
+                    return jsonify(resp), 200
+
+            # Task completed successfully; store it
             asset_type = task_info.get('asset_type', 'image')
-            
             try:
                 # Download and store the asset
                 asset_data = download_and_store_asset(

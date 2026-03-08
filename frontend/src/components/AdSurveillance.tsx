@@ -2378,13 +2378,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                               {ad.image_url || ad.thumbnail ? (
                                 <img
                                   src={
-                                    proxyImageUrl(ad.image_url) || ad.thumbnail
+                                    proxyImageUrl(ad.image_url) || proxyImageUrl(ad.thumbnail) || ad.thumbnail
                                   }
                                   alt={ad.title}
                                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src =
-                                      "https://via.placeholder.com/300x200?text=No+Image";
+                                    const el = e.target as HTMLImageElement;
+                                    el.src = ad.thumbnail ? (proxyImageUrl(ad.thumbnail) || ad.thumbnail) : 'https://via.placeholder.com/300x200?text=Ad';
                                   }}
                                 />
                               ) : (
