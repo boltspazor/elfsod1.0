@@ -287,3 +287,43 @@ class TrendingAdCache(Base):
 
     def __repr__(self):
         return f"<TrendingAdCache(category={self.category}, ads_count={len(self.ads_json or [])})>"
+
+
+class UserAnalyzedAd(Base):
+    """Per-user analyzed ads from Video Analysis (Reverse Engineering). Supports all major platforms."""
+    __tablename__ = "user_analyzed_ads"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    platform = Column(String(32), nullable=False)  # facebook, instagram, tiktok, youtube, linkedin, twitter
+    source_url = Column(Text, nullable=False)
+    external_id = Column(String(255), nullable=False)  # platform-specific ad/post id
+    company = Column(String(255), nullable=True)
+    ad_title = Column(Text, nullable=True)
+    ad_text = Column(Text, nullable=True)
+    full_ad_text = Column(Text, nullable=True)
+    call_to_action = Column(String(255), nullable=True)
+    analysis = Column(JSONB, nullable=True)  # scores, media_analysis, value_proposition, etc.
+    status = Column(String(20), nullable=False, default="pending")  # pending, analyzed, failed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    analyzed_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        return f"<UserAnalyzedAd(id={self.id}, platform={self.platform}, external_id={self.external_id})>"
+
+
+class UserBrandAsset(Base):
+    """Per-user brand identity assets (logos/media) for inclusion in generations."""
+    __tablename__ = "user_brand_assets"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    type = Column(String(32), nullable=False)  # logo, media
+    data_url = Column(Text, nullable=False)   # base64 data URL
+    mime_type = Column(String(128), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<UserBrandAsset(id={self.id}, name={self.name}, type={self.type})>"

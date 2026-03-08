@@ -14,6 +14,8 @@ from app.routers import (
     trending,
     targ_intel,
     sum_metrics,
+    video_analysis,
+    brand_identity,
 )
 from app.utils.logger import get_logger
 
@@ -69,6 +71,8 @@ app.include_router(metrics.router, prefix="/api/metrics", tags=["metrics"])
 app.include_router(trending.router, prefix="/api/trending", tags=["trending"])
 app.include_router(targ_intel.router, prefix="/api/targ-intel", tags=["Targeting Intelligence"])
 app.include_router(sum_metrics.router, prefix="/api/sum-metrics", tags=["Summary Metrics"])
+app.include_router(video_analysis.router, prefix="/api/video-analysis", tags=["Video Analysis"])
+app.include_router(brand_identity.router, prefix="/api/brand-identity", tags=["Brand Identity"])
 app.mount("/auth", WSGIMiddleware(flask_auth_app))
 
 

@@ -2,14 +2,14 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { useBrandIdentity } from '../contexts/BrandIdentityContext';
-import { Upload, Trash2, FileImage } from 'lucide-react';
+import { Upload, Trash2, FileImage, Loader2 } from 'lucide-react';
 
 const MAX_FILE_SIZE_MB = 5;
 const ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.svg,.gif';
 
 const BrandIdentity: React.FC = () => {
   const navigate = useNavigate();
-  const { assets, addAsset, removeAsset } = useBrandIdentity();
+  const { assets, addAsset, removeAsset, loading } = useBrandIdentity();
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -49,6 +49,18 @@ const BrandIdentity: React.FC = () => {
     if (file) processFile(file);
     e.target.value = '';
   };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Navigation />
+        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+          <Loader2 size={32} className="animate-spin" style={{ display: 'inline-block' }} />
+          <p style={{ marginTop: 12 }}>Loading brand assets…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0d0d0d' }}>

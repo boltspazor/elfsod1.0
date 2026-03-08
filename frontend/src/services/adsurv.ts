@@ -489,6 +489,58 @@ export const TrendingAPI = {
 };
 
 /* =====================================================
+   VIDEO ANALYSIS (Reverse Engineering) – user-scoped, all platforms
+===================================================== */
+
+/* =====================================================
+   BRAND IDENTITY – user-scoped, persisted in DB
+===================================================== */
+
+export const BrandIdentityAPI = {
+  list: (): Promise<Array<{ id: string; name: string; type: string; dataUrl: string; mimeType?: string }>> =>
+    fetchWithAuth('/api/brand-identity/'),
+  add: (asset: { name: string; type: string; data_url: string; mime_type?: string }) =>
+    fetchWithAuth('/api/brand-identity/', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: asset.name,
+        type: asset.type,
+        data_url: asset.data_url,
+        mime_type: asset.mime_type ?? undefined,
+      }),
+    }),
+  remove: (assetId: string) =>
+    fetchWithAuth(`/api/brand-identity/${assetId}`, { method: 'DELETE' }),
+};
+
+/* =====================================================
+   VIDEO ANALYSIS (Reverse Engineering) – user-scoped, all platforms
+===================================================== */
+
+export const VideoAnalysisAPI = {
+  addAd: (url: string) =>
+    fetchWithAuth('/api/video-analysis/add', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
+  listAds: (): Promise<Array<{
+    id: string;
+    company: string;
+    ad_title: string;
+    ad_text: string;
+    full_ad_text: string;
+    call_to_action: string;
+    ad_archive_id: string;
+    analyzed_at: string;
+    created_at: string;
+    analysis: unknown;
+    platform?: string;
+    source_url?: string;
+    status?: string;
+  }>> => fetchWithAuth('/api/video-analysis/ads'),
+};
+
+/* =====================================================
    REMOVED: SUMMARY METRICS API (sum_metrics) - Using ads table instead
 ===================================================== */
 

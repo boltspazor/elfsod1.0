@@ -429,11 +429,29 @@ const Home: React.FC = () => {
 
     </div>
 
-    <AdCarousel 
-      category={selectedCategory as 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended'}
-      onCardClick={handleCardClick}
-      ads={getCachedAdsForCategory(selectedCategory)}
-    />
+    {/* Recommended: cache only (no static fallback). Sports/food/fashion: use AdCarousel built-in ads. */}
+    {selectedCategory === 'recommended' ? (
+      <>
+        {isLoadingCache && getCachedAdsForCategory('recommended').length === 0 && (
+          <div className="text-gray-400 text-center py-12">Loading recommended campaigns…</div>
+        )}
+        {!isLoadingCache && getCachedAdsForCategory('recommended').length === 0 && (
+          <div className="text-gray-400 text-center py-12">No recommended campaigns right now. Try again later.</div>
+        )}
+        {getCachedAdsForCategory('recommended').length > 0 && (
+          <AdCarousel
+            category="recommended"
+            onCardClick={handleCardClick}
+            ads={getCachedAdsForCategory('recommended')}
+          />
+        )}
+      </>
+    ) : (
+      <AdCarousel
+        category={selectedCategory as 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended'}
+        onCardClick={handleCardClick}
+      />
+    )}
   </div>
 </section>
 
@@ -461,11 +479,20 @@ const Home: React.FC = () => {
 
     </div>
 
-    <AdCarousel 
-      category="trending" 
-      onCardClick={handleCardClick}
-      ads={getCachedAdsForCategory('trending')}
-    />
+    {/* Trending: cache only (no static fallback) */}
+    {isLoadingCache && getCachedAdsForCategory('trending').length === 0 && (
+      <div className="text-gray-400 text-center py-12">Loading trending…</div>
+    )}
+    {!isLoadingCache && getCachedAdsForCategory('trending').length === 0 && (
+      <div className="text-gray-400 text-center py-12">No trending campaigns right now. Try again later.</div>
+    )}
+    {getCachedAdsForCategory('trending').length > 0 && (
+      <AdCarousel
+        category="trending"
+        onCardClick={handleCardClick}
+        ads={getCachedAdsForCategory('trending')}
+      />
+    )}
   </div>
 </section>
 

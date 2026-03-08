@@ -390,8 +390,8 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: ads
     ]
   };
 
-  // Use provided ads (from cache) or fallback to built-in category ads
-  const ads = (adsProp && adsProp.length > 0) ? adsProp : (categoryAds[category] || categoryAds.recommended);
+  // When parent passes ads (e.g. from cache), use them even if empty. Otherwise use built-in category ads.
+  const ads = adsProp !== undefined ? adsProp : (categoryAds[category] || categoryAds.recommended);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {

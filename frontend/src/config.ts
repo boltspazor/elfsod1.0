@@ -38,9 +38,11 @@ function normalizeApiUrl(value: string): string {
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 // optional() so module evaluation never throws even before .env is loaded.
-// validateConfig() surfaces a clear error if either value is absent.
-export const SUPABASE_URL = optional(import.meta.env.VITE_SUPABASE_URL, 'https://syhypngkvalsakepxbtu.supabase.co');
-export const SUPABASE_ANON_KEY = optional(import.meta.env.VITE_SUPABASE_ANON_KEY, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8');
+// Video Analysis (Reverse Engineering) only runs when both are set – no hardcoded fallback.
+export const SUPABASE_URL = optional(import.meta.env.VITE_SUPABASE_URL, '');
+export const SUPABASE_ANON_KEY = optional(import.meta.env.VITE_SUPABASE_ANON_KEY, '');
+/** True only when both Supabase env vars are set. Use this to gate Video Analysis so it doesn't call a missing DB. */
+export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 // ── Backend API ───────────────────────────────────────────────────────────────
 /** Main FastAPI backend (adsurv, targeting-intel, auth, etc.) */

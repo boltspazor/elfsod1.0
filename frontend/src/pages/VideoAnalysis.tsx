@@ -22,19 +22,9 @@ import {
   Layers,
   Award,
 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
-
-/* -------------------- Supabase -------------------- */
-// Credentials are read directly from import.meta.env so Vite can inline them
-// at build time. Values come from .env – see .env.example.
-// ⚠️  Never use a service_role key in frontend code – it bypasses Row Level
-//     Security and grants full database access to anyone who reads the bundle.
-//     If you need elevated access, proxy the request through your backend.
-const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || 'https://syhypngkvalsakepxbtu.supabase.co';
-const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5aHlwbmdrdmFsc2FrZXB4YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjYwNzksImV4cCI6MjA4MDcwMjA3OX0.K1sSWFzLr3M0RqFy2rSggLKjEF-Hg3iFnkRbtpIQxV8';
-const supabase = createClient(SUPA_URL, SUPA_KEY);
+import { VideoAnalysisAPI } from "../services/adsurv";
 
 /* -------------------- Types -------------------- */
 interface InfluencerName {
@@ -92,8 +82,11 @@ interface AdData {
   ad_archive_id: string;
   analyzed_at: string;
   created_at: string;
-  analysis: AdAnalysis;
+  analysis: AdAnalysis | null;
   search_keyword?: string;
+  platform?: string;
+  source_url?: string;
+  status?: string;
 }
 
 /* -------------------- Component -------------------- */ 
@@ -102,8 +95,9 @@ const VideoAnalysis: React.FC = () => {
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [companyFilter, setCompanyFilter] = useState("all");
-  const [searchKeywords, setSearchKeywords] = useState<string[]>([]);
+  const [addAdLink, setAddAdLink] = useState("");
+  const [addAdLoading, setAddAdLoading] = useState(false);
+  const [addAdMessage, setAddAdMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     fetchAds();
@@ -114,45 +108,58 @@ const VideoAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from("facebook_ads")
-        .select("*")
-        .not("analyzed_at", "is", null)
-        .order("analyzed_at", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      const safeData = (data || []).sort((a: AdData, b: AdData) => {
-        const aScore = a.analysis?.scores?.total_score ?? 0;
-        const bScore = b.analysis?.scores?.total_score ?? 0;
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Please log in to view your analyzed ads.");
+        setAds([]);
+        return;
+      }
+      const data = await VideoAnalysisAPI.listAds();
+      const sorted = (data || []).sort((a, b) => {
+        const aScore = (a.analysis as { scores?: { total_score?: number } } | null)?.scores?.total_score ?? 0;
+        const bScore = (b.analysis as { scores?: { total_score?: number } } | null)?.scores?.total_score ?? 0;
         return bScore - aScore;
       });
-
-      setAds(safeData);
-
-      // Extract unique search keywords
-      const uniqueKeywords = Array.from(
-        new Set(safeData.map((ad) => ad.search_keyword).filter(Boolean))
-      ).sort() as string[];
-
-      setSearchKeywords(uniqueKeywords);
-
-      if (safeData.length > 0) {
-        setSelectedAd(safeData[0]);
-      }
-    } catch (err: any) {
+      setAds(sorted as AdData[]);
+    } catch (err: unknown) {
       console.error("❌ Fetch failed:", err);
-      setError("Failed to load ads. Check Supabase config.");
+      const message = err instanceof Error ? err.message : "Failed to load ads.";
+      if (message.includes("401") || message.toLowerCase().includes("unauthorized")) {
+        setError("Please log in to view your analyzed ads.");
+      } else {
+        setError(message);
+      }
+      setAds([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAds =
-    companyFilter === "all"
-      ? ads
-      : ads.filter((ad) => ad.search_keyword === companyFilter);
+  const handleAddAndAnalyze = async () => {
+    const trimmed = addAdLink.trim();
+    if (!trimmed) {
+      setAddAdMessage({ type: "error", text: "Please paste an ad or content link." });
+      return;
+    }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAddAdMessage({ type: "error", text: "Please log in to add and analyze ads." });
+      return;
+    }
+    setAddAdLoading(true);
+    setAddAdMessage(null);
+    try {
+      const data = await VideoAnalysisAPI.addAd(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+      setAddAdMessage({ type: "success", text: (data as { message?: string }).message || "Ad added. Refresh to see it in your list." });
+      setAddAdLink("");
+      fetchAds();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to add ad. Try a direct link from Facebook, Instagram, TikTok, YouTube, LinkedIn, or X.";
+      setAddAdMessage({ type: "error", text: msg });
+    } finally {
+      setAddAdLoading(false);
+    }
+  };
 
   const renderColorPalette = (colors: string[]) => {
     return (
@@ -226,72 +233,44 @@ const VideoAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters */}
-      
-<div className="max-w-7xl mx-auto mb-8">
-  <div className="bg-[#0B0F1A] rounded-[32px] px-8 py-6">
-
-    <div className="flex items-center gap-8">
-      
-      <label className="text-gray-300 font-semibold text-xl whitespace-nowrap">
-        Filter by Search Keyword:
-      </label>
-
-      {/* Gradient Border Only Around Select */}
-      <div className="rounded-full p-[2px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.25)]">
-        
-        <div className="relative rounded-full">
-          <select
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
-            className="appearance-none rounded-full bg-gradient-to-r from-[#2c2c2c] to-[#3a3a3a] pl-8 pr-14 py-3 text-lg text-white focus:outline-none"
-          >
-            <option value="all">
-              All Keywords ({ads.length} ads)
-            </option>
-
-            {searchKeywords.map((keyword) => (
-              <option key={keyword} value={keyword}>
-                {keyword} ({ads.filter(ad => ad.search_keyword === keyword).length})
-              </option>
-            ))}
-          </select>
-
-          {/* Custom Arrow */}
-          <div className="pointer-events-none absolute inset-y-0 right-5 flex items-center text-gray-400">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
+        {/* Add and analyze ad by link */}
+        <div className="max-w-7xl mx-auto mb-8">
+          <div className="bg-[#0B0F1A] rounded-[32px] px-8 py-6">
+            <h3 className="text-gray-200 font-semibold text-lg mb-3">Add and analyze ad</h3>
+            <p className="text-gray-500 text-sm mb-4">Paste a link from Facebook Ad Library, Instagram, TikTok, YouTube, LinkedIn, or X (Twitter) to add and analyze.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="url"
+                placeholder="Facebook, Instagram, TikTok, YouTube, LinkedIn, or X link..."
+                value={addAdLink}
+                onChange={(e) => setAddAdLink(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddAndAnalyze()}
+                className="flex-1 min-w-[280px] rounded-xl bg-[#1a1a1a] border border-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
               />
-            </svg>
+              <button
+                type="button"
+                onClick={handleAddAndAnalyze}
+                disabled={addAdLoading}
+                className="rounded-full p-[2px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.25)] disabled:opacity-60"
+              >
+                <div className="rounded-full bg-gradient-to-r from-[#2c2c2c] to-[#3a3a3a] px-5 py-3 flex items-center gap-2 text-white font-semibold">
+                  {addAdLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                  {addAdLoading ? "Submitting…" : "Add & analyze"}
+                </div>
+              </button>
+            </div>
+            {addAdMessage && (
+              <p className={`mt-3 text-sm ${addAdMessage.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+                {addAdMessage.text}
+              </p>
+            )}
           </div>
         </div>
 
-      </div>
-
-    </div>
-
-    {/* Bigger Showing Count */}
-    <div className="mt-6">
-      <span className="text-2xl font-bold text-gray-300">
-        Showing {filteredAds.length} ads
-      </span>
-    </div>
-
-  </div>
-</div>
         {/* Cards Grid */}
         {!selectedAd ? (
           <div className="max-w-7xl mx-auto">
-            {filteredAds.length === 0 ? (
+            {ads.length === 0 ? (
               <div className="rounded-[32px] p-[1px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 shadow-[0_0_30px_rgba(168,85,247,0.15)]">
                 <div className="bg-[#0B0F1A] rounded-[32px] p-12 text-center">
                   <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -300,7 +279,7 @@ const VideoAnalysis: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAds.map((ad) => (
+                {ads.map((ad) => (
                   <button
                     key={ad.id}
                     onClick={() => setSelectedAd(ad)}

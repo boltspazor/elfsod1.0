@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { BrandIdentityAPI } from '../services/adsurv';
 
 export interface BrandAsset {
   id: string;
@@ -30,6 +31,7 @@ interface BrandIdentityContextValue {
   addAsset: (asset: Omit<BrandAsset, 'id'>) => void;
   removeAsset: (id: string) => void;
   hasAssets: boolean;
+  loading: boolean;
 }
 
 const defaultValue: BrandIdentityContextValue = {
@@ -37,27 +39,74 @@ const defaultValue: BrandIdentityContextValue = {
   addAsset: () => {},
   removeAsset: () => {},
   hasAssets: false,
+  loading: false,
 };
 
 const BrandIdentityContext = createContext<BrandIdentityContextValue>(defaultValue);
 
 export function BrandIdentityProvider({ children }: { children: React.ReactNode }) {
   const [assets, setAssets] = useState<BrandAsset[]>(loadFromStorage);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    saveToStorage(assets);
-  }, [assets]);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setAssets(loadFromStorage());
+      setLoading(false);
+      return;
+    }
+    BrandIdentityAPI.list()
+      .then((list) => {
+        const mapped: BrandAsset[] = list.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type as 'logo' | 'media',
+          dataUrl: a.dataUrl,
+          mimeType: a.mimeType,
+        }));
+        setAssets(mapped);
+        saveToStorage(mapped);
+      })
+      .catch(() => setAssets(loadFromStorage()))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!loading) saveToStorage(assets);
+  }, [assets, loading]);
 
   const addAsset = useCallback((asset: Omit<BrandAsset, 'id'>) => {
-    const newAsset: BrandAsset = {
-      ...asset,
-      id: crypto.randomUUID(),
-    };
-    setAssets((prev) => [...prev, newAsset]);
+    const token = localStorage.getItem('token');
+    if (token) {
+      BrandIdentityAPI.add({
+        name: asset.name,
+        type: asset.type,
+        data_url: asset.dataUrl,
+        mime_type: asset.mimeType,
+      })
+        .then((a) => {
+          setAssets((prev) => [...prev, { id: a.id, name: a.name, type: a.type as 'logo' | 'media', dataUrl: a.dataUrl, mimeType: a.mimeType }]);
+        })
+        .catch(() => {
+          const fallback: BrandAsset = { ...asset, id: crypto.randomUUID() };
+          setAssets((prev) => [...prev, fallback]);
+        });
+    } else {
+      const newAsset: BrandAsset = { ...asset, id: crypto.randomUUID() };
+      setAssets((prev) => [...prev, newAsset]);
+    }
   }, []);
 
   const removeAsset = useCallback((id: string) => {
-    setAssets((prev) => prev.filter((a) => a.id !== id));
+    const token = localStorage.getItem('token');
+    if (token) {
+      BrandIdentityAPI.remove(id).then(
+        () => setAssets((prev) => prev.filter((a) => a.id !== id)),
+        () => setAssets((prev) => prev.filter((a) => a.id !== id))
+      );
+    } else {
+      setAssets((prev) => prev.filter((a) => a.id !== id));
+    }
   }, []);
 
   const value: BrandIdentityContextValue = {
@@ -65,6 +114,7 @@ export function BrandIdentityProvider({ children }: { children: React.ReactNode 
     addAsset,
     removeAsset,
     hasAssets: assets.length > 0,
+    loading,
   };
 
   return (
