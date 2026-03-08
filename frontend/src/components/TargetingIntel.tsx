@@ -591,16 +591,20 @@ const TargetingIntel: React.FC = () => {
       ]);
       setAllData(records);
       setCompetitors(comps);
-      if (records.length > 0) {
-        const selectedId = selectedCompetitorId && records.some(r => r.competitor_id === selectedCompetitorId)
-          ? selectedCompetitorId
-          : records[0].competitor_id;
-        setSelectedCompetitorId(selectedId);
-        setData(records.find(r => r.competitor_id === selectedId) || records[0]);
-      } else {
-        setData(null);
-        if (comps.length > 0 && !selectedCompetitorId) setSelectedCompetitorId(comps[0].id);
+      // Determine the selected competitor: prefer previously selected, then first with data, then first overall
+      const allComps = comps.length > 0 ? comps : records.map(r => ({ id: r.competitor_id, name: r.competitor_name || r.competitor_id }));
+      const prevId = selectedCompetitorId;
+      const prevStillExists = allComps.some(c => c.id === prevId);
+      let newSelectedId: string | null = null;
+      if (prevStillExists && prevId) {
+        newSelectedId = prevId;
+      } else if (records.length > 0) {
+        newSelectedId = records[0].competitor_id;
+      } else if (allComps.length > 0) {
+        newSelectedId = allComps[0].id;
       }
+      setSelectedCompetitorId(newSelectedId);
+      setData(newSelectedId ? (records.find(r => r.competitor_id === newSelectedId) || null) : null);
     } catch {
       setAllData([]);
       setData(null);
@@ -618,7 +622,22 @@ const TargetingIntel: React.FC = () => {
   const handleCompetitorChange = (competitorId: string) => {
     setSelectedCompetitorId(competitorId);
     const record = allData.find(r => r.competitor_id === competitorId);
-    setData(record || null);
+    setData(record ?? null);
+  };
+
+  const handleCalculateForCompetitor = async (competitorId: string) => {
+    setCalculating(true);
+    setLastCalculateMessage(null);
+    try {
+      await TargetingIntelAPI.calculateCompetitor(competitorId, true);
+      await new Promise(r => setTimeout(r, 1000));
+      await loadData();
+    } catch (e) {
+      console.error('Calculate targeting failed:', e);
+      setLastCalculateMessage(e instanceof Error ? e.message : 'Calculation failed');
+    } finally {
+      setCalculating(false);
+    }
   };
 
   const handleCalculateAll = async () => {
@@ -763,15 +782,14 @@ const TargetingIntel: React.FC = () => {
                   minWidth: '180px',
                 }}
               >
-                {allData.length > 0
-                  ? allData.map((r) => (
-                      <option key={r.competitor_id} value={r.competitor_id}>
-                        {r.competitor_name || r.competitor_id?.slice(0, 8)}
-                      </option>
-                    ))
-                  : competitors.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                {competitors.map((c) => {
+                  const hasData = allData.some(r => r.competitor_id === c.id);
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{!hasData ? ' (no data)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             )}
             <div className="flex gap-2">
@@ -824,7 +842,9 @@ const TargetingIntel: React.FC = () => {
               <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '24px', maxWidth: '420px', margin: '0 auto 24px' }}>
                 {competitors.length === 0
                   ? 'Add competitors in Ad Surveillance first, then refresh their ads. After that you can calculate targeting intelligence here.'
-                  : 'Calculate targeting intelligence for your competitors. This may take a minute.'}
+                  : selectedCompetitorId
+                    ? `No targeting data for ${competitors.find(c => c.id === selectedCompetitorId)?.name || 'this competitor'} yet. Calculate it below.`
+                    : 'Calculate targeting intelligence for your competitors. This may take a minute.'}
               </p>
               {lastCalculateMessage && (
                 <p style={{ color: '#facc15', fontSize: '13px', marginBottom: '16px', maxWidth: '480px', margin: '0 auto 16px' }}>
@@ -832,34 +852,66 @@ const TargetingIntel: React.FC = () => {
                 </p>
               )}
               {competitors.length > 0 && (
-                <button
-                  onClick={handleCalculateAll}
-                  disabled={calculating}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: '#0ea5e9',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: calculating ? 'wait' : 'pointer',
-                    opacity: calculating ? 0.8 : 1,
-                  }}
-                >
-                  {calculating ? (
-                    <>
-                      <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" />
-                      Calculating…
-                    </>
-                  ) : (
-                    <>
-                      <Cpu style={{ width: 16, height: 16 }} />
-                      Calculate targeting intelligence
-                    </>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {selectedCompetitorId && (
+                    <button
+                      onClick={() => handleCalculateForCompetitor(selectedCompetitorId)}
+                      disabled={calculating}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        padding: '12px 24px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: '#0ea5e9',
+                        color: '#fff',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: calculating ? 'wait' : 'pointer',
+                        opacity: calculating ? 0.8 : 1,
+                      }}
+                    >
+                      {calculating ? (
+                        <>
+                          <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" />
+                          Calculating…
+                        </>
+                      ) : (
+                        <>
+                          <Cpu style={{ width: 16, height: 16 }} />
+                          Calculate for {competitors.find(c => c.id === selectedCompetitorId)?.name || 'this competitor'}
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
+                  <button
+                    onClick={handleCalculateAll}
+                    disabled={calculating}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      border: '1px solid #444',
+                      background: 'transparent',
+                      color: '#fff',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: calculating ? 'wait' : 'pointer',
+                      opacity: calculating ? 0.8 : 1,
+                    }}
+                  >
+                    {calculating ? (
+                      <>
+                        <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" />
+                        Calculating…
+                      </>
+                    ) : (
+                      <>
+                        <Cpu style={{ width: 16, height: 16 }} />
+                        Calculate all competitors
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           )}

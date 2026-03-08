@@ -298,6 +298,8 @@ const AdSurveillance = () => {
     null,
   );
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [isAddingCompetitor, setIsAddingCompetitor] = useState(false);
+  const [addCompetitorStatus, setAddCompetitorStatus] = useState<"idle" | "creating" | "fetching">("idle");
   const [newCompetitor, setNewCompetitor] = useState({
     name: "",
     domain: "",
@@ -1244,20 +1246,16 @@ const AdSurveillance = () => {
       return;
     }
 
+    setIsAddingCompetitor(true);
+    setAddCompetitorStatus("creating");
+    setError(null);
+
     try {
       const created = await CompetitorsAPI.create(newCompetitor) as { id?: string; name?: string };
-      await loadCompetitors();
-      setNewCompetitor({
-        name: "",
-        domain: "",
-        industry: "",
-        estimated_monthly_spend: 0,
-      });
-      setShowAddCompetitor(false);
-      setError(null);
 
       // Auto-refresh ads for the newly added competitor
       if (created?.id) {
+        setAddCompetitorStatus("fetching");
         setIsRefreshing(true);
         try {
           await AdsAPI.refreshCompetitor(created.id);
@@ -1270,14 +1268,28 @@ const AdSurveillance = () => {
           await calculateFrontendMetrics(list);
         } catch (refreshErr: unknown) {
           console.error("Error refreshing ads for new competitor:", refreshErr);
-          setError(refreshErr instanceof Error ? refreshErr.message : "Competitor added, but ad refresh failed. Use Refresh ads to retry.");
+          // Don't block modal close on refresh failure
         } finally {
           setIsRefreshing(false);
         }
+      } else {
+        await loadCompetitors();
       }
+
+      setNewCompetitor({
+        name: "",
+        domain: "",
+        industry: "",
+        estimated_monthly_spend: 0,
+      });
+      setShowAddCompetitor(false);
+      setError(null);
     } catch (error: unknown) {
       console.error("Error adding competitor:", error);
       setError(error instanceof Error ? error.message : "Failed to add competitor");
+    } finally {
+      setIsAddingCompetitor(false);
+      setAddCompetitorStatus("idle");
     }
   };
 
@@ -1904,13 +1916,36 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
       {/* ========== ADD COMPETITOR MODAL (WHITE - matches screenshot exactly) ========== */}
       {showAddCompetitor && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl relative overflow-hidden">
+            {/* Loading overlay */}
+            {isAddingCompetitor && (
+              <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-4 rounded-xl">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full border-4 border-gray-100 border-t-black animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Wifi className="w-5 h-5 text-black" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-semibold text-black">
+                    {addCompetitorStatus === "creating" ? "Adding competitor…" : "Fetching their ads…"}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {addCompetitorStatus === "creating"
+                      ? "Saving competitor to your account"
+                      : "Scanning ad platforms — this may take a moment"}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="p-8">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-bold text-black">Add New Competitor</h3>
                 <button
-                  onClick={() => { setShowAddCompetitor(false); setError(null); }}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={() => { if (!isAddingCompetitor) { setShowAddCompetitor(false); setError(null); } }}
+                  disabled={isAddingCompetitor}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40"
                 >
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
@@ -1925,7 +1960,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     type="text"
                     value={newCompetitor.name}
                     onChange={(e) => setNewCompetitor({ ...newCompetitor, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
+                    disabled={isAddingCompetitor}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm disabled:opacity-60"
                   />
                 </div>
                 <div>
@@ -1936,7 +1972,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     type="text"
                     value={newCompetitor.domain}
                     onChange={(e) => setNewCompetitor({ ...newCompetitor, domain: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
+                    disabled={isAddingCompetitor}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm disabled:opacity-60"
                   />
                 </div>
                 <div>
@@ -1945,17 +1982,8 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     type="text"
                     value={newCompetitor.industry}
                     onChange={(e) => setNewCompetitor({ ...newCompetitor, industry: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Monthly Ad Spend ($)</label>
-                  <input
-                    type="number"
-                    placeholder="Example: 5000"
-                    value={newCompetitor.estimated_monthly_spend || ""}
-                    onChange={(e) => setNewCompetitor({ ...newCompetitor, estimated_monthly_spend: e.target.value ? parseInt(e.target.value) : 0 })}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm"
+                    disabled={isAddingCompetitor}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-gray-400 text-sm disabled:opacity-60"
                   />
                 </div>
               </div>
@@ -1963,17 +1991,27 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
               <div className="flex items-center justify-between mt-8">
                 <button
                   onClick={() => { setShowAddCompetitor(false); setError(null); }}
-                  className="px-6 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium rounded-lg transition-colors"
+                  disabled={isAddingCompetitor}
+                  className="px-6 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddCompetitor}
-                  disabled={!newCompetitor.name.trim()}
+                  disabled={!newCompetitor.name.trim() || isAddingCompetitor}
                   className="px-6 py-2.5 bg-black hover:bg-gray-900 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add a competitor
+                  {isAddingCompetitor ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {addCompetitorStatus === "creating" ? "Adding…" : "Fetching ads…"}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Add a competitor
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -2517,12 +2555,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
         </div>
 
         {/* ===== COMPETITORS TABLE ===== */}
-        {metricsSummary.length > 0 && (
+        {competitors.length > 0 && (
           <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mb-8 overflow-hidden">
             <div className="p-5 border-b border-[#2a2a2a]">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-[#0ea5e9]" />
                 <h3 className="text-base font-semibold text-white">Competitors Performance</h3>
+                <span className="text-xs text-[#555] font-normal">({competitors.length} tracked)</span>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -2538,22 +2577,50 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1f1f1f]">
-                  {metricsSummary.map((summary) => (
-                    <tr key={summary.competitor_id} className="hover:bg-[#222] transition-colors">
-                      <td className="px-5 py-4">
-                        <span className="text-sm font-medium text-white">{summary.competitor_name}</span>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-[#ccc]">{summary.active_ads}</td>
-                      <td className="px-5 py-4 text-sm text-[#ccc]">{formatCurrency(summary.estimated_monthly_spend)}</td>
-                      <td className="px-5 py-4 text-sm text-[#ccc]">{formatPercentage(summary.avg_ctr)}</td>
-                      <td className="px-5 py-4">
-                        <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary.risk_score)}`}>{summary.risk_score}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary.opportunity_score)}`}>{summary.opportunity_score}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {competitors.map((comp) => {
+                    const summary = metricsSummary.find((m) => m.competitor_id === comp.id);
+                    const isNew = !summary;
+                    return (
+                      <tr
+                        key={comp.id}
+                        className="hover:bg-[#222] transition-colors cursor-pointer"
+                        onClick={() => { setSelectedCompetitor(comp.id); setSelectedCompany(comp.id); }}
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-white">{comp.name}</span>
+                            {comp.domain && <span className="text-xs text-[#555]">{comp.domain}</span>}
+                            {isNew && (
+                              <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#0ea5e9]/15 text-[#0ea5e9] rounded-md border border-[#0ea5e9]/30">
+                                Syncing…
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[#ccc]">
+                          {isNew ? <span className="text-[#555]">—</span> : summary!.active_ads}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[#ccc]">
+                          {isNew ? <span className="text-[#555]">—</span> : formatCurrency(summary!.estimated_monthly_spend)}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[#ccc]">
+                          {isNew ? <span className="text-[#555]">—</span> : formatPercentage(summary!.avg_ctr)}
+                        </td>
+                        <td className="px-5 py-4">
+                          {isNew
+                            ? <span className="text-[#555] text-sm">—</span>
+                            : <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary!.risk_score)}`}>{summary!.risk_score}</span>
+                          }
+                        </td>
+                        <td className="px-5 py-4">
+                          {isNew
+                            ? <span className="text-[#555] text-sm">—</span>
+                            : <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getScoreColor(summary!.opportunity_score)}`}>{summary!.opportunity_score}</span>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
