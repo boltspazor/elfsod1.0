@@ -66,6 +66,10 @@ const Home: React.FC = () => {
   const [showRecommendedWhiteModal, setShowRecommendedWhiteModal] = useState(false);
   const [recommendedWhiteAds, setRecommendedWhiteAds] = useState<AdItem[] | null>(null);
   const [loadingRecommendedWhite, setLoadingRecommendedWhite] = useState(false);
+  // Trending: same white modal + multi-keyword fetch as Recommended
+  const [showTrendingWhiteModal, setShowTrendingWhiteModal] = useState(false);
+  const [trendingWhiteAds, setTrendingWhiteAds] = useState<AdItem[] | null>(null);
+  const [loadingTrendingWhite, setLoadingTrendingWhite] = useState(false);
   const isLoggedIn = !!localStorage.getItem('token');
 
   const RECOMMENDED_KEYWORDS = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
@@ -297,7 +301,7 @@ const Home: React.FC = () => {
         })
           .then((result) => {
             const raw = result?.top_trending ?? [];
-            return mapTrendingToAdFormat(raw.slice(0, 5), 'recommended');
+            return mapTrendingToAdFormat(raw.slice(0, 5), keyword);
           })
           .catch(() => [] as AdItem[])
       )
@@ -305,6 +309,19 @@ const Home: React.FC = () => {
       .then((results) => {
         const seen = new Set<string>();
         const merged: AdItem[] = [];
+        const maxPerSource = 5;
+        for (let i = 0; i < maxPerSource; i++) {
+          for (const ads of results) {
+            if (ads[i]) {
+              const ad = ads[i];
+              const key = String(ad.id);
+              if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(ad);
+              }
+            }
+          }
+        }
         for (const ads of results) {
           for (const ad of ads) {
             const key = String(ad.id);
@@ -321,7 +338,61 @@ const Home: React.FC = () => {
       .finally(() => setLoadingRecommendedWhite(false));
   };
 
-  const openTrendingAndFetch = () => openCategoryModalAndFetch('trending');
+  // Trending: same white modal and multi-keyword fetch as Recommended (Shoes, Fashion, Food, Sports)
+  const openTrendingWhiteModal = () => {
+    setShowTrendingWhiteModal(true);
+    setTrendingWhiteAds(null);
+    setLoadingTrendingWhite(true);
+    const minLoaderMs = 600;
+    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    Promise.all(
+      RECOMMENDED_KEYWORDS.map((keyword) =>
+        TrendingAPI.search({
+          keyword,
+          platforms: ['meta', 'instagram', 'youtube'],
+          limit_per_platform: 3,
+          async_mode: false,
+        })
+          .then((result) => {
+            const raw = result?.top_trending ?? [];
+            return mapTrendingToAdFormat(raw.slice(0, 5), keyword);
+          })
+          .catch(() => [] as AdItem[])
+      )
+    )
+      .then((results) => {
+        const seen = new Set<string>();
+        const merged: AdItem[] = [];
+        const maxPerSource = 5;
+        for (let i = 0; i < maxPerSource; i++) {
+          for (const ads of results) {
+            if (ads[i]) {
+              const ad = ads[i];
+              const key = String(ad.id);
+              if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(ad);
+              }
+            }
+          }
+        }
+        for (const ads of results) {
+          for (const ad of ads) {
+            const key = String(ad.id);
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(ad);
+            }
+          }
+        }
+        return merged.slice(0, 20);
+      })
+      .then((ads) => minDelay.then(() => ads))
+      .then((ads) => setTrendingWhiteAds(ads))
+      .finally(() => setLoadingTrendingWhite(false));
+  };
+
+  const openTrendingAndFetch = () => openTrendingWhiteModal();
 
   const handleCloseModal = () => {
     setSelectedAd(null);
@@ -697,7 +768,15 @@ const Home: React.FC = () => {
                           <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
                           <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                             <span>⭐ {ad.rating} ({ad.votes})</span>
-                            {ad.url && <span className="text-purple-600 font-medium">View Campaign →</span>}
+                            {ad.url && (
+                              <button
+                                type="button"
+                                className="text-purple-600 font-medium hover:text-purple-700"
+                                onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                              >
+                                View Campaign →
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -712,7 +791,73 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Unified category modal: Fashion, Sports, Food, Trending (dark) – not used for Recommended */}
+      {/* Trending: white modal – same multi-keyword fetch as Recommended */}
+      {showTrendingWhiteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60" onClick={() => setShowTrendingWhiteModal(false)} />
+          <div className="relative min-h-screen flex items-center justify-center p-4">
+            <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex justify-between items-center px-8 py-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Trending Now</h2>
+                <button type="button" onClick={() => setShowTrendingWhiteModal(false)} className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xl">&times;</button>
+              </div>
+              <div className="p-6">
+                {loadingTrendingWhite ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                    <p className="text-gray-500">Fetching trending campaigns…</p>
+                  </div>
+                ) : trendingWhiteAds && trendingWhiteAds.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {trendingWhiteAds.map((ad) => (
+                      <div
+                        key={ad.id}
+                        className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => {
+                          const others = trendingWhiteAds.filter((a) => String(a.id) !== String(ad.id));
+                          setRelatedAds(others.slice(0, 3));
+                          setTrendingExampleAds(others.slice(0, 4));
+                          setSelectedAd(ad);
+                          setShowTrendingWhiteModal(false);
+                          document.body.style.overflow = 'hidden';
+                        }}
+                      >
+                        <div className="aspect-video bg-gray-100 relative">
+                          <img
+                            src={ad.image}
+                            alt={ad.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
+                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                            <span>⭐ {ad.rating} ({ad.votes})</span>
+                            {ad.url && (
+                              <button
+                                type="button"
+                                className="text-purple-600 font-medium hover:text-purple-700"
+                                onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                              >
+                                View Campaign →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-center py-16">No trending campaigns right now. Try again later.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified category modal: Fashion, Sports, Food (dark) – not used for Recommended or Trending */}
       {showCategoryModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"

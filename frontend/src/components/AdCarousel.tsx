@@ -428,14 +428,8 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: ads
         style={{ scrollbarWidth: 'none' }}
       >
         {ads.map((ad) => (
-          <div key={ad.id} onClickCapture={(e) => {
-            if (onCardClick) {
-              e.stopPropagation();
-              e.preventDefault();
-              handleCardClick(ad);
-            }
-          }}>
-            <AdCard ad={ad} />
+          <div key={ad.id}>
+            <AdCard ad={ad} onCardClick={onCardClick ? () => handleCardClick(ad) : undefined} />
           </div>
         ))}
       </div>

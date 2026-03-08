@@ -267,8 +267,19 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
     ? trendingExampleAds
     : getExampleAdsForGenre(genre);
 
-  const modalTitle = isFashion ? 'Fashion Ads' : ad.title;
-  const sectionTitle = isFashion ? 'Fashion Ads' : `Top ${genre} Campaign Examples`;
+  // Hardcoded campaign names as modal title (from category keywords)
+  const HARDCODED_CAMPAIGN_NAMES = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
+  const isKnownCampaign = typeof genre === 'string' && HARDCODED_CAMPAIGN_NAMES.includes(genre);
+  const modalTitle = isKnownCampaign
+    ? genre
+    : genreLower === 'recommended'
+      ? 'Recommended Campaigns'
+      : genreLower === 'trending'
+        ? 'Trending Now'
+        : isFashion
+          ? 'Fashion Ads'
+          : ad.title;
+  const sectionTitle = isKnownCampaign || isFashion ? modalTitle : `Top ${genre} Campaign Examples`;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -308,12 +319,12 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
 
           {/* Content */}
           <div className="px-8 py-6">
-            {/* Header */}
+            {/* Header: title = hardcoded campaign name; View Campaign → opens actual ad on platform */}
             <div className="mb-6">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                {ad.title}
+                {modalTitle}
               </h1>
-              <div className="flex items-center gap-4 text-gray-600">
+              <div className="flex items-center gap-4 text-gray-600 flex-wrap">
                 <div className="flex items-center gap-1">
                   <Star className="w-5 h-5 text-yellow-500 fill-current" />
                   <span className="font-bold">{ad.rating}</span>
@@ -323,6 +334,15 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                   <Users className="w-5 h-5" />
                   <span className="font-medium text-purple-600">{genre}</span>
                 </div>
+                {ad.url && (
+                  <button
+                    type="button"
+                    className="text-purple-600 font-semibold hover:text-purple-700 hover:underline"
+                    onClick={() => window.open(ad.url, '_blank', 'noopener,noreferrer')}
+                  >
+                    View Campaign →
+                  </button>
+                )}
               </div>
             </div>
 

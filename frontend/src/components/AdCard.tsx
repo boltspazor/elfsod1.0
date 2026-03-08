@@ -16,22 +16,28 @@ interface AdCardProps {
     description?: string;
     engagement?: string;
   };
+  /** When set, card click opens modal; "View Campaign" opens ad URL. When unset, card click opens URL. */
+  onCardClick?: (ad: AdCardProps['ad']) => void;
 }
 
-const AdCard: React.FC<AdCardProps> = ({ ad }) => {
+const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
   const navigate = useNavigate();
 
-  const handleClick = () => {
-    if (ad.url) {
-      window.open(ad.url, '_blank', 'noopener,noreferrer');
+  const handleCardAreaClick = () => {
+    if (onCardClick) {
+      onCardClick(ad);
     } else {
-      navigate(`/ads/${ad.id}`);
+      if (ad.url) {
+        window.open(ad.url, '_blank', 'noopener,noreferrer');
+      } else {
+        navigate(`/ads/${ad.id}`);
+      }
     }
   };
 
   return (
     <div
-      onClick={handleClick}
+      onClick={handleCardAreaClick}
       className="cursor-pointer transition-transform hover:scale-[1.02]"
       style={{
         width: 327,
@@ -108,12 +114,26 @@ const AdCard: React.FC<AdCardProps> = ({ ad }) => {
               {ad.engagement && (
                 <span className="text-xs text-white/80">{ad.engagement} engagement</span>
               )}
-              <span
-                className="text-sm font-semibold text-cyan-400 hover:text-cyan-300"
-                style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
-              >
-                View Campaign →
-              </span>
+              {ad.url ? (
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-cyan-400 hover:text-cyan-300"
+                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(ad.url, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  View Campaign →
+                </button>
+              ) : (
+                <span
+                  className="text-sm font-semibold text-cyan-400 hover:text-cyan-300"
+                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
+                >
+                  View Campaign →
+                </span>
+              )}
             </div>
           )}
         </div>
