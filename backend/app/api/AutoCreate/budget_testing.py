@@ -8,7 +8,8 @@ from datetime import datetime
 from unified_db import (
     decode_jwt_token,
     handle_campaign_save,
-    get_active_campaign
+    get_active_campaign,
+    save_assets_to_campaign,
 )
 
 # Supabase
@@ -185,7 +186,7 @@ def budget_recommendations():
 @budget_testing_bp.route("/api/campaigns/publish", methods=["POST"])
 def publish_campaign():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
 
         token = data.get("user_id")
         if not token:
@@ -202,10 +203,14 @@ def publish_campaign():
         except (ValueError, TypeError):
             return jsonify({"error": "Invalid campaign_id"}), 400
 
-        response = supabase.table("auto_create").update({
+        update_payload = {
             "campaign_status": "published",
             "published_at": datetime.now().isoformat()
-        }).eq("id", campaign_id).eq("user_id", user_id).execute()
+        }
+        response = supabase.table("auto_create").update(update_payload).eq("id", campaign_id).eq("user_id", user_id).execute()
+
+        if response.data and data.get("assets"):
+            save_assets_to_campaign(supabase, user_id, data["assets"], campaign_id)
 
         if response.data:
             return jsonify({
@@ -239,6 +244,27 @@ def get_my_campaigns():
             "success": True,
             "campaigns": response.data or []
         }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@budget_testing_bp.route("/api/campaigns/<int:campaign_id>", methods=["GET"])
+def get_campaign_by_id(campaign_id):
+    """Get a single campaign with full data (including assets) for the current user."""
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        user_id = decode_jwt_token(token)
+
+        response = supabase.table("auto_create").select("*").eq("id", campaign_id).eq("user_id", user_id).execute()
+
+        if not response.data or len(response.data) == 0:
+            return jsonify({"success": False, "error": "Campaign not found"}), 404
+
+        return jsonify({"success": True, "campaign": response.data[0]}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

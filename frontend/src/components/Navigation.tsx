@@ -43,7 +43,10 @@ const Navigation: React.FC = () => {
   ];
 
   const logout = () => {
+    // Clear only auth-related keys so brand identity and other preferences persist
+    const brandAssets = localStorage.getItem('brandIdentityAssets');
     localStorage.clear();
+    if (brandAssets) localStorage.setItem('brandIdentityAssets', brandAssets);
     navigate("/");
     window.location.reload();
   };

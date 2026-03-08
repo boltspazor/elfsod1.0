@@ -78,11 +78,23 @@ const AutoCreate: React.FC = () => {
         return;
       }
 
-      // Step 2: Publish the campaign
+      // Step 2: Fetch generated creatives so we can store them with the published campaign
+      let assets: unknown[] = [];
+      try {
+        const assetsRes = await fetch(`${AUTOCREATE_API_URL}/api/get-generated-assets/${campaignId}`);
+        const assetsData = await assetsRes.json();
+        if (assetsData?.success && Array.isArray(assetsData?.assets)) {
+          assets = assetsData.assets;
+        }
+      } catch {
+        // Proceed without assets if creative service unavailable
+      }
+
+      // Step 3: Publish the campaign (with creatives so they are stored in DB)
       const res = await fetch(`${AUTOCREATE_API_URL}/api/campaigns/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: token, campaign_id: campaignId }),
+        body: JSON.stringify({ user_id: token, campaign_id: campaignId, assets }),
       });
 
       const data = await res.json() as { success?: boolean; error?: string };

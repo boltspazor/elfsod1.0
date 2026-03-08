@@ -4,7 +4,6 @@ import Navigation from '../components/Navigation';
 import AdCarousel from '../components/AdCarousel';
 import AdDetailModal from '../components/AdDetailModal';
 import { AUTOCREATE_API_URL } from '../config';
-import { CampaignAdsAPI } from '../services/adsurv';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 interface Campaign {
@@ -17,6 +16,7 @@ interface Campaign {
   published_at?: string;
   created_at?: string;
   selected_tests?: string[];
+  assets?: string | unknown[]; // JSON string or array of stored creatives
 }
 
 interface AdItem {
@@ -44,20 +44,36 @@ const formatVotes = (value: number | string | undefined): string => {
 
 const mapApiAdsToAdItem = (ads: Record<string, unknown>[]): AdItem[] => {
   return ads.map((item: Record<string, unknown>, index: number) => ({
-    id: (item.id as string) || `ad-${index}`,
+    id: (item.id as string) ?? String(index),
     title: (item.title as string) || (item.headline as string) || 'Ad',
-    image: (item.image_url as string) || (item.thumbnail as string) || 'https://via.placeholder.com/400x300?text=No+Image',
+    image: (item.image_url as string) || (item.data_uri as string) || (item.thumbnail as string) || 'https://via.placeholder.com/400x300?text=No+Image',
     rating: item.score ? Math.min(Number(item.score) / 20, 5).toFixed(1) : '4.5',
     votes: formatVotes((item.views as number) ?? (item.likes as number)),
-    tags: [item.platform, item.type].filter(Boolean).map(String),
-    genre: (item.platform as string) || '',
+    tags: [item.platform, item.type, item.asset_type].filter(Boolean).map(String),
+    genre: (item.platform as string) || (item.asset_type as string) || '',
     engagement: item.score ? `${Math.min(Number(item.score), 100)}%` : 'N/A',
-    description: (item.description as string) || '',
+    description: (item.description as string) || (item.prompt as string) || '',
     url: item.url as string | undefined,
     platform: item.platform as string | undefined,
     score: item.score as number | undefined,
   }));
 };
+
+/** Parse campaign.assets (JSON string or array) and map to AdItem for display. */
+function campaignAssetsToAdItems(campaign: Campaign | null): AdItem[] {
+  if (!campaign?.assets) return [];
+  let list: unknown[] = [];
+  if (Array.isArray(campaign.assets)) list = campaign.assets;
+  else if (typeof campaign.assets === 'string') {
+    try {
+      const parsed = JSON.parse(campaign.assets);
+      list = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return mapApiAdsToAdItem(list as Record<string, unknown>[]);
+}
 
 const CampaignDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -74,31 +90,30 @@ const CampaignDetail: React.FC = () => {
 
   const id = campaignId ? parseInt(campaignId, 10) : null;
 
-  // Load campaign if not in state (e.g. direct URL or refresh)
+  // Load campaign by id to get full data including stored assets (creatives)
   useEffect(() => {
-    if (!id || campaign) {
-      if (campaign) setCampaignLoading(false);
-      return;
-    }
+    if (!id) return;
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
       return;
     }
     setCampaignLoading(true);
-    fetch(`${AUTOCREATE_API_URL}/api/campaigns/my-campaigns`, {
+    fetch(`${AUTOCREATE_API_URL}/api/campaigns/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((data: { success?: boolean; campaigns?: Campaign[] }) => {
-        if (data.success && data.campaigns) {
-          const c = data.campaigns.find((x) => x.id === id) ?? null;
-          setCampaign(c);
-        }
+      .then((data: { success?: boolean; campaign?: Campaign }) => {
+        if (data.success && data.campaign) setCampaign(data.campaign);
+        else if (location.state?.campaign) setCampaign(location.state.campaign);
+        else setCampaign(null);
       })
-      .catch(() => setCampaign(null))
+      .catch(() => {
+        if (location.state?.campaign) setCampaign(location.state.campaign);
+        else setCampaign(null);
+      })
       .finally(() => setCampaignLoading(false));
-  }, [id, campaign, navigate]);
+  }, [id, navigate, location.state?.campaign]);
 
   // Fetch ads for this campaign (from DB or dynamically)
   useEffect(() => {

@@ -1,4 +1,5 @@
 # unified_db.py
+import json
 import jwt
 from datetime import datetime
 import os

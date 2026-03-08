@@ -49,6 +49,10 @@ const Home: React.FC = () => {
   const [trendingExampleAds, setTrendingExampleAds] = useState<AdItem[]>([]);
   const [cachedByCategory, setCachedByCategory] = useState<Record<string, TrendingAdType[]>>({});
   const [isLoadingCache, setIsLoadingCache] = useState(true);
+  const [recommendedFetchedAds, setRecommendedFetchedAds] = useState<AdItem[] | null>(null);
+  const [trendingFetchedAds, setTrendingFetchedAds] = useState<AdItem[] | null>(null);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
+  const [loadingTrending, setLoadingTrending] = useState(false);
   const isLoggedIn = !!localStorage.getItem('token');
 
   // Map carousel card genres to trending search keywords
@@ -181,7 +185,6 @@ const Home: React.FC = () => {
   const handleCardClick = (ad: AdItem) => {
     setSelectedAd(ad);
     document.body.style.overflow = 'hidden';
-    // Use cached data only: no dynamic fetch. Related/trending from same category cache.
     const validCategories = ['sports', 'food', 'fashion', 'trending', 'recommended'];
     const category = validCategories.includes((ad.genre || '').toLowerCase())
       ? (ad.genre || 'recommended').toLowerCase()
@@ -190,6 +193,30 @@ const Home: React.FC = () => {
     const others = cachedList.filter(item => String(item.id) !== String(ad.id));
     setRelatedAds(others.slice(0, 3));
     setTrendingExampleAds(others.slice(0, 4));
+  };
+
+  const fetchRecommendedAndShow = () => {
+    setLoadingRecommended(true);
+    setRecommendedFetchedAds(null);
+    TrendingAPI.getCached()
+      .then((data: { categories?: Record<string, TrendingAdType[]> }) => {
+        const raw = data?.categories?.recommended ?? [];
+        setRecommendedFetchedAds(mapTrendingToAdFormat(raw.slice(0, 20), 'recommended'));
+      })
+      .catch(() => setRecommendedFetchedAds([]))
+      .finally(() => setLoadingRecommended(false));
+  };
+
+  const fetchTrendingAndShow = () => {
+    setLoadingTrending(true);
+    setTrendingFetchedAds(null);
+    TrendingAPI.getCached()
+      .then((data: { categories?: Record<string, TrendingAdType[]> }) => {
+        const raw = data?.categories?.trending ?? [];
+        setTrendingFetchedAds(mapTrendingToAdFormat(raw.slice(0, 20), 'trending'));
+      })
+      .catch(() => setTrendingFetchedAds([]))
+      .finally(() => setLoadingTrending(false));
   };
 
   const handleCloseModal = () => {
@@ -429,21 +456,45 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Recommended: cache only (no static fallback). Sports/food/fashion: use AdCarousel built-in ads. */}
+    {/* Recommended: always show hardcoded cards first; on click fetch and show dynamic ads. */}
     {selectedCategory === 'recommended' ? (
       <>
-        {isLoadingCache && getCachedAdsForCategory('recommended').length === 0 && (
+        {loadingRecommended && (
           <div className="text-gray-400 text-center py-12">Loading recommended campaigns…</div>
         )}
-        {!isLoadingCache && getCachedAdsForCategory('recommended').length === 0 && (
-          <div className="text-gray-400 text-center py-12">No recommended campaigns right now. Try again later.</div>
+        {!loadingRecommended && recommendedFetchedAds && recommendedFetchedAds.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setRecommendedFetchedAds(null)}
+              className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+            >
+              ← Back to categories
+            </button>
+            <AdCarousel
+              category="recommended"
+              onCardClick={handleCardClick}
+              ads={recommendedFetchedAds}
+            />
+          </>
         )}
-        {getCachedAdsForCategory('recommended').length > 0 && (
+        {!loadingRecommended && recommendedFetchedAds === null && (
           <AdCarousel
             category="recommended"
-            onCardClick={handleCardClick}
-            ads={getCachedAdsForCategory('recommended')}
+            onCardClick={fetchRecommendedAndShow}
           />
+        )}
+        {!loadingRecommended && recommendedFetchedAds && recommendedFetchedAds.length === 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setRecommendedFetchedAds(null)}
+              className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+            >
+              ← Back to categories
+            </button>
+            <div className="text-gray-400 text-center py-12">No recommended campaigns right now. Try again later.</div>
+          </>
         )}
       </>
     ) : (
@@ -479,19 +530,43 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Trending: cache only (no static fallback) */}
-    {isLoadingCache && getCachedAdsForCategory('trending').length === 0 && (
+    {/* Trending: always show hardcoded cards first; on click fetch and show dynamic ads. */}
+    {loadingTrending && (
       <div className="text-gray-400 text-center py-12">Loading trending…</div>
     )}
-    {!isLoadingCache && getCachedAdsForCategory('trending').length === 0 && (
-      <div className="text-gray-400 text-center py-12">No trending campaigns right now. Try again later.</div>
+    {!loadingTrending && trendingFetchedAds && trendingFetchedAds.length > 0 && (
+      <>
+        <button
+          type="button"
+          onClick={() => setTrendingFetchedAds(null)}
+          className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+        >
+          ← Back to categories
+        </button>
+        <AdCarousel
+          category="trending"
+          onCardClick={handleCardClick}
+          ads={trendingFetchedAds}
+        />
+      </>
     )}
-    {getCachedAdsForCategory('trending').length > 0 && (
+    {!loadingTrending && trendingFetchedAds === null && (
       <AdCarousel
         category="trending"
-        onCardClick={handleCardClick}
-        ads={getCachedAdsForCategory('trending')}
+        onCardClick={fetchTrendingAndShow}
       />
+    )}
+    {!loadingTrending && trendingFetchedAds && trendingFetchedAds.length === 0 && (
+      <>
+        <button
+          type="button"
+          onClick={() => setTrendingFetchedAds(null)}
+          className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+        >
+          ← Back to categories
+        </button>
+        <div className="text-gray-400 text-center py-12">No trending campaigns right now. Try again later.</div>
+      </>
     )}
   </div>
 </section>

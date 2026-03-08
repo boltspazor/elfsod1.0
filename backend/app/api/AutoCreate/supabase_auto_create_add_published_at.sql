@@ -8,5 +8,9 @@ ALTER TABLE public.auto_create
 ALTER TABLE public.auto_create
   ADD COLUMN IF NOT EXISTS campaign_status TEXT;
 
+-- Store campaign creatives (generated images/videos) when publishing
+ALTER TABLE public.auto_create
+  ADD COLUMN IF NOT EXISTS assets JSONB;
+
 -- Optional: backfill existing rows so select/display works
 -- UPDATE public.auto_create SET campaign_status = 'draft' WHERE campaign_status IS NULL;
