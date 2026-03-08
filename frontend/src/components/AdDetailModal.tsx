@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Star, Play, Users, TrendingUp } from 'lucide-react';
+import { X, Star, Users, TrendingUp } from 'lucide-react';
 
 interface AdItem {
   id: number | string;
@@ -21,9 +21,21 @@ interface AdDetailModalProps {
   onClose: () => void;
   relatedAds: AdItem[];
   trendingExampleAds?: AdItem[];
+  /** When set, use as modal title (e.g. "Travel Ads") instead of the first ad's title */
+  campaignTitle?: string | null;
 }
 
-const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, trendingExampleAds }) => {
+const VIDEO_EXT = /\.(mp4|webm|ogg|mov)(\?|$)/i;
+function staticThumbnail(item: { image?: string; thumbnail?: string; genre?: string }): string {
+  const placeholder = `https://via.placeholder.com/800x400?text=${encodeURIComponent(item.genre || 'Ad')}`;
+  const thumb = item.thumbnail?.trim();
+  const img = item.image?.trim();
+  if (thumb && !VIDEO_EXT.test(thumb)) return thumb;
+  if (img && !VIDEO_EXT.test(img)) return img;
+  return placeholder;
+}
+
+const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, trendingExampleAds, campaignTitle }) => {
   // Example ads for each genre (these would be fetched from your backend)
   const getExampleAdsForGenre = (genre: string) => {
     const exampleAdsMap: Record<string, any[]> = {
@@ -268,10 +280,10 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
     ? trendingExampleAds
     : getExampleAdsForGenre(genre);
 
-  // Hardcoded campaign names as modal title (from category keywords)
+  // Prefer explicit campaign title (e.g. "Travel Ads") over first ad's title
   const HARDCODED_CAMPAIGN_NAMES = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
   const isKnownCampaign = typeof genre === 'string' && HARDCODED_CAMPAIGN_NAMES.includes(genre);
-  const modalTitle = isKnownCampaign
+  const modalTitle = (campaignTitle && campaignTitle.trim()) || (isKnownCampaign
     ? genre
     : genreLower === 'recommended'
       ? 'Recommended Campaigns'
@@ -279,7 +291,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
         ? 'Trending Now'
         : isFashion
           ? 'Fashion Ads'
-          : ad.title;
+          : ad.title);
   const sectionTitle = isKnownCampaign || isFashion ? modalTitle : `Top ${genre} Campaign Examples`;
 
   return (
@@ -301,10 +313,10 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
             <X className="w-6 h-6 text-white" />
           </button>
 
-          {/* Hero Section - image, then thumbnail, then same-category placeholder */}
+          {/* Hero Section - static thumbnail only (no video); placeholder if broken */}
           <div className="relative h-96 bg-gray-200">
             <img
-              src={ad.image || ad.thumbnail || `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+              src={staticThumbnail(ad)}
               alt={ad.title}
               className="w-full h-full object-cover"
               onError={(e) => {
@@ -314,13 +326,6 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-            
-            {/* Play Trailer Button */}
-            <button className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors group">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Play className="w-8 h-8 text-black ml-1" />
-              </div>
-            </button>
           </div>
 
           {/* Content */}
@@ -376,10 +381,10 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                           }
                         }}
                       >
-                        {/* Ad Image - image, thumbnail, then same-category placeholder */}
+                        {/* Static thumbnail (no video) */}
                         <div className="relative h-48 overflow-hidden bg-gray-200">
                           <img
-                            src={exampleAd.image || exampleAd.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(exampleAd.genre || 'Ad')}`}
+                            src={staticThumbnail({ ...exampleAd, image: exampleAd.image, thumbnail: exampleAd.thumbnail, genre: exampleAd.genre })}
                             alt={exampleAd.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             onError={(e) => {
@@ -451,7 +456,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                     >
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shrink-0">
                         <img
-                          src={relatedAd.image || relatedAd.thumbnail || `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`}
+                          src={staticThumbnail(relatedAd) || `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`}
                           alt={relatedAd.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {

@@ -52,6 +52,7 @@ const Home: React.FC = () => {
   const [showRecommendedWhiteModal, setShowRecommendedWhiteModal] = useState(false);
   const [recommendedWhiteAds, setRecommendedWhiteAds] = useState<AdItem[] | null>(null);
   const [recommendedWhiteByCategory, setRecommendedWhiteByCategory] = useState<Record<string, AdItem[]>>({});
+  const [recommendedWhiteModalTitle, setRecommendedWhiteModalTitle] = useState('Recommended Campaigns');
   const [loadingRecommendedWhite, setLoadingRecommendedWhite] = useState(false);
   // Trending: same – per-category sections when opened as "Trending Now"; single list when opened by genre
   const [showTrendingWhiteModal, setShowTrendingWhiteModal] = useState(false);
@@ -59,6 +60,8 @@ const Home: React.FC = () => {
   const [trendingWhiteByCategory, setTrendingWhiteByCategory] = useState<Record<string, AdItem[]>>({});
   const [loadingTrendingWhite, setLoadingTrendingWhite] = useState(false);
   const [trendingWhiteModalTitle, setTrendingWhiteModalTitle] = useState('Trending Now');
+  /** When opening detail modal from a campaign card, use this as modal title (e.g. "Travel Ads") instead of first ad title */
+  const [detailModalCampaignTitle, setDetailModalCampaignTitle] = useState<string | null>(null);
   // Category-specific ads for main section carousel (food / fashion / sports only)
   const [sectionCategoryAds, setSectionCategoryAds] = useState<Record<string, AdItem[] | null>>({});
   const [loadingSectionCategory, setLoadingSectionCategory] = useState<Record<string, boolean>>({});
@@ -298,6 +301,7 @@ const Home: React.FC = () => {
 
   // Recommended: fetch using hardcoded category names (Shoes, Fashion, Food, Sports), merge results
   const openRecommendedWhiteModal = () => {
+    setRecommendedWhiteModalTitle('Recommended Campaigns');
     setShowRecommendedWhiteModal(true);
     setRecommendedWhiteAds(null);
     setRecommendedWhiteByCategory({});
@@ -338,6 +342,43 @@ const Home: React.FC = () => {
           setSelectedAd(flat[0]);
           setRelatedAds(flat.slice(1, 4));
           setTrendingExampleAds(flat.slice(0, 8));
+          setShowRecommendedWhiteModal(false);
+          document.body.style.overflow = 'hidden';
+        }
+      })
+      .finally(() => setLoadingRecommendedWhite(false));
+  };
+
+  // When user clicks a card in Recommended carousel (Fashion, Shoes, Tech, Car), open genre-specific modal
+  const openRecommendedWhiteModalWithGenre = (genre: string, modalTitle: string) => {
+    const keyword = genreToKeyword[genre] || genre;
+    setRecommendedWhiteModalTitle(modalTitle);
+    setShowRecommendedWhiteModal(true);
+    setRecommendedWhiteAds(null);
+    setRecommendedWhiteByCategory({});
+    setLoadingRecommendedWhite(true);
+    const minLoaderMs = 600;
+    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    TrendingAPI.search({
+      keyword,
+      platforms: ['meta', 'instagram', 'youtube'],
+      limit_per_platform: 5,
+      async_mode: false,
+    })
+      .then((result) => {
+        const raw = result?.top_trending ?? [];
+        return mapTrendingToAdFormat(raw.slice(0, 20), genre);
+      })
+      .catch(() => [] as AdItem[])
+      .then((ads) => minDelay.then(() => ads))
+      .then((ads) => {
+        const filtered = ads.filter((ad) => (ad.genre || '').toLowerCase() === genre.toLowerCase());
+        const list = filtered.length > 0 ? filtered : ads;
+        setRecommendedWhiteAds(list);
+        if (list.length > 0) {
+          setSelectedAd(list[0]);
+          setRelatedAds(list.slice(1, 4));
+          setTrendingExampleAds(list.slice(0, 8));
           setShowRecommendedWhiteModal(false);
           document.body.style.overflow = 'hidden';
         }
@@ -443,6 +484,7 @@ const Home: React.FC = () => {
 
   const handleCloseModal = () => {
     setSelectedAd(null);
+    setDetailModalCampaignTitle(null);
     document.body.style.overflow = 'auto';
   };
 
@@ -563,11 +605,17 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Recommended: white modal only (Ad Surveillance trending). Others: dark category modal. */}
+    {/* Recommended: card click opens genre-specific modal (Fashion/Shoes/Tech/Car) or full "See All" modal */}
     {selectedCategory === 'recommended' ? (
       <AdCarousel
         category="recommended"
-        onCardClick={openRecommendedWhiteModal}
+        onCardClick={(ad) => {
+          if (ad.genre && genreToKeyword[ad.genre]) {
+            openRecommendedWhiteModalWithGenre(ad.genre, ad.title || `${ad.genre} Ads`);
+          } else {
+            openRecommendedWhiteModal();
+          }
+        }}
       />
     ) : selectedCategory === 'fashion' ? (
       <AdCarousel
@@ -667,7 +715,7 @@ const Home: React.FC = () => {
           <div className="relative min-h-screen flex items-center justify-center p-4">
             <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden">
               <div className="flex justify-between items-center px-8 py-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900">Recommended Campaigns</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{recommendedWhiteModalTitle}</h2>
                 <button type="button" onClick={() => setShowRecommendedWhiteModal(false)} className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xl">&times;</button>
               </div>
               <div className="p-6">
@@ -677,6 +725,7 @@ const Home: React.FC = () => {
                     <p className="text-gray-500">Fetching recommended campaigns…</p>
                   </div>
                 ) : (Object.keys(recommendedWhiteByCategory).length > 0 || (recommendedWhiteAds && recommendedWhiteAds.length > 0)) ? (
+                  Object.keys(recommendedWhiteByCategory).length > 0 ? (
                   <div className="space-y-8">
                     {RECOMMENDED_KEYWORDS.map((keyword) => {
                       const ads = recommendedWhiteByCategory[keyword] ?? [];
@@ -696,6 +745,7 @@ const Home: React.FC = () => {
                                   const others = all.filter((a) => String(a.id) !== String(ad.id));
                                   setRelatedAds(others.slice(0, 3));
                                   setTrendingExampleAds(all.slice(0, 4));
+                                  setDetailModalCampaignTitle(keyword);
                                   setSelectedAd(ad);
                                   setShowRecommendedWhiteModal(false);
                                   document.body.style.overflow = 'hidden';
@@ -735,6 +785,47 @@ const Home: React.FC = () => {
                       );
                     })}
                   </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {(recommendedWhiteAds ?? []).map((ad) => {
+                        const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                        return (
+                          <div
+                            key={ad.id}
+                            className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            onClick={() => {
+                              const all = recommendedWhiteAds ?? [];
+                              const others = all.filter((a) => String(a.id) !== String(ad.id));
+                              setRelatedAds(others.slice(0, 3));
+                              setTrendingExampleAds(all.slice(0, 4));
+                              setDetailModalCampaignTitle(recommendedWhiteModalTitle);
+                              setSelectedAd(ad);
+                              setShowRecommendedWhiteModal(false);
+                              document.body.style.overflow = 'hidden';
+                            }}
+                          >
+                            <div className="aspect-video bg-gray-100 relative">
+                              <img
+                                src={ad.image || ad.thumbnail || safePlaceholder}
+                                alt={ad.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { const el = e.target as HTMLImageElement; el.onerror = null; el.src = safePlaceholder; }}
+                              />
+                            </div>
+                            <div className="p-3">
+                              <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
+                              <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                                <span>⭐ {ad.rating} ({ad.votes})</span>
+                                {ad.url && (
+                                  <button type="button" className="text-purple-600 font-medium hover:text-purple-700" onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}>View Campaign →</button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
                 ) : (
                   <div className="text-gray-500 text-center py-16">No recommended campaigns right now. Try again later.</div>
                 )}
@@ -832,6 +923,7 @@ const Home: React.FC = () => {
                             const others = trendingWhiteAds!.filter((a) => String(a.id) !== String(ad.id));
                             setRelatedAds(others.slice(0, 3));
                             setTrendingExampleAds(trendingWhiteAds!.slice(0, 4));
+                            setDetailModalCampaignTitle(trendingWhiteModalTitle);
                             setSelectedAd(ad);
                             setShowTrendingWhiteModal(false);
                             document.body.style.overflow = 'hidden';
@@ -916,6 +1008,7 @@ const Home: React.FC = () => {
           onClose={handleCloseModal}
           relatedAds={relatedAds}
           trendingExampleAds={modalExampleAds ?? trendingExampleAds}
+          campaignTitle={detailModalCampaignTitle}
         />
       )}
 
