@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NavbarLogoImg from "./NavbarIcons/Navbar_logo.png";
+import { ChevronDown } from "lucide-react";
 
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [isLoggedIn] = useState(() => {
     return !!localStorage.getItem("token");
   });
@@ -19,6 +23,16 @@ const Navigation: React.FC = () => {
     }
     return null;
   });
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const navItems = [
     { name: "Home", link: "/home" },
@@ -108,25 +122,37 @@ const Navigation: React.FC = () => {
                 Logout
               </button>
 
-              <button
-                onClick={() => navigate('/my-campaigns')}
-                className="px-5 py-2 rounded-full font-semibold text-white transition-all hover:scale-105"
-                style={{
-                  background: `linear-gradient(#1f1f1f, #1f1f1f) padding-box,
-                    linear-gradient(90deg, #22d3ee, #a855f7, #ec4899) border-box`,
-                  border: '2px solid transparent',
-                  fontSize: 14,
-                }}
-              >
-                My Published Ads
-              </button>
+              {/* Profile dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setProfileOpen((o) => !o)}
+                  className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1.5 bg-[#1f1f1f] text-white hover:bg-[#2a2a2a] transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gray-500 flex items-center justify-center text-white shrink-0">
+                    👤
+                  </div>
+                  <span className="font-medium max-w-[120px] truncate">
+                    Hello, {userName ?? 'User'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              <span className="text-white">
-                Hello, {userName}
-              </span>
-
-              <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white">
-                👤
+                {profileOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#1a1a1a] border border-gray-700 shadow-xl py-1 z-50">
+                    <button
+                      onClick={() => { setProfileOpen(false); navigate('/my-campaigns'); }}
+                      className="w-full px-4 py-3 text-left text-gray-200 hover:bg-white/10 transition-colors font-medium"
+                    >
+                      Published Ads
+                    </button>
+                    <button
+                      onClick={() => { setProfileOpen(false); navigate('/brand-identity'); }}
+                      className="w-full px-4 py-3 text-left text-gray-200 hover:bg-white/10 transition-colors font-medium"
+                    >
+                      Brand Identity
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

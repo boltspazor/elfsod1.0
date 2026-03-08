@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { colors } from '../styles/colors';
 import { IMAGE_GEN_API_URL } from '../config';
+import { useBrandIdentityOptional } from '../contexts/BrandIdentityContext';
 
 interface GenerateAdPopupProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface GenerateAdPopupProps {
 }
 
 const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) => {
+  const { assets: brandAssets, hasAssets } = useBrandIdentityOptional();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -192,17 +194,26 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
       // Construct enhanced prompt
       const enhancedPrompt = `${prompt}`;
 
+      const body: Record<string, unknown> = {
+        message: enhancedPrompt,
+        aspect_ratio: selectedAspectRatio,
+        style: selectedStyle,
+        negative_prompt: negativePrompt,
+      };
+      if (brandAssets.length > 0) {
+        body.brand_identity_assets = brandAssets.map((a) => ({
+          type: a.type,
+          name: a.name,
+          data_url: a.dataUrl,
+        }));
+      }
+
       const response = await fetch(`${IMAGE_GEN_API_URL}/image_gen`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: enhancedPrompt,
-          aspect_ratio: selectedAspectRatio,
-          style: selectedStyle,
-          negative_prompt: negativePrompt
-        }),
+        body: JSON.stringify(body),
       });
 
       console.log('Response status:', response.status);
@@ -374,6 +385,16 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Brand identity notice */}
+        <div className="px-8 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2 text-amber-800 text-sm">
+          <span className="font-medium">Brand identity:</span>
+          {hasAssets ? (
+            <span>Your {brandAssets.length} brand asset{brandAssets.length !== 1 ? 's' : ''} (logos/media) will be included in this generation.</span>
+          ) : (
+            <span>Upload logos and media in <strong>Brand Identity</strong> (profile menu) to include them in generations.</span>
+          )}
         </div>
 
         {/* Content Area */}

@@ -3,10 +3,18 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime
 
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.schemas import TrendingSearchRequest, TrendingSearchResponse, PlatformResult
-from app.services.trending_service import TrendingSearchService  # Updated import
+from app.services.trending_service import TrendingSearchService
+from app.services.trending_cache_service import (
+    get_or_refresh_cache,
+    get_all_categories_cached,
+    CATEGORY_KEYWORDS,
+)
 
 router = APIRouter()
 
@@ -104,6 +112,26 @@ async def search_trending_ads(
         top_trending=results.get("top_trending", []),
         platform_performance=results.get("platform_performance", {})
     )
+
+
+@router.get("/cached")
+async def get_cached_trending(
+    category: Optional[str] = Query(None, description="Category: recommended, sports, food, fashion, trending. Omit for all."),
+    db: Session = Depends(get_db),
+):
+    """
+    Get trending ads from 24h cache (no auth required for home page).
+    Ads are refreshed once every 24 hours; only ads with displayable images are stored.
+    """
+    valid = set(CATEGORY_KEYWORDS.keys())
+    if category is not None:
+        if category not in valid:
+            raise HTTPException(status_code=400, detail=f"Invalid category. Use one of: {sorted(valid)}")
+        ads = await get_or_refresh_cache(db, category)
+        return {"category": category, "ads": ads}
+    # Return all categories
+    data = await get_all_categories_cached(db)
+    return {"categories": data}
 
 
 @router.get("/platforms")

@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Video, ArrowLeft, Loader2 } from 'lucide-react';
 import { AUTOCREATE_API_URL } from '../../config';
+import { useBrandIdentityOptional } from '../../contexts/BrandIdentityContext';
 
 interface CreativeAssetsStepProps {
   selectedGoal?: string | null;
@@ -122,10 +123,12 @@ const UploadView = ({
   type,
   selectedGoal,
   onBack,
+  brandAssets,
 }: {
   type: 'image' | 'video';
   selectedGoal?: string | null;
   onBack: () => void;
+  brandAssets: { type: string; name: string; dataUrl: string }[];
 }) => {
   const [adType, setAdType]     = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -163,16 +166,20 @@ const UploadView = ({
       const base64 = await fileToBase64(file);
 
       // Step 2 — upload-image
+      const uploadPayload: Record<string, unknown> = {
+        image_data:  base64,
+        filename:    file.name,
+        ad_type:     adType.trim(),
+        user_id:     token,
+        campaign_id: campaignId,
+      };
+      if (brandAssets.length > 0) {
+        uploadPayload.brand_identity_assets = brandAssets.map((a) => ({ type: a.type, name: a.name, data_url: a.dataUrl }));
+      }
       const uploadRes = await fetch(`${API}/upload-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          image_data:  base64,
-          filename:    file.name,
-          ad_type:     adType.trim(),
-          user_id:     token,
-          campaign_id: campaignId,
-        }),
+        body: JSON.stringify(uploadPayload),
       });
 
       if (!uploadRes.ok) {
@@ -188,16 +195,20 @@ const UploadView = ({
       setIsGenerating(true);
       setProgress('Starting AI generation…');
 
+      const genPayload: Record<string, unknown> = {
+        campaign_id:   cid,
+        asset_type:    type,
+        user_id:       token,
+        campaign_goal: selectedGoal ?? 'awareness',
+        ad_type:       adType.trim(),
+      };
+      if (brandAssets.length > 0) {
+        genPayload.brand_identity_assets = brandAssets.map((a) => ({ type: a.type, name: a.name, data_url: a.dataUrl }));
+      }
       const genRes = await fetch(`${API}/generate-assets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          campaign_id:   cid,
-          asset_type:    type,
-          user_id:       token,
-          campaign_goal: selectedGoal ?? 'awareness',
-          ad_type:       adType.trim(),
-        }),
+        body: JSON.stringify(genPayload),
       });
 
       if (!genRes.ok) {
@@ -266,9 +277,14 @@ const UploadView = ({
         <ArrowLeft size={16} /> Back
       </button>
 
-      <h2 style={{ color: '#fff', fontSize: 26, fontWeight: 700, marginBottom: 28 }}>
+      <h2 style={{ color: '#fff', fontSize: 26, fontWeight: 700, marginBottom: 12 }}>
         Generate AI {type === 'image' ? 'Images' : 'Videos'} for your Campaigns
       </h2>
+      <div style={{ marginBottom: 28, padding: '10px 14px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 8, fontSize: 13, color: 'rgba(251,191,36,0.95)' }}>
+        {brandAssets.length > 0
+          ? `Brand identity: Your ${brandAssets.length} brand asset${brandAssets.length !== 1 ? 's' : ''} will be included in this generation.`
+          : 'Brand identity assets (profile → Brand Identity) are included in every generation when you add them.'}
+      </div>
 
       {/* ── Upload area (hidden once we have results) ──── */}
       {assets.length === 0 && (
@@ -494,11 +510,13 @@ const UploadView = ({
 const CreativeAssetsStep: React.FC<CreativeAssetsStepProps> = ({ selectedGoal }) => {
   const [view, setView] = useState<AssetView>('select');
 
+  const { assets: brandAssets } = useBrandIdentityOptional();
+
   if (view === 'upload-image') {
-    return <UploadView type="image" selectedGoal={selectedGoal} onBack={() => setView('select')} />;
+    return <UploadView type="image" selectedGoal={selectedGoal} onBack={() => setView('select')} brandAssets={brandAssets} />;
   }
   if (view === 'upload-video') {
-    return <UploadView type="video" selectedGoal={selectedGoal} onBack={() => setView('select')} />;
+    return <UploadView type="video" selectedGoal={selectedGoal} onBack={() => setView('select')} brandAssets={brandAssets} />;
   }
 
   return (
@@ -506,9 +524,12 @@ const CreativeAssetsStep: React.FC<CreativeAssetsStepProps> = ({ selectedGoal })
       <h2 style={{ color: '#fff', fontSize: 26, fontWeight: 700, marginBottom: 8 }}>
         Generate AI Assets for your Campaigns
       </h2>
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, marginBottom: 32 }}>
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, marginBottom: 12 }}>
         Choose what type of assets you would like to generate for your campaign
       </p>
+      <div style={{ marginBottom: 32, padding: '10px 14px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 8, fontSize: 13, color: 'rgba(251,191,36,0.95)' }}>
+        Brand identity assets (logos and media from profile → Brand Identity) are automatically included in every image and video generation.
+      </div>
 
       <div style={{ display: 'flex', gap: 24 }}>
         <AssetCard

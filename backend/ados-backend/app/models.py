@@ -272,3 +272,18 @@ class SurvMetrics(Base):
     
     def __repr__(self):
         return f"<SurvMetrics(id={self.id}, competitor={self.competitor_id}, period={self.time_period})>"
+
+
+class TrendingAdCache(Base):
+    """Cache of trending ads per category for home page. Refreshed every 24 hours."""
+    __tablename__ = "trending_ad_cache"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    category = Column(String(64), nullable=False, unique=True)  # recommended, sports, food, fashion, trending
+    ads_json = Column(JSONB, nullable=False, default=list)  # List of ad dicts (image-validated)
+    last_fetched_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<TrendingAdCache(category={self.category}, ads_count={len(self.ads_json or [])})>"

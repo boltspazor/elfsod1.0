@@ -4,6 +4,7 @@ import { Zap, Eye, Sparkles, Plus, Mic, Send, Loader2, Trash2, MessageSquare } f
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { GENAI_API_URL } from '../config';
+import { useBrandIdentityOptional } from '../contexts/BrandIdentityContext';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface Message {
@@ -169,6 +170,7 @@ const ActionChip = ({ icon: Icon, label, onClick }: { icon: React.ElementType; l
 /* ─── Main Component ─────────────────────────────────────────── */
 const CommandCenter: React.FC = () => {
   const navigate  = useNavigate();
+  const { assets: brandAssets, hasAssets } = useBrandIdentityOptional();
   const token      = localStorage.getItem('token') ?? '';
   const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -285,20 +287,28 @@ const CommandCenter: React.FC = () => {
     const action = overrideAction ?? ACTION_MAP[text] ?? 'chat';
 
     try {
+      const body: Record<string, unknown> = {
+        message: text, action,
+        locale: 'US (en-US), currency $',
+        context: {
+          brand: 'unknown', product: 'unknown', category: 'unknown',
+          market: 'unknown', pricing: 'unknown', objective: 'unknown',
+          kpi: 'unknown', budget: 'unknown', timeline: 'unknown',
+          stage: 'unknown', channels: 'unknown', competitors: 'unknown',
+          constraints: 'none',
+        },
+      };
+      if (hasAssets && brandAssets.length > 0) {
+        body.brand_identity_assets = brandAssets.map((a) => ({
+          type: a.type,
+          name: a.name,
+          data_url: a.dataUrl,
+        }));
+      }
       const res = await fetch(`${GENAI_API_URL}/genai_call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text, action,
-          locale: 'US (en-US), currency $',
-          context: {
-            brand: 'unknown', product: 'unknown', category: 'unknown',
-            market: 'unknown', pricing: 'unknown', objective: 'unknown',
-            kpi: 'unknown', budget: 'unknown', timeline: 'unknown',
-            stage: 'unknown', channels: 'unknown', competitors: 'unknown',
-            constraints: 'none',
-          },
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json() as { reply?: string; error?: string };
       const reply = data.reply || data.error || "I couldn't generate a response.";
@@ -336,9 +346,14 @@ const CommandCenter: React.FC = () => {
         boxSizing: 'border-box',
       }}>
         <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, marginBottom: 2, flexShrink: 0 }}>Command Center</h1>
-        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, marginBottom: 14, flexShrink: 0 }}>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, marginBottom: 6, flexShrink: 0 }}>
           Chat with your autonomous advertising agent
         </p>
+        <div style={{ marginBottom: 14, padding: '8px 12px', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 8, fontSize: 13, color: 'rgba(251,191,36,0.95)' }}>
+          {hasAssets
+            ? `Brand identity: Your ${brandAssets.length} brand asset${brandAssets.length !== 1 ? 's' : ''} will be included in every generation request.`
+            : 'Brand identity assets (from profile → Brand Identity) are included in every generation when you add them.'}
+        </div>
 
         {/* Two-column layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 14, flex: 1, minHeight: 0 }}>

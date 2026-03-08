@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import { BrandIdentityProvider } from './contexts/BrandIdentityContext';
 
 /* ✅ IMPORT SPLASH SCREEN */
 import SplashScreen from './components/SplashScreen';
@@ -20,6 +21,7 @@ import BookingPage from './pages/BookingPage';
 /* ✅ NEW PAGE IMPORT */
 import TargetingIntel from './pages/targetingIntel';
 import MyCampaigns from './pages/MyCampaigns';
+import BrandIdentity from './pages/BrandIdentity';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -36,6 +38,7 @@ function App() {
 
       {/* ✅ App Routes (only show after splash disappears.) */}
       {!showSplash && (
+        <BrandIdentityProvider>
         <Router>
           <Routes>
 
@@ -148,11 +151,21 @@ function App() {
               }
             />
 
+            <Route
+              path="/brand-identity"
+              element={
+                <ProtectedRoute>
+                  <BrandIdentity />
+                </ProtectedRoute>
+              }
+            />
+
             {/* FALLBACK */}
             <Route path="*" element={<Navigate to="/" replace />} />
 
           </Routes>
         </Router>
+        </BrandIdentityProvider>
       )}
     </>
   );

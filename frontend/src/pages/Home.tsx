@@ -46,8 +46,9 @@ const Home: React.FC = () => {
   const [selectedCategory, _setSelectedCategory] = useState<string>('recommended');
   const [publishedCampaigns, setPublishedCampaigns] = useState<PublishedCampaign[]>([]);
   const [launchSuccessId, setLaunchSuccessId] = useState<string | null>(null);
-  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
   const [trendingExampleAds, setTrendingExampleAds] = useState<AdItem[]>([]);
+  const [cachedByCategory, setCachedByCategory] = useState<Record<string, TrendingAdType[]>>({});
+  const [isLoadingCache, setIsLoadingCache] = useState(true);
   const isLoggedIn = !!localStorage.getItem('token');
 
   // Map carousel card genres to trending search keywords
@@ -104,6 +105,20 @@ const Home: React.FC = () => {
     if (cid) setLaunchSuccessId(cid);
   }, [location.search]);
 
+  // Fetch 24h-cached trending ads once on load (no fetch on category click or card click)
+  useEffect(() => {
+    let cancelled = false;
+    TrendingAPI.getCached()
+      .then((data: { categories?: Record<string, TrendingAdType[]> }) => {
+        if (!cancelled && data.categories) {
+          setCachedByCategory(data.categories);
+        }
+      })
+      .catch(() => { /* use fallback static ads */ })
+      .finally(() => { if (!cancelled) setIsLoadingCache(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     if (!isLoggedIn) return;
     const token = localStorage.getItem('token') ?? '';
@@ -157,39 +172,24 @@ const Home: React.FC = () => {
     // ... other ads
   ];
 
-  const handleCardClick = async (ad: AdItem) => {
+  // Build carousel ads from cache (mapped to AdItem format) for a given category
+  const getCachedAdsForCategory = (category: string): AdItem[] => {
+    const raw = cachedByCategory[category] || [];
+    return mapTrendingToAdFormat(raw.slice(0, 20), category);
+  };
+
+  const handleCardClick = (ad: AdItem) => {
     setSelectedAd(ad);
-    setRelatedAds([]);
-    setTrendingExampleAds([]);
-    setIsLoadingTrending(true);
     document.body.style.overflow = 'hidden';
-
-    const keyword = genreToKeyword[ad.genre || ''] || ad.genre || ad.title;
-
-    try {
-      const result = await TrendingAPI.search({
-        keyword,
-        platforms: ['meta', 'instagram', 'youtube'],
-        limit_per_platform: 5,
-        async_mode: false,
-      });
-
-      if (result.top_trending && Array.isArray(result.top_trending)) {
-        const mapped = mapTrendingToAdFormat(result.top_trending.slice(0, 10), ad.genre || 'Trending');
-        setRelatedAds(mapped.slice(0, 3));
-        setTrendingExampleAds(mapped.slice(0, 4));
-      }
-    } catch (error) {
-      console.error('Error fetching trending ads:', error);
-      // Fallback to static related ads
-      const filtered = allAds
-        .filter(item => item.genre === ad.genre && item.id !== ad.id)
-        .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
-        .slice(0, 3);
-      setRelatedAds(filtered);
-    } finally {
-      setIsLoadingTrending(false);
-    }
+    // Use cached data only: no dynamic fetch. Related/trending from same category cache.
+    const validCategories = ['sports', 'food', 'fashion', 'trending', 'recommended'];
+    const category = validCategories.includes((ad.genre || '').toLowerCase())
+      ? (ad.genre || 'recommended').toLowerCase()
+      : 'recommended';
+    const cachedList = getCachedAdsForCategory(category);
+    const others = cachedList.filter(item => String(item.id) !== String(ad.id));
+    setRelatedAds(others.slice(0, 3));
+    setTrendingExampleAds(others.slice(0, 4));
   };
 
   const handleCloseModal = () => {
@@ -432,6 +432,7 @@ const Home: React.FC = () => {
     <AdCarousel 
       category={selectedCategory as 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended'}
       onCardClick={handleCardClick}
+      ads={getCachedAdsForCategory(selectedCategory)}
     />
   </div>
 </section>
@@ -463,6 +464,7 @@ const Home: React.FC = () => {
     <AdCarousel 
       category="trending" 
       onCardClick={handleCardClick}
+      ads={getCachedAdsForCategory('trending')}
     />
   </div>
 </section>
@@ -506,7 +508,6 @@ const Home: React.FC = () => {
           onClose={handleCloseModal}
           relatedAds={relatedAds}
           trendingExampleAds={trendingExampleAds}
-          isLoadingTrending={isLoadingTrending}
         />
       )}
 

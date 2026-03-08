@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Star, Clock, Globe, Award, Play, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { X, Star, Play, Users, TrendingUp } from 'lucide-react';
 
 interface AdItem {
   id: number | string;
@@ -20,10 +20,9 @@ interface AdDetailModalProps {
   onClose: () => void;
   relatedAds: AdItem[];
   trendingExampleAds?: AdItem[];
-  isLoadingTrending?: boolean;
 }
 
-const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, trendingExampleAds, isLoadingTrending }) => {
+const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, trendingExampleAds }) => {
   // Example ads for each genre (these would be fetched from your backend)
   const getExampleAdsForGenre = (genre: string) => {
     const exampleAdsMap: Record<string, any[]> = {
@@ -305,63 +304,19 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
           {/* Content */}
           <div className="px-8 py-6">
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                  {ad.title}
-                </h1>
-                <div className="flex items-center gap-4 text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                    <span className="font-bold">{ad.rating}</span>
-                    <span className="text-gray-500">({ad.votes} votes)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-5 h-5" />
-                    <span>2h 15m</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Globe className="w-5 h-5" />
-                    <span>Global Campaign</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="w-5 h-5" />
-                    <span className="font-medium text-purple-600">{genre}</span>
-                  </div>
+            <div className="mb-6">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                {ad.title}
+              </h1>
+              <div className="flex items-center gap-4 text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                  <span className="font-bold">{ad.rating}</span>
+                  <span className="text-gray-500">({ad.votes} votes)</span>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <button className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors">
-                  Book Campaign
-                </button>
-                <button className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
-                  Watch Trailer
-                </button>
-              </div>
-            </div>
-
-            {/* Offers Section */}
-            <div className="mb-8 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-              <h3 className="text-lg font-semibold mb-3 text-gray-900">Top offers for you</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 border-2 border-gray-400 rounded flex items-center justify-center">
-                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  </div>
-                  <span className="text-gray-700">YES Private Debit Card Offer</span>
-                  <button className="ml-auto text-purple-600 font-medium hover:text-purple-700">
-                    Tap to view details →
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 border-2 border-green-500 rounded flex items-center justify-center">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  </div>
-                  <span className="text-gray-700">Buy 1 get 1 movie ticket free + 50% off on non...</span>
-                  <button className="ml-auto text-purple-600 font-medium hover:text-purple-700">
-                    Tap to view details →
-                  </button>
+                <div className="flex items-center gap-1">
+                  <Users className="w-5 h-5" />
+                  <span className="font-medium text-purple-600">{genre}</span>
                 </div>
               </div>
             </div>
@@ -377,12 +332,6 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                       Top {genre} Campaign Examples
                     </h2>
                   </div>
-                  {isLoadingTrending && (
-                    <div className="flex items-center gap-2 mb-4 text-gray-500">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Fetching trending {genre} ads...</span>
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     {exampleAds.map((exampleAd) => (
                       <div 
@@ -440,36 +389,11 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                     ))}
                   </div>
                 </div>
-
-                {/* Campaign Statistics */}
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold mb-4 text-gray-900">Campaign Performance</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-blue-50 rounded-xl">
-                      <div className="text-2xl font-bold text-blue-600 mb-1">24.5M</div>
-                      <div className="text-sm text-gray-600">Total Impressions</div>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-xl">
-                      <div className="text-2xl font-bold text-green-600 mb-1">3.2M</div>
-                      <div className="text-sm text-gray-600">Engagements</div>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-xl">
-                      <div className="text-2xl font-bold text-purple-600 mb-1">12.8%</div>
-                      <div className="text-sm text-gray-600">Conversion Rate</div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Right Column - Related Ads & Info */}
+              {/* Right Column - Related Ads */}
               <div>
                 <h2 className="text-2xl font-bold mb-4 text-gray-900">Similar Campaigns</h2>
-                {isLoadingTrending && relatedAds.length === 0 && (
-                  <div className="flex items-center gap-2 mb-4 text-gray-500">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Loading...</span>
-                  </div>
-                )}
                 <div className="space-y-4 mb-8">
                   {relatedAds.map((relatedAd) => (
                     <div 
@@ -502,65 +426,6 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                     </div>
                   ))}
                 </div>
-
-                {/* Campaign Details */}
-                <div className="mb-8 p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-6 h-6 text-amber-600" />
-                    <h3 className="font-bold text-gray-900">Campaign Details</h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="font-medium">Duration:</span> 3 months
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="font-medium">Platforms:</span> Digital, Social, TV
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="font-medium">Target Audience:</span> 18-45 years
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="font-medium">Budget Range:</span> $500K - $2M
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="space-y-3">
-                  <button className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
-                    Download Media Kit
-                  </button>
-                  <button className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
-                    Request Proposal
-                  </button>
-                  <button className="w-full py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:border-gray-400 transition-colors">
-                    Share Campaign
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* About Section */}
-            <div className="mt-8 p-6 bg-gray-50 rounded-xl">
-              <h3 className="text-xl font-bold mb-3 text-gray-900">About {genre} Campaigns</h3>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                {genre} campaigns are designed to {getGenreDescription(genre)}. 
-                These campaigns typically achieve higher engagement rates by connecting with audiences 
-                on an emotional level and delivering memorable brand experiences.
-              </p>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="p-3 bg-white rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-1">Best For</h4>
-                  <p className="text-sm text-gray-600">{getBestForGenre(genre)}</p>
-                </div>
-                <div className="p-3 bg-white rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-1">Average ROI</h4>
-                  <p className="text-sm text-gray-600">{getAverageROI(genre)}</p>
-                </div>
               </div>
             </div>
           </div>
@@ -568,43 +433,6 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
       </div>
     </div>
   );
-};
-
-// Helper functions for genre descriptions
-const getGenreDescription = (genre: string): string => {
-  const descriptions: Record<string, string> = {
-    'Drama': 'tell compelling stories that evoke deep emotions and create lasting brand connections',
-    'Comedy': 'use humor and wit to entertain audiences while delivering brand messages in a memorable way',
-    'Lifestyle': 'showcase products and services within the context of everyday life and aspirational scenarios',
-    'UGC': 'leverage authentic user-generated content to build trust and community around the brand',
-    'Luxury': 'create exclusive, high-end brand experiences that emphasize quality and prestige',
-    'Documentary': 'present factual, informative content that educates audiences while building brand authority'
-  };
-  return descriptions[genre] || 'create impactful brand experiences';
-};
-
-const getBestForGenre = (genre: string): string => {
-  const bestFor: Record<string, string> = {
-    'Drama': 'Brand storytelling, emotional connection, long-term loyalty',
-    'Comedy': 'Viral potential, brand personality, audience engagement',
-    'Lifestyle': 'Product placement, influencer marketing, social media',
-    'UGC': 'Authenticity, community building, social proof',
-    'Luxury': 'Premium positioning, exclusivity, high-value customers',
-    'Documentary': 'Thought leadership, B2B marketing, educational content'
-  };
-  return bestFor[genre] || 'Various marketing objectives';
-};
-
-const getAverageROI = (genre: string): string => {
-  const roi: Record<string, string> = {
-    'Drama': '4.8x - Higher brand recall and emotional connection',
-    'Comedy': '3.9x - Strong social sharing and engagement',
-    'Lifestyle': '4.2x - Effective for product consideration',
-    'UGC': '5.1x - Excellent trust building and conversion',
-    'Luxury': '3.5x - Premium positioning and exclusivity',
-    'Documentary': '4.5x - Strong authority and trust building'
-  };
-  return roi[genre] || '3.5x - 5.0x depending on execution';
 };
 
 export default AdDetailModal;

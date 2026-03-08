@@ -17,12 +17,14 @@ interface CarouselAd {
 interface AdCarouselProps {
   category: 'sports' | 'food' | 'fashion' | 'trending' | 'top' | 'recommended';
   onCardClick?: (ad: CarouselAd) => void;
+  /** When provided, use these ads instead of built-in category ads (e.g. from 24h cache). */
+  ads?: CarouselAd[];
 }
 
-const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
+const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: adsProp }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Define ads for different categories
+  // Define ads for different categories (fallback when no cached ads)
   const categoryAds = {
     sports: [
       {
@@ -212,16 +214,6 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
     ],
     recommended: [
       {
-        id: 1,
-        title: 'Food & Beverages Ads',
-        type: 'PROMOTED',
-        image: 'https://res.cloudinary.com/doajtpveg/image/upload/v1769789337/samples/food/dessert.jpg',
-        rating: '4.8',
-        votes: '234K',
-        tags: ['Food', 'Beverages'],
-        genre: 'food'
-      },
-      {
         id: 2,
         title: 'Fashion Ads',
         type: null,
@@ -398,8 +390,8 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick }) => {
     ]
   };
 
-  // Get ads based on category
-  const ads = categoryAds[category] || categoryAds.recommended;
+  // Use provided ads (from cache) or fallback to built-in category ads
+  const ads = (adsProp && adsProp.length > 0) ? adsProp : (categoryAds[category] || categoryAds.recommended);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {

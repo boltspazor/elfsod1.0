@@ -440,6 +440,16 @@ export const TrendingAPI = {
     }
   },
 
+  /** Get 24h-cached trending ads for home (no auth). category: recommended | sports | food | fashion | trending, or omit for all. */
+  getCached: async (category?: string): Promise<{ category?: string; ads?: TrendingAd[]; categories?: Record<string, TrendingAd[]> }> => {
+    const url = category
+      ? `${BASE_URL}/api/trending/cached?category=${encodeURIComponent(category)}`
+      : `${BASE_URL}/api/trending/cached`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Trending cache failed: ${res.status}`);
+    return res.json();
+  },
+
   platforms: () => fetchWithAuth('/api/trending/platforms'),
 
   stats: () => fetchWithAuth('/api/trending/stats'),
