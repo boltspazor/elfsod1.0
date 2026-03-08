@@ -1,12 +1,46 @@
 # main.py
 import os
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
 from config import settings
 
 app = Flask(__name__)
-CORS(app, origins=settings.CORS_ORIGINS)
+
+# ── CORS: allow both localhost:5173 and any FRONTEND_URL env var ──────────────
+_cors_origins = list(dict.fromkeys([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    *settings.CORS_ORIGINS,
+]))
+_cors_origins_set = set(_cors_origins)
+
+CORS(
+    app,
+    origins=_cors_origins,
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin"],
+    supports_credentials=False,
+    max_age=3600,
+)
+
+@app.after_request
+def _add_cors(response):
+    origin = request.headers.get("Origin", "")
+    if origin in _cors_origins_set:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    return response
+
+# Generic OPTIONS handler so every preflight gets a 200
+@app.route("/<path:path>", methods=["OPTIONS"])
+@app.route("/", methods=["OPTIONS"])
+def _options_handler(path=""):
+    return "", 200
 
 # Import blueprints
 from audience_step import audience_bp
