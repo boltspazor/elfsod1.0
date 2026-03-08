@@ -2,9 +2,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useNavigate } from "react-router-dom"
-import googleIcon from "./SocialIcons/google-svgrepo-com.svg"
-import appleIcon from "./SocialIcons/apple-173-svgrepo-com.svg"
+import { useNavigate, Link } from "react-router-dom"
 import { AUTH_API_URL } from "../config"
 
 
@@ -73,7 +71,7 @@ return (
         Welcome Back!
       </h1>
       <p className="text-gray-400 text-sm">
-        Login with your Apple or Google Account
+        Login to your account
       </p>
     </div>
 
@@ -127,41 +125,15 @@ return (
         {isLoading ? "Logging in..." : "Login"}
       </Button>
 
-      {/* Divider */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-gray-700" />
-        <span className="text-sm text-gray-400">Or</span>
-        <div className="flex-1 h-px bg-gray-700" />
-      </div>
-
-      {/* Social Buttons */}
-      <div className="grid grid-cols-2 gap-4">
-        <Button
-          type="button"
-          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
-        >
-          <img src={googleIcon} alt="Google" className="w-5 h-5" />{" "}
-          Google
-        </Button>
-
-        <Button
-          type="button"
-          className="h-12 bg-[#f0f0f0] text-black rounded-sm hover:bg-white flex items-center justify-center gap-2"
-        >
-          <img src={appleIcon} alt="Apple" className="w-5 h-5" />{" "}
-          Apple
-        </Button>
-      </div>
-
     </form>
 
     {/* Sign Up */}
     <div className="text-center mt-8">
       <p className="text-sm text-gray-400">
         Don’t have an account?{" "}
-        <a href="/sign-up" className="text-white font-medium hover:underline">
+        <Link to="/sign-up" className="text-white font-medium hover:underline">
           Sign Up
-        </a>
+        </Link>
       </p>
     </div>
 
