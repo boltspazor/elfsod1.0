@@ -2188,7 +2188,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 </div>
                 {showResults && trendingSearchResult && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full">
+                    <span className="text-xs px-2 py-1 bg-purple-700/20 text-purple-400 rounded-full">
                       "{trendingSearchResult.keyword}"
                     </span>
                     <span className="text-xs text-[#666]">
@@ -2212,7 +2212,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                         value={trendingSearchKeyword}
                         onChange={(e) => setTrendingSearchKeyword(e.target.value)}
                         placeholder="Search any keyword to discover trending ads..."
-                        className="w-full pl-12 pr-32 py-4 text-lg bg-[#111] border-2 border-[#333] rounded-xl text-white placeholder-[#666] focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        className="w-full pl-12 pr-32 py-4 text-lg bg-[#111] border-2 border-[#333] rounded-xl text-white placeholder-[#666] focus:ring-2 focus:ring-purple-700 focus:border-purple-700"
                         onKeyDown={(e) =>
                           e.key === "Enter" && handleTrendingSearch()
                         }
@@ -2317,7 +2317,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 <>
                   {isSearchingTrending ? (
                     <div className="py-12 text-center">
-                      <div className="w-12 h-12 border-2 border-t-orange-500 border-[#333] rounded-full animate-spin mx-auto"></div>
+                      <div className="w-12 h-12 border-2 border-t-purple-700 border-[#333] rounded-full animate-spin mx-auto"></div>
                       <p className="mt-4 text-[#ccc]">
                         Searching trending content for "{trendingSearchKeyword}"...
                       </p>
@@ -2348,7 +2348,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                                     onClick={() => toggleTrendingPlatform(platform)}
                                     className={`px-3 py-1.5 text-sm rounded-lg border flex items-center gap-2 ${
                                       selectedTrendingPlatforms.includes(platform)
-                                        ? "border-orange-500 bg-orange-500/20 text-orange-400"
+                                        ? "border-purple-700 bg-purple-700/20 text-purple-400"
                                         : "border-[#333] text-[#888] hover:border-[#555]"
                                     }`}
                                   >
@@ -2409,7 +2409,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                                 </span>
                               </div>
                               <div className="absolute top-2 right-2">
-                                <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded font-bold">
+                                <span className="px-2 py-1 bg-gradient-to-r from-purple-700 to-purple-900 text-white text-xs rounded font-bold">
                                   #{ad.rank || index + 1}
                                 </span>
                               </div>
@@ -2438,7 +2438,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                                         : ad.engagement_score >= 60
                                           ? "bg-yellow-500"
                                           : ad.engagement_score >= 40
-                                            ? "bg-orange-500"
+                                            ? "bg-purple-700"
                                             : "bg-red-500"
                                     }`}
                                   ></div>
@@ -2518,7 +2518,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                         <div className="text-center">
                           <button
                             onClick={handleNewSearch}
-                            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 flex items-center gap-2 mx-auto"
+                            className="px-6 py-3 bg-gradient-to-r from-purple-700 to-purple-900 text-white rounded-lg hover:opacity-90 flex items-center gap-2 mx-auto"
                           >
                             <Search className="w-4 h-4" />
                             <span>New Search</span>
@@ -2542,7 +2542,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                       </p>
                       <button
                         onClick={handleNewSearch}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90"
+                        className="px-6 py-3 bg-gradient-to-r from-purple-700 to-purple-900 text-white rounded-lg hover:opacity-90"
                       >
                         Try Another Search
                       </button>
