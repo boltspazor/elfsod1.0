@@ -266,7 +266,7 @@ const Home: React.FC = () => {
 
      
 
-  {/* Figma Neon Category Pills - Always Visible Gradient */}
+  {/* Figma Neon Category Pills - Always Visible Gradient
 <div className="px-6 py-8 max-w-7xl mx-auto">
   <h3
   className="text-gray-100 mb-8 text-[48px] font-semibold leading-[1] tracking-[-0.03em]"
@@ -306,7 +306,7 @@ const Home: React.FC = () => {
     ))}
 
   </div>
-</div>
+</div> */}
 
      {/* Dynamic Category Section */}
 <section className="px-6 py-12 max-w-7xl mx-auto">
@@ -359,12 +359,12 @@ const Home: React.FC = () => {
   <div className="mb-8">
     <div className="flex items-center justify-between mb-6">
 
-      <h2
+      {/* <h2
         className="text-gray-200 text-[48px] font-semibold leading-[1] tracking-[-0.03em]"
         style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
       >
         Trending Now
-      </h2>
+      </h2> */}
 
       <button
         className="flex items-center gap-2 text-[18px] font-semibold text-purple-400 hover:text-purple-300 transition-colors"
@@ -387,7 +387,7 @@ const Home: React.FC = () => {
 
 
 {/* Top Performers Section */}
-<section className="px-6 py-12 max-w-7xl mx-auto">
+{/* <section className="px-6 py-12 max-w-7xl mx-auto">
   <div className="mb-8">
     <div className="flex items-center justify-between mb-6">
 
@@ -415,7 +415,7 @@ const Home: React.FC = () => {
       onCardClick={handleCardClick}
     />
   </div>
-</section>
+</section> */}
 
       {/* Ad Detail Modal */}
       {selectedAd && (
