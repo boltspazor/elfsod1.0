@@ -2373,31 +2373,24 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                             key={ad.id || `${ad.platform}-${index}`}
                             className="bg-[#111] rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-[#2a2a2a] hover:border-[#444]"
                           >
-                            {/* Image/Video Preview */}
+                            {/* Static thumbnail only (no video); category placeholder when missing/broken */}
                             <div className="aspect-video bg-[#222] relative overflow-hidden">
-                              {ad.image_url || ad.thumbnail ? (
-                                <img
-                                  src={
-                                    proxyImageUrl(ad.image_url) || proxyImageUrl(ad.thumbnail) || ad.thumbnail
-                                  }
-                                  alt={ad.title}
-                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                  onError={(e) => {
-                                    const el = e.target as HTMLImageElement;
-                                    el.src = ad.thumbnail ? (proxyImageUrl(ad.thumbnail) || ad.thumbnail) : 'https://via.placeholder.com/300x200?text=Ad';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-[#333] to-[#444] flex items-center justify-center">
-                                  <div className="text-center">
-                                    {ad.video_url ? (
-                                      <PlayCircle className="w-12 h-12 text-[#666]" />
-                                    ) : (
-                                      <ImageIcon className="w-12 h-12 text-[#666]" />
-                                    )}
-                                  </div>
-                                </div>
-                              )}
+                              <img
+                                src={
+                                  (ad.image_url && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(ad.image_url) && !/^data:video\//i.test(ad.image_url))
+                                    ? (proxyImageUrl(ad.image_url) || ad.image_url)
+                                    : (ad.thumbnail && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(ad.thumbnail) && !/^data:video\//i.test(ad.thumbnail))
+                                      ? (proxyImageUrl(ad.thumbnail) || ad.thumbnail)
+                                      : 'https://via.placeholder.com/300x200?text=Ad'
+                                }
+                                alt={ad.title}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  const el = e.target as HTMLImageElement;
+                                  el.onerror = null;
+                                  el.src = 'https://via.placeholder.com/300x200?text=Ad';
+                                }}
+                              />
                               <div className="absolute top-2 left-2">
                                 <span className="px-2 py-1 bg-black/70 text-white text-xs rounded flex items-center gap-1">
                                   {platformIcons[ad.platform] || (
@@ -2887,20 +2880,26 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
             </button>
           </div>
 
-          {/* Ad Preview */}
-          {(analyzeAd.image_url || analyzeAd.video_url) && (
+          {/* Ad Preview - static thumbnail only (no video); category placeholder when missing/broken */}
+          {(analyzeAd.image_url || analyzeAd.thumbnail || analyzeAd.video_url) && (
             <div className="mx-6 mt-6 rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#0a0a0a]">
-              {analyzeAd.video_url ? (
-                <VideoPlayer videoUrl={analyzeAd.video_url} />
-              ) : (
-                <img
-                  src={proxyImageUrl(analyzeAd.image_url)}
-                  alt="Ad creative"
-                  className="w-full max-h-56 object-cover"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-              )}
+              <img
+                src={
+                  (analyzeAd.image_url && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(analyzeAd.image_url) && !/^data:video\//i.test(analyzeAd.image_url))
+                    ? proxyImageUrl(analyzeAd.image_url)
+                    : (analyzeAd.thumbnail && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(analyzeAd.thumbnail) && !/^data:video\//i.test(analyzeAd.thumbnail))
+                      ? proxyImageUrl(analyzeAd.thumbnail)
+                      : 'https://via.placeholder.com/600x340?text=Ad'
+                }
+                alt="Ad creative"
+                className="w-full max-h-56 object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const el = e.target as HTMLImageElement;
+                  el.onerror = null;
+                  el.src = 'https://via.placeholder.com/600x340?text=Ad';
+                }}
+              />
             </div>
           )}
 

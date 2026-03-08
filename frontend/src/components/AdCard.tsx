@@ -22,14 +22,23 @@ interface AdCardProps {
   onCardClick?: (ad: AdCardProps['ad']) => void;
 }
 
+const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
+const safeImageSrc = (image?: string, thumbnail?: string, genre?: string) => {
+  const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(genre || 'Ad')}`;
+  const img = (image || '').trim();
+  const thumb = (thumbnail || '').trim();
+  if (img && !isVideoUrl(img)) return img;
+  if (thumb && !isVideoUrl(thumb)) return thumb;
+  return categoryPlaceholder;
+};
+
 const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
   const navigate = useNavigate();
   const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
-  const [imgSrc, setImgSrc] = React.useState(ad.image || ad.thumbnail || categoryPlaceholder);
-  const fallbackSrc = ad.thumbnail || ad.image || categoryPlaceholder;
+  const [imgSrc, setImgSrc] = React.useState(() => safeImageSrc(ad.image, ad.thumbnail, ad.genre));
 
   React.useEffect(() => {
-    setImgSrc(ad.image || ad.thumbnail || categoryPlaceholder);
+    setImgSrc(safeImageSrc(ad.image, ad.thumbnail, ad.genre));
   }, [ad.image, ad.thumbnail, ad.genre]);
 
   const handleCardAreaClick = () => {
@@ -66,7 +75,7 @@ const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
           src={imgSrc}
           alt={ad.title}
           className="absolute inset-0 w-full h-full object-cover"
-          onError={() => setImgSrc((prev) => (prev === fallbackSrc ? categoryPlaceholder : fallbackSrc))}
+          onError={() => setImgSrc(categoryPlaceholder)}
         />
         <div
           className="absolute inset-0"

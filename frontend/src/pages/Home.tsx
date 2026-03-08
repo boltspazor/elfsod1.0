@@ -105,13 +105,16 @@ const Home: React.FC = () => {
     }
   };
 
+  const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
     const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(genre || 'Ad')}`;
     return items.map((item, index) => {
-      const rawImage = item.image_url || item.thumbnail || '';
-      const rawThumb = item.thumbnail || item.image_url || '';
-      const imageUrl = rawImage ? proxyImageUrl(rawImage) : (rawThumb ? proxyImageUrl(rawThumb) : categoryPlaceholder);
-      const thumbUrl = rawThumb ? proxyImageUrl(rawThumb) : (rawImage ? proxyImageUrl(rawImage) : categoryPlaceholder);
+      const rawImage = (item.image_url || item.thumbnail || '').trim();
+      const rawThumb = (item.thumbnail || item.image_url || '').trim();
+      const validImage = rawImage && !isVideoUrl(rawImage) ? proxyImageUrl(rawImage) : '';
+      const validThumb = rawThumb && !isVideoUrl(rawThumb) ? proxyImageUrl(rawThumb) : '';
+      const imageUrl = validImage || validThumb || categoryPlaceholder;
+      const thumbUrl = validThumb || validImage || categoryPlaceholder;
       return {
       id: item.id || `trending-${index}`,
       title: item.title || item.headline || 'Trending Ad',
@@ -758,7 +761,7 @@ const Home: React.FC = () => {
                               >
                                 <div className="aspect-video bg-gray-100 relative">
                                   <img
-                                    src={ad.image || ad.thumbnail || safePlaceholder}
+                                    src={(ad.image && !isVideoUrl(ad.image)) ? ad.image : (ad.thumbnail && !isVideoUrl(ad.thumbnail)) ? ad.thumbnail : safePlaceholder}
                                     alt={ad.title}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -811,7 +814,7 @@ const Home: React.FC = () => {
                           >
                             <div className="aspect-video bg-gray-100 relative">
                               <img
-                                src={ad.image || ad.thumbnail || safePlaceholder}
+                                src={(ad.image && !isVideoUrl(ad.image)) ? ad.image : (ad.thumbnail && !isVideoUrl(ad.thumbnail)) ? ad.thumbnail : safePlaceholder}
                                 alt={ad.title}
                                 className="w-full h-full object-cover"
                                 onError={(e) => { const el = e.target as HTMLImageElement; el.onerror = null; el.src = safePlaceholder; }}
@@ -884,7 +887,7 @@ const Home: React.FC = () => {
                                 >
                                   <div className="aspect-video bg-gray-100 relative">
                                     <img
-                                      src={ad.image || ad.thumbnail || safePlaceholder}
+                                      src={(ad.image && !isVideoUrl(ad.image)) ? ad.image : (ad.thumbnail && !isVideoUrl(ad.thumbnail)) ? ad.thumbnail : safePlaceholder}
                                       alt={ad.title}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
@@ -936,7 +939,7 @@ const Home: React.FC = () => {
                         >
                           <div className="aspect-video bg-gray-100 relative">
                             <img
-                              src={ad.image || ad.thumbnail || safePlaceholder}
+                              src={(ad.image && !isVideoUrl(ad.image)) ? ad.image : (ad.thumbnail && !isVideoUrl(ad.thumbnail)) ? ad.thumbnail : safePlaceholder}
                               alt={ad.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
