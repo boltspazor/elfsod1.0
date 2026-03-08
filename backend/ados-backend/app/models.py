@@ -327,3 +327,17 @@ class UserBrandAsset(Base):
 
     def __repr__(self):
         return f"<UserBrandAsset(id={self.id}, name={self.name}, type={self.type})>"
+
+
+class CampaignAd(Base):
+    """Ads fetched and stored per campaign (from AutoCreate). Fetched dynamically when opening a campaign."""
+    __tablename__ = "campaign_ads"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    campaign_id = Column(Integer, nullable=False)  # AutoCreate campaign id
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    ad_data = Column(JSONB, nullable=False)  # trending ad payload: image_url, title, platform, score, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<CampaignAd(id={self.id}, campaign_id={self.campaign_id})>"

@@ -21,6 +21,7 @@ import BookingPage from './pages/BookingPage';
 /* ✅ NEW PAGE IMPORT */
 import TargetingIntel from './pages/targetingIntel';
 import MyCampaigns from './pages/MyCampaigns';
+import CampaignDetail from './pages/CampaignDetail';
 import BrandIdentity from './pages/BrandIdentity';
 
 function App() {
@@ -147,6 +148,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MyCampaigns />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-campaigns/:campaignId"
+              element={
+                <ProtectedRoute>
+                  <CampaignDetail />
                 </ProtectedRoute>
               }
             />

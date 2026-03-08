@@ -517,6 +517,21 @@ export const BrandIdentityAPI = {
    VIDEO ANALYSIS (Reverse Engineering) – user-scoped, all platforms
 ===================================================== */
 
+/* =====================================================
+   CAMPAIGN ADS – per-campaign ads (fetch if missing, store in DB)
+===================================================== */
+
+export const CampaignAdsAPI = {
+  get: (campaignId: number | string, goal?: string): Promise<{ ads: unknown[]; source: string }> => {
+    const q = goal ? `?goal=${encodeURIComponent(goal)}` : '';
+    return fetchWithAuth(`/api/campaign-ads/${campaignId}${q}`);
+  },
+};
+
+/* =====================================================
+   VIDEO ANALYSIS (Reverse Engineering) – user-scoped, all platforms
+===================================================== */
+
 export const VideoAnalysisAPI = {
   addAd: (url: string) =>
     fetchWithAuth('/api/video-analysis/add', {

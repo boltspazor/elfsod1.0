@@ -19,6 +19,7 @@ From the `ados-backend` directory, with `DATABASE_URL` set (e.g. in `.env`):
 ```bash
 python migrations/run_migration.py 003_user_analyzed_ads.sql
 python migrations/run_migration.py 004_user_brand_assets.sql
+python migrations/run_migration.py 005_campaign_ads.sql
 ```
 
 Use the same Python environment that runs the backend (and that has the DB driver installed).

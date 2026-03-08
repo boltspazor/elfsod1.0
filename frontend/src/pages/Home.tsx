@@ -280,7 +280,7 @@ const Home: React.FC = () => {
                 {publishedCampaigns.slice(0, 3).map(campaign => (
                   <div
                     key={campaign.id}
-                    onClick={() => navigate('/my-campaigns')}
+                    onClick={() => navigate(`/my-campaigns/${campaign.id}`, { state: { campaign } })}
                     style={{
 
                       borderRadius: 16,

@@ -169,10 +169,14 @@ const MyCampaigns: React.FC = () => {
             {filtered.map(campaign => (
               <div
                 key={campaign.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/my-campaigns/${campaign.id}`, { state: { campaign } })}
+                onKeyDown={(e) => e.key === 'Enter' && navigate(`/my-campaigns/${campaign.id}`, { state: { campaign } })}
                 style={{
                   borderRadius: 16,
                   padding: '24px',
-                  cursor: 'default',
+                  cursor: 'pointer',
                   transition: 'transform 0.15s',
                   background: `linear-gradient(#131313, #131313) padding-box,
                     linear-gradient(135deg, #00e5d4, #8b6fff, #ff4fcb) border-box`,

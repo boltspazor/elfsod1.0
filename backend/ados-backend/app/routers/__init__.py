@@ -9,6 +9,7 @@ from . import targ_intel
 from . import sum_metrics
 from . import video_analysis
 from . import brand_identity
+from . import campaign_ads
 
 
-__all__ = ["auth", "users", "competitors", "ads", "platforms", "metrics", "trending", "video_analysis", "brand_identity"]
+__all__ = ["auth", "users", "competitors", "ads", "platforms", "metrics", "trending", "video_analysis", "brand_identity", "campaign_ads"]
