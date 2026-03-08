@@ -12,6 +12,9 @@ interface CarouselAd {
   votes: string;
   tags: string[];
   genre?: string;
+  url?: string;
+  description?: string;
+  engagement?: string;
 }
 
 interface AdCarouselProps {

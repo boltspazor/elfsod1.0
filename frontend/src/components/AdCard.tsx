@@ -12,6 +12,9 @@ interface AdCardProps {
     votes: string;
     tags: string[];
     genre?: string;
+    url?: string;
+    description?: string;
+    engagement?: string;
   };
 }
 
@@ -19,7 +22,11 @@ const AdCard: React.FC<AdCardProps> = ({ ad }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/ads/${ad.id}`);
+    if (ad.url) {
+      window.open(ad.url, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(`/ads/${ad.id}`);
+    }
   };
 
   return (
@@ -96,6 +103,19 @@ const AdCard: React.FC<AdCardProps> = ({ ad }) => {
             ))}
 
           </div>
+          {(ad.url || ad.engagement) && (
+            <div className="mt-3 flex items-center justify-between">
+              {ad.engagement && (
+                <span className="text-xs text-white/80">{ad.engagement} engagement</span>
+              )}
+              <span
+                className="text-sm font-semibold text-cyan-400 hover:text-cyan-300"
+                style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
+              >
+                View Campaign →
+              </span>
+            </div>
+          )}
         </div>
 
       </div>

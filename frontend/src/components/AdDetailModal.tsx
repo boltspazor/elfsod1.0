@@ -380,7 +380,15 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                               <Users className="w-4 h-4" />
                               <span>{exampleAd.votes} votes</span>
                             </div>
-                            <button className="text-sm font-medium text-purple-600 hover:text-purple-700">
+                            <button
+                              type="button"
+                              className="text-sm font-medium text-purple-600 hover:text-purple-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = exampleAd.url || `${window.location.origin}/ads/${exampleAd.id}`;
+                                window.open(url, '_blank', 'noopener,noreferrer');
+                              }}
+                            >
                               View Campaign →
                             </button>
                           </div>

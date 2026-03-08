@@ -55,6 +55,13 @@ const Home: React.FC = () => {
   const [loadingTrending, setLoadingTrending] = useState(false);
   const [showRecommendedModal, setShowRecommendedModal] = useState(false);
   const [showTrendingModal, setShowTrendingModal] = useState(false);
+  // Unified category modal: Fashion, Sports, Food use same pattern as Recommended
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryModalKey, setCategoryModalKey] = useState<'recommended' | 'fashion' | 'sports' | 'food' | 'trending'>('recommended');
+  const [categoryFetchedAds, setCategoryFetchedAds] = useState<AdItem[] | null>(null);
+  const [loadingCategory, setLoadingCategory] = useState(false);
+  // Fetched ads for AdDetailModal "Top Campaign Examples" (by genre when opening from a card)
+  const [modalExampleAds, setModalExampleAds] = useState<AdItem[] | null>(null);
   const isLoggedIn = !!localStorage.getItem('token');
 
   // Map carousel card genres to trending search keywords
@@ -195,51 +202,65 @@ const Home: React.FC = () => {
     const others = cachedList.filter(item => String(item.id) !== String(ad.id));
     setRelatedAds(others.slice(0, 3));
     setTrendingExampleAds(others.slice(0, 4));
+    setModalExampleAds(null);
+    // Fetch category-specific ads for "Top Campaign Examples" in the detail modal
+    const keyword = genreToKeyword[ad.genre || ''] || genreToKeyword[category] || 'advertising campaigns';
+    const minDelay = new Promise<void>(r => setTimeout(r, 400));
+    TrendingAPI.search({
+      keyword,
+      platforms: ['meta', 'instagram', 'youtube'],
+      limit_per_platform: 6,
+      async_mode: false,
+    }).then((result) => {
+      const raw = result?.top_trending ?? [];
+      return mapTrendingToAdFormat(raw.slice(0, 8), category);
+    }).catch(() => [] as AdItem[]).then((ads) => {
+      minDelay.then(() => setModalExampleAds(ads));
+    });
   };
 
-  // Same logic as Ad Surveillance "Trending Ads & Content": use TrendingAPI.search
-  const openRecommendedAndFetch = () => {
-    setShowRecommendedModal(true);
-    setLoadingRecommended(true);
-    setRecommendedFetchedAds(null);
+  const categoryModalTitles: Record<typeof categoryModalKey, string> = {
+    recommended: 'Recommended Campaigns',
+    fashion: 'Fashion Campaigns',
+    sports: 'Sports Campaigns',
+    food: 'Food Campaigns',
+    trending: 'Trending Now',
+  };
+
+  const categorySearchKeywords: Record<typeof categoryModalKey, string> = {
+    recommended: 'advertising campaigns',
+    fashion: 'fashion ads',
+    sports: 'sports ads',
+    food: 'food ads',
+    trending: 'trending ads',
+  };
+
+  // Open category modal and fetch ads (Fashion, Sports, Food, Recommended, Trending – same as Ad Surveillance)
+  const openCategoryModalAndFetch = (key: typeof categoryModalKey) => {
+    setCategoryModalKey(key);
+    setShowCategoryModal(true);
+    setLoadingCategory(true);
+    setCategoryFetchedAds(null);
     const minLoaderMs = 800;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    const keyword = categorySearchKeywords[key];
     Promise.all([
       TrendingAPI.search({
-        keyword: 'advertising campaigns',
+        keyword,
         platforms: ['meta', 'instagram', 'youtube'],
         limit_per_platform: 6,
         async_mode: false,
       }).then((result) => {
         const raw = result?.top_trending ?? [];
-        return mapTrendingToAdFormat(raw.slice(0, 20), 'recommended');
+        return mapTrendingToAdFormat(raw.slice(0, 20), key);
       }).catch(() => [] as AdItem[]),
       minDelay,
-    ]).then(([ads]) => setRecommendedFetchedAds(ads))
-      .finally(() => setLoadingRecommended(false));
+    ]).then(([ads]) => setCategoryFetchedAds(ads))
+      .finally(() => setLoadingCategory(false));
   };
 
-  // Same logic as Ad Surveillance: use TrendingAPI.search for trending content
-  const openTrendingAndFetch = () => {
-    setShowTrendingModal(true);
-    setLoadingTrending(true);
-    setTrendingFetchedAds(null);
-    const minLoaderMs = 800;
-    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
-    Promise.all([
-      TrendingAPI.search({
-        keyword: 'trending ads',
-        platforms: ['meta', 'instagram', 'youtube'],
-        limit_per_platform: 6,
-        async_mode: false,
-      }).then((result) => {
-        const raw = result?.top_trending ?? [];
-        return mapTrendingToAdFormat(raw.slice(0, 20), 'trending');
-      }).catch(() => [] as AdItem[]),
-      minDelay,
-    ]).then(([ads]) => setTrendingFetchedAds(ads))
-      .finally(() => setLoadingTrending(false));
-  };
+  const openRecommendedAndFetch = () => openCategoryModalAndFetch('recommended');
+  const openTrendingAndFetch = () => openCategoryModalAndFetch('trending');
 
   const handleCloseModal = () => {
     setSelectedAd(null);
@@ -478,11 +499,26 @@ const Home: React.FC = () => {
 
     </div>
 
-    {/* Recommended: always show hardcoded cards; on click open modal overlay and fetch ads. */}
+    {/* Any category: on card click open modal and fetch ads for that category (Fashion, Sports, Food, Recommended). */}
     {selectedCategory === 'recommended' ? (
       <AdCarousel
         category="recommended"
         onCardClick={openRecommendedAndFetch}
+      />
+    ) : selectedCategory === 'fashion' ? (
+      <AdCarousel
+        category="fashion"
+        onCardClick={() => openCategoryModalAndFetch('fashion')}
+      />
+    ) : selectedCategory === 'sports' ? (
+      <AdCarousel
+        category="sports"
+        onCardClick={() => openCategoryModalAndFetch('sports')}
+      />
+    ) : selectedCategory === 'food' ? (
+      <AdCarousel
+        category="food"
+        onCardClick={() => openCategoryModalAndFetch('food')}
       />
     ) : (
       <AdCarousel
@@ -557,45 +593,26 @@ const Home: React.FC = () => {
   </div>
 </section> */}
 
-      {/* Recommended overlay modal: shows fetched ads or empty state */}
-      {showRecommendedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setShowRecommendedModal(false)}>
+      {/* Unified category modal: Fashion, Sports, Food, Recommended, Trending – fetched ads; View Campaign → on cards */}
+      {showCategoryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setShowCategoryModal(false)}
+        >
           <div className="bg-[#0B0F1A] rounded-[32px] max-w-6xl w-full max-h-[90vh] overflow-auto p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Recommended Campaigns</h3>
-              <button type="button" onClick={() => setShowRecommendedModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+              <h3 className="text-xl font-semibold text-white">{categoryModalTitles[categoryModalKey]}</h3>
+              <button type="button" onClick={() => setShowCategoryModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            {loadingRecommended ? (
+            {loadingCategory ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4">
                 <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
-                <p className="text-gray-400">Fetching recommended campaigns…</p>
+                <p className="text-gray-400">Fetching campaigns…</p>
               </div>
-            ) : recommendedFetchedAds && recommendedFetchedAds.length > 0 ? (
-              <AdCarousel category="recommended" onCardClick={handleCardClick} ads={recommendedFetchedAds} />
+            ) : categoryFetchedAds && categoryFetchedAds.length > 0 ? (
+              <AdCarousel category={categoryModalKey} onCardClick={handleCardClick} ads={categoryFetchedAds} />
             ) : (
-              <div className="text-gray-400 text-center py-16">No recommended campaigns right now. Try again later.</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Trending overlay modal: shows fetched ads or empty state */}
-      {showTrendingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setShowTrendingModal(false)}>
-          <div className="bg-[#0B0F1A] rounded-[32px] max-w-6xl w-full max-h-[90vh] overflow-auto p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Trending Now</h3>
-              <button type="button" onClick={() => setShowTrendingModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-            </div>
-            {loadingTrending ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
-                <p className="text-gray-400">Fetching trending campaigns…</p>
-              </div>
-            ) : trendingFetchedAds && trendingFetchedAds.length > 0 ? (
-              <AdCarousel category="trending" onCardClick={handleCardClick} ads={trendingFetchedAds} />
-            ) : (
-              <div className="text-gray-400 text-center py-16">No trending campaigns right now. Try again later.</div>
+              <div className="text-gray-400 text-center py-16">No campaigns right now. Try again later.</div>
             )}
           </div>
         </div>
@@ -607,7 +624,7 @@ const Home: React.FC = () => {
           ad={selectedAd}
           onClose={handleCloseModal}
           relatedAds={relatedAds}
-          trendingExampleAds={trendingExampleAds}
+          trendingExampleAds={modalExampleAds ?? trendingExampleAds}
         />
       )}
 
