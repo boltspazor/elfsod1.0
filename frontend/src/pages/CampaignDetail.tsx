@@ -115,26 +115,19 @@ const CampaignDetail: React.FC = () => {
       .finally(() => setCampaignLoading(false));
   }, [id, navigate, location.state?.campaign]);
 
-  // Fetch ads for this campaign (from DB or dynamically)
+  // Use stored campaign creatives (assets) as the ads
   useEffect(() => {
-    if (id == null || !campaign) {
+    if (!campaign) {
+      setAds([]);
       setAdsLoading(false);
       return;
     }
     setAdsLoading(true);
     setAdsError(null);
-    const goal = campaign.campaign_goal || 'ads';
-    CampaignAdsAPI.get(id, goal)
-      .then((res) => {
-        const list = Array.isArray(res.ads) ? res.ads : [];
-        setAds(mapApiAdsToAdItem(list as Record<string, unknown>[]));
-      })
-      .catch((err) => {
-        setAdsError(err instanceof Error ? err.message : 'Failed to load ads');
-        setAds([]);
-      })
-      .finally(() => setAdsLoading(false));
-  }, [id, campaign, campaignLoading]);
+    const fromAssets = campaignAssetsToAdItems(campaign);
+    setAds(fromAssets);
+    setAdsLoading(false);
+  }, [campaign]);
 
   const handleCardClick = (ad: AdItem) => {
     setSelectedAd(ad);
