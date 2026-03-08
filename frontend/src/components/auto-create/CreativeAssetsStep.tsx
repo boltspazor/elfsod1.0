@@ -246,18 +246,24 @@ const UploadView = ({
         }
       }
 
-      // Step 5 — fetch results (linked video: backend adds all clips at once, so retry briefly if 0)
+      // Step 5 — fetch results (linked video: backend adds all clips at once; retry while still_generating or 0)
       setProgress('Fetching results…');
       let raw: Record<string, string>[] = [];
       const isLinkedVideo = linkedChain && type === 'video';
-      for (let attempt = 0; attempt < (isLinkedVideo ? 6 : 1); attempt++) {
+      const maxAttempts = isLinkedVideo ? 30 : 1; // up to ~60s retry for video
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const resultRes = await fetch(`${API}/get-generated-assets/${cid}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!resultRes.ok) throw new Error(`Failed to fetch results (${resultRes.status})`);
-        const resultData = await resultRes.json() as { assets?: Record<string, string>[] };
+        const resultData = await resultRes.json() as {
+          assets?: Record<string, string>[];
+          still_generating?: boolean;
+        };
         raw = resultData.assets ?? [];
-        if (raw.length > 0 || !isLinkedVideo) break;
+        const stillGenerating = resultData.still_generating === true;
+        if (raw.length > 0) break;
+        if (!isLinkedVideo || !stillGenerating) break;
         await new Promise(r => setTimeout(r, 2000));
       }
 
@@ -273,7 +279,9 @@ const UploadView = ({
       setIsGenerating(false);
 
       if (parsed.length === 0) {
-        setError('Generation completed but no assets were returned. Ensure the backend has a valid RUNWAY_API_KEY.');
+        setError(
+          'No assets were returned. If you generated videos, the server may still be saving them—try again in a moment. Otherwise check backend logs for Runway or download errors.'
+        );
       }
     } catch (err: unknown) {
       setIsUploading(false);

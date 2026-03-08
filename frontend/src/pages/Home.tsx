@@ -48,13 +48,15 @@ const Home: React.FC = () => {
   const [loadingCategory, setLoadingCategory] = useState(false);
   // Fetched ads for AdDetailModal "Top Campaign Examples" (by genre when opening from a card)
   const [modalExampleAds, setModalExampleAds] = useState<AdItem[] | null>(null);
-  // Recommended: white modal – fetch using hardcoded category keywords (Shoes, Fashion, Food, Sports)
+  // Recommended: white modal – fetch by category; show per-category sections (no mixed grid)
   const [showRecommendedWhiteModal, setShowRecommendedWhiteModal] = useState(false);
   const [recommendedWhiteAds, setRecommendedWhiteAds] = useState<AdItem[] | null>(null);
+  const [recommendedWhiteByCategory, setRecommendedWhiteByCategory] = useState<Record<string, AdItem[]>>({});
   const [loadingRecommendedWhite, setLoadingRecommendedWhite] = useState(false);
-  // Trending: same white modal + multi-keyword fetch as Recommended
+  // Trending: same – per-category sections when opened as "Trending Now"; single list when opened by genre
   const [showTrendingWhiteModal, setShowTrendingWhiteModal] = useState(false);
   const [trendingWhiteAds, setTrendingWhiteAds] = useState<AdItem[] | null>(null);
+  const [trendingWhiteByCategory, setTrendingWhiteByCategory] = useState<Record<string, AdItem[]>>({});
   const [loadingTrendingWhite, setLoadingTrendingWhite] = useState(false);
   const [trendingWhiteModalTitle, setTrendingWhiteModalTitle] = useState('Trending Now');
   // Category-specific ads for main section carousel (food / fashion / sports only)
@@ -297,6 +299,7 @@ const Home: React.FC = () => {
   const openRecommendedWhiteModal = () => {
     setShowRecommendedWhiteModal(true);
     setRecommendedWhiteAds(null);
+    setRecommendedWhiteByCategory({});
     setLoadingRecommendedWhite(true);
     const minLoaderMs = 600;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
@@ -310,45 +313,28 @@ const Home: React.FC = () => {
         })
           .then((result) => {
             const raw = result?.top_trending ?? [];
-            return mapTrendingToAdFormat(raw.slice(0, 5), keyword);
+            return { keyword, ads: mapTrendingToAdFormat(raw.slice(0, 5), keyword) };
           })
-          .catch(() => [] as AdItem[])
+          .catch(() => ({ keyword, ads: [] as AdItem[] }))
       )
     )
       .then((results) => {
-        const seen = new Set<string>();
-        const merged: AdItem[] = [];
-        const maxPerSource = 5;
-        for (let i = 0; i < maxPerSource; i++) {
-          for (const ads of results) {
-            if (ads[i]) {
-              const ad = ads[i];
-              const key = String(ad.id);
-              if (!seen.has(key)) {
-                seen.add(key);
-                merged.push(ad);
-              }
-            }
-          }
-        }
-        for (const ads of results) {
-          for (const ad of ads) {
-            const key = String(ad.id);
-            if (!seen.has(key)) {
-              seen.add(key);
-              merged.push(ad);
-            }
-          }
-        }
-        return merged.slice(0, 20);
+        const byCategory: Record<string, AdItem[]> = {};
+        const flat: AdItem[] = [];
+        results.forEach((r) => {
+          if (r.keyword) byCategory[r.keyword] = r.ads;
+          r.ads.forEach((ad) => flat.push(ad));
+        });
+        return { byCategory, flat };
       })
-      .then((ads) => minDelay.then(() => ads))
-      .then((ads) => {
-        setRecommendedWhiteAds(ads);
-        if (ads.length > 0) {
-          setSelectedAd(ads[0]);
-          setRelatedAds(ads.slice(1, 4));
-          setTrendingExampleAds(ads.slice(0, 8));
+      .then(({ byCategory, flat }) => minDelay.then(() => ({ byCategory, flat })))
+      .then(({ byCategory, flat }) => {
+        setRecommendedWhiteByCategory(byCategory);
+        setRecommendedWhiteAds(flat);
+        if (flat.length > 0) {
+          setSelectedAd(flat[0]);
+          setRelatedAds(flat.slice(1, 4));
+          setTrendingExampleAds(flat.slice(0, 8));
           setShowRecommendedWhiteModal(false);
           document.body.style.overflow = 'hidden';
         }
@@ -356,11 +342,12 @@ const Home: React.FC = () => {
       .finally(() => setLoadingRecommendedWhite(false));
   };
 
-  // Trending: mixed fetch (Shoes, Fashion, Food, Sports) when opening generic "Trending"
+  // Trending: per-category sections (Shoes, Fashion, Food, Sports) when opening generic "Trending Now"
   const openTrendingWhiteModal = () => {
     setTrendingWhiteModalTitle('Trending Now');
     setShowTrendingWhiteModal(true);
     setTrendingWhiteAds(null);
+    setTrendingWhiteByCategory({});
     setLoadingTrendingWhite(true);
     const minLoaderMs = 600;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
@@ -374,45 +361,28 @@ const Home: React.FC = () => {
         })
           .then((result) => {
             const raw = result?.top_trending ?? [];
-            return mapTrendingToAdFormat(raw.slice(0, 5), keyword);
+            return { keyword, ads: mapTrendingToAdFormat(raw.slice(0, 5), keyword) };
           })
-          .catch(() => [] as AdItem[])
+          .catch(() => ({ keyword, ads: [] as AdItem[] }))
       )
     )
       .then((results) => {
-        const seen = new Set<string>();
-        const merged: AdItem[] = [];
-        const maxPerSource = 5;
-        for (let i = 0; i < maxPerSource; i++) {
-          for (const ads of results) {
-            if (ads[i]) {
-              const ad = ads[i];
-              const key = String(ad.id);
-              if (!seen.has(key)) {
-                seen.add(key);
-                merged.push(ad);
-              }
-            }
-          }
-        }
-        for (const ads of results) {
-          for (const ad of ads) {
-            const key = String(ad.id);
-            if (!seen.has(key)) {
-              seen.add(key);
-              merged.push(ad);
-            }
-          }
-        }
-        return merged.slice(0, 20);
+        const byCategory: Record<string, AdItem[]> = {};
+        const flat: AdItem[] = [];
+        results.forEach((r) => {
+          if (r.keyword) byCategory[r.keyword] = r.ads;
+          r.ads.forEach((ad) => flat.push(ad));
+        });
+        return { byCategory, flat };
       })
-      .then((ads) => minDelay.then(() => ads))
-      .then((ads) => {
-        setTrendingWhiteAds(ads);
-        if (ads.length > 0) {
-          setSelectedAd(ads[0]);
-          setRelatedAds(ads.slice(1, 4));
-          setTrendingExampleAds(ads.slice(0, 8));
+      .then(({ byCategory, flat }) => minDelay.then(() => ({ byCategory, flat })))
+      .then(({ byCategory, flat }) => {
+        setTrendingWhiteByCategory(byCategory);
+        setTrendingWhiteAds(flat);
+        if (flat.length > 0) {
+          setSelectedAd(flat[0]);
+          setRelatedAds(flat.slice(1, 4));
+          setTrendingExampleAds(flat.slice(0, 8));
           setShowTrendingWhiteModal(false);
           document.body.style.overflow = 'hidden';
         }
@@ -420,12 +390,13 @@ const Home: React.FC = () => {
       .finally(() => setLoadingTrendingWhite(false));
   };
 
-  // When user clicks a specific card in Trending (e.g. "Home Decor Ads"), fetch only that category's ads
+  // When user clicks a specific card in Trending (e.g. "Home Decor Ads"), fetch only that category's ads (single section)
   const openTrendingWhiteModalWithGenre = (genre: string, modalTitle: string) => {
     const keyword = genreToKeyword[genre] || genre;
     setTrendingWhiteModalTitle(modalTitle);
     setShowTrendingWhiteModal(true);
     setTrendingWhiteAds(null);
+    setTrendingWhiteByCategory({}); // single category = no sectioned view
     setLoadingTrendingWhite(true);
     const minLoaderMs = 600;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
@@ -701,46 +672,58 @@ const Home: React.FC = () => {
                     <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                     <p className="text-gray-500">Fetching recommended campaigns…</p>
                   </div>
-                ) : recommendedWhiteAds && recommendedWhiteAds.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {recommendedWhiteAds.map((ad) => (
-                      <div
-                        key={ad.id}
-                        className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => {
-                          const others = recommendedWhiteAds.filter((a) => String(a.id) !== String(ad.id));
-                          setRelatedAds(others.slice(0, 3));
-                          setTrendingExampleAds(others.slice(0, 4));
-                          setSelectedAd(ad);
-                          setShowRecommendedWhiteModal(false);
-                          document.body.style.overflow = 'hidden';
-                        }}
-                      >
-                        <div className="aspect-video bg-gray-100 relative">
-                          <img
-                            src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
-                            alt={ad.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
-                          />
-                        </div>
-                        <div className="p-3">
-                          <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
-                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                            <span>⭐ {ad.rating} ({ad.votes})</span>
-                            {ad.url && (
-                              <button
-                                type="button"
-                                className="text-purple-600 font-medium hover:text-purple-700"
-                                onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                ) : (Object.keys(recommendedWhiteByCategory).length > 0 || (recommendedWhiteAds && recommendedWhiteAds.length > 0)) ? (
+                  <div className="space-y-8">
+                    {RECOMMENDED_KEYWORDS.map((keyword) => {
+                      const ads = recommendedWhiteByCategory[keyword] ?? [];
+                      if (ads.length === 0) return null;
+                      return (
+                        <div key={keyword}>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {ads.map((ad) => (
+                              <div
+                                key={ad.id}
+                                className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => {
+                                  const all = recommendedWhiteAds ?? [];
+                                  const others = all.filter((a) => String(a.id) !== String(ad.id));
+                                  setRelatedAds(others.slice(0, 3));
+                                  setTrendingExampleAds(all.slice(0, 4));
+                                  setSelectedAd(ad);
+                                  setShowRecommendedWhiteModal(false);
+                                  document.body.style.overflow = 'hidden';
+                                }}
                               >
-                                View Campaign →
-                              </button>
-                            )}
+                                <div className="aspect-video bg-gray-100 relative">
+                                  <img
+                                    src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                                    alt={ad.title}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                                  />
+                                </div>
+                                <div className="p-3">
+                                  <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
+                                  <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                                    <span>⭐ {ad.rating} ({ad.votes})</span>
+                                    {ad.url && (
+                                      <button
+                                        type="button"
+                                        className="text-purple-600 font-medium hover:text-purple-700"
+                                        onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                                      >
+                                        View Campaign →
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-gray-500 text-center py-16">No recommended campaigns right now. Try again later.</div>
@@ -767,47 +750,102 @@ const Home: React.FC = () => {
                     <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                     <p className="text-gray-500">Fetching campaigns…</p>
                   </div>
-                ) : trendingWhiteAds && trendingWhiteAds.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {trendingWhiteAds.map((ad) => (
-                      <div
-                        key={ad.id}
-                        className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => {
-                          const others = trendingWhiteAds.filter((a) => String(a.id) !== String(ad.id));
-                          setRelatedAds(others.slice(0, 3));
-                          setTrendingExampleAds(others.slice(0, 4));
-                          setSelectedAd(ad);
-                          setShowTrendingWhiteModal(false);
-                          document.body.style.overflow = 'hidden';
-                        }}
-                      >
-                        <div className="aspect-video bg-gray-100 relative">
-                          <img
-                            src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
-                            alt={ad.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
-                          />
-                        </div>
-                        <div className="p-3">
-                          <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
-                          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                            <span>⭐ {ad.rating} ({ad.votes})</span>
-                            {ad.url && (
-                              <button
-                                type="button"
-                                className="text-purple-600 font-medium hover:text-purple-700"
-                                onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
-                              >
-                                View Campaign →
-                              </button>
-                            )}
+                ) : (Object.keys(trendingWhiteByCategory).length > 0 || (trendingWhiteAds && trendingWhiteAds.length > 0)) ? (
+                  Object.keys(trendingWhiteByCategory).length > 0 ? (
+                    <div className="space-y-8">
+                      {RECOMMENDED_KEYWORDS.map((keyword) => {
+                        const ads = trendingWhiteByCategory[keyword] ?? [];
+                        if (ads.length === 0) return null;
+                        return (
+                          <div key={keyword}>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              {ads.map((ad) => (
+                                <div
+                                  key={ad.id}
+                                  className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                  onClick={() => {
+                                    const all = trendingWhiteAds ?? [];
+                                    const others = all.filter((a) => String(a.id) !== String(ad.id));
+                                    setRelatedAds(others.slice(0, 3));
+                                    setTrendingExampleAds(all.slice(0, 4));
+                                    setSelectedAd(ad);
+                                    setShowTrendingWhiteModal(false);
+                                    document.body.style.overflow = 'hidden';
+                                  }}
+                                >
+                                  <div className="aspect-video bg-gray-100 relative">
+                                    <img
+                                      src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                                      alt={ad.title}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                                    />
+                                  </div>
+                                  <div className="p-3">
+                                    <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
+                                    <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                                      <span>⭐ {ad.rating} ({ad.votes})</span>
+                                      {ad.url && (
+                                        <button
+                                          type="button"
+                                          className="text-purple-600 font-medium hover:text-purple-700"
+                                          onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                                        >
+                                          View Campaign →
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {trendingWhiteAds!.map((ad) => (
+                        <div
+                          key={ad.id}
+                          className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => {
+                            const others = trendingWhiteAds!.filter((a) => String(a.id) !== String(ad.id));
+                            setRelatedAds(others.slice(0, 3));
+                            setTrendingExampleAds(trendingWhiteAds!.slice(0, 4));
+                            setSelectedAd(ad);
+                            setShowTrendingWhiteModal(false);
+                            document.body.style.overflow = 'hidden';
+                          }}
+                        >
+                          <div className="aspect-video bg-gray-100 relative">
+                            <img
+                              src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                              alt={ad.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                            />
+                          </div>
+                          <div className="p-3">
+                            <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
+                            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                              <span>⭐ {ad.rating} ({ad.votes})</span>
+                              {ad.url && (
+                                <button
+                                  type="button"
+                                  className="text-purple-600 font-medium hover:text-purple-700"
+                                  onClick={(e) => { e.stopPropagation(); if (ad.url) window.open(ad.url, '_blank', 'noopener,noreferrer'); }}
+                                >
+                                  View Campaign →
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )
                 ) : (
                   <div className="text-gray-500 text-center py-16">No trending campaigns right now. Try again later.</div>
                 )}

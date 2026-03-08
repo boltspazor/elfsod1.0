@@ -1057,7 +1057,9 @@ def get_generated_assets(campaign_id: str):
         
         campaign = tasks_store[campaign_id]
         generated_assets = campaign.get('generated_assets', [])
-        
+        # Let frontend know to retry when linked video chain is still running and no assets yet
+        still_generating = bool(campaign.get('linked_chain') and len(generated_assets) == 0)
+
         # Format assets for frontend
         formatted_assets = []
         for i, asset in enumerate(generated_assets):
@@ -1077,14 +1079,15 @@ def get_generated_assets(campaign_id: str):
                 "status": asset.get('status', 'completed')
             })
         
-        logger.info(f"Returning {len(formatted_assets)} generated assets for campaign: {campaign_id}")
-        
+        logger.info(f"Returning {len(formatted_assets)} generated assets for campaign: {campaign_id} (still_generating={still_generating})")
+
         return jsonify({
             "success": True,
             "campaign_id": campaign_id,
             "assets": formatted_assets,
             "count": len(formatted_assets),
-            "total_generating": len(generation_tasks.get(campaign_id, []))
+            "total_generating": len(generation_tasks.get(campaign_id, [])),
+            "still_generating": still_generating,
         }), 200
         
     except Exception as e:
