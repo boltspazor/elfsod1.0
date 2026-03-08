@@ -142,12 +142,6 @@ const Navigation: React.FC = () => {
                 {profileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#1a1a1a] border border-gray-700 shadow-xl py-1 z-50">
                     <button
-                      onClick={() => { setProfileOpen(false); navigate('/my-campaigns'); }}
-                      className="w-full px-4 py-3 text-left text-gray-200 hover:bg-white/10 transition-colors font-medium"
-                    >
-                      Published Ads
-                    </button>
-                    <button
                       onClick={() => { setProfileOpen(false); navigate('/brand-identity'); }}
                       className="w-full px-4 py-3 text-left text-gray-200 hover:bg-white/10 transition-colors font-medium"
                     >

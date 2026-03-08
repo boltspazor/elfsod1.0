@@ -4,6 +4,7 @@ import base64
 import uuid
 import json
 import time
+import threading
 import requests
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv
@@ -55,6 +56,8 @@ VALID_RATIOS = [
 # In-memory storage for tasks (in production, use a database)
 tasks_store = {}
 generation_tasks = {}  # Separate storage for tracking individual tasks
+# For linked video chain: campaign_id -> { task_id -> next_task_id }
+chain_next_task = {}
 
 # -----------------------------
 # Helper Functions
@@ -230,6 +233,127 @@ def create_video_generation_task(image_data_uri: str, prompt_text: str, variatio
         logger.error(f"Error creating video generation task: {e}")
         raise
 
+
+def create_video_to_video_task(video_uri: str, prompt_text: str) -> str:
+    """
+    Create video-to-video task using Runway gen4_aleph.
+    Input video is the previous clip's output; output continues from where it left off.
+    """
+    try:
+        clean_prompt = prompt_text.replace("@product", "").strip()
+        payload = {
+            "model": "gen4_aleph",
+            "videoUri": video_uri,
+            "promptText": clean_prompt,
+        }
+        logger.info(f"Creating video_to_video (gen4_aleph) task, prompt: {clean_prompt[:80]}...")
+        response = requests.post(
+            f"{RUNWAY_BASE_URL}/v1/video_to_video",
+            headers=RUNWAY_HEADERS,
+            json=payload,
+            timeout=30,
+        )
+        logger.info(f"Runway video_to_video API Response: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"Runway video_to_video Error: {response.text}")
+            response.raise_for_status()
+        task_data = response.json()
+        task_id = task_data.get("id")
+        if not task_id:
+            raise Exception("No task ID from Runway video_to_video API")
+        logger.info(f"Video-to-video task created: {task_id}")
+        return task_id
+    except Exception as e:
+        logger.error(f"Error creating video_to_video task: {e}")
+        raise
+
+
+def get_output_video_url(task: dict) -> str:
+    """Extract output video URL from Runway task result (handles list or dict output)."""
+    output = task.get("output")
+    if not output:
+        return None
+    if isinstance(output, list) and len(output) > 0:
+        return output[0] if isinstance(output[0], str) else output[0].get("url") or output[0].get("uri")
+    if isinstance(output, dict):
+        return output.get("video") or output.get("uri") or output.get("url")
+    return None
+
+
+def run_linked_video_chain(
+    campaign_id: str,
+    image_data_uri: str,
+    user_id: str,
+    ad_type: str,
+    campaign_goal: str,
+    num_clips: int,
+    shared: dict,
+):
+    """
+    Run a linked video sequence in a background thread:
+    Clip 1 = image_to_video; Clip 2..N = video_to_video (gen4_aleph) using previous clip output.
+    Each clip starts where the previous ended.
+    """
+    global chain_next_task
+    try:
+        if campaign_id not in chain_next_task:
+            chain_next_task[campaign_id] = {}
+        prev_output_url = None
+        prev_task_id = None
+
+        for i in range(num_clips):
+            variation = i + 1
+            prompt_text = generate_video_prompt(ad_type, campaign_goal, variation)
+
+            if i == 0:
+                task_id = create_video_generation_task(image_data_uri, prompt_text, variation)
+            else:
+                task_id = create_video_to_video_task(prev_output_url, prompt_text)
+
+            task_info = {
+                "task_id": task_id,
+                "campaign_id": campaign_id,
+                "user_id": user_id,
+                "asset_type": "video",
+                "ad_type": ad_type,
+                "campaign_goal": campaign_goal,
+                "status": "processing",
+                "variation": variation,
+                "started_at": time.time(),
+                "prompt": prompt_text,
+            }
+            if campaign_id not in generation_tasks:
+                generation_tasks[campaign_id] = []
+            generation_tasks[campaign_id].append(task_info)
+
+            if prev_task_id is not None:
+                chain_next_task[campaign_id][prev_task_id] = task_id
+
+            if i == 0:
+                shared["first_task_id"] = task_id
+                ev = shared.get("event")
+                if ev is not None:
+                    ev.set()
+
+            result = poll_task_status(task_id)
+            if not result.get("success"):
+                logger.error(f"Linked video clip {variation} failed: {result.get('error')}")
+                break
+            prev_output_url = result.get("output_url")
+            prev_task_id = task_id
+            if not prev_output_url:
+                logger.error(f"Linked video clip {variation} succeeded but no output URL")
+                break
+
+        logger.info(f"Linked video chain finished for campaign {campaign_id} up to clip {variation}")
+    except Exception as e:
+        logger.error(f"Linked video chain error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        if shared.get("event"):
+            shared["event"].set()
+
+
 def poll_task_status(task_id: str):
     """Poll Runway ML task status with better logging"""
     max_attempts = 300  # 5 minutes with 1-second intervals (videos take longer)
@@ -258,7 +382,7 @@ def poll_task_status(task_id: str):
             logger.info(f"Task {task_id} status: {status} (attempt {attempt + 1}/{max_attempts})")
             
             if status == "SUCCEEDED":
-                output_url = task.get("output", [])[0] if task.get("output") else None
+                output_url = get_output_video_url(task)
                 if output_url:
                     logger.info(f"Task {task_id} succeeded! Output URL: {output_url[:50]}...")
                     return {
@@ -569,40 +693,64 @@ def generate_assets():
                 campaign['generated_assets'] = [a for a in campaign['generated_assets'] if a.get('type') != asset_type]
         
         task_ids = []
-        
+        linked_video_shared = None  # for video: shared state with background thread
+
+        if asset_type == 'video':
+            # Linked video chain: clip 1 = image_to_video, clip 2..N = video_to_video (gen4_aleph)
+            # Run in background thread; we return the first task_id so frontend can poll
+            linked_video_shared = {"first_task_id": None, "event": threading.Event()}
+            thread = threading.Thread(
+                target=run_linked_video_chain,
+                kwargs={
+                    "campaign_id": campaign_id,
+                    "image_data_uri": image_data_uri,
+                    "user_id": user_id,
+                    "ad_type": ad_type,
+                    "campaign_goal": campaign_goal,
+                    "num_clips": num_variations,
+                    "shared": linked_video_shared,
+                },
+                daemon=True,
+            )
+            thread.start()
+            # Wait up to 20s for first task to be created
+            linked_video_shared["event"].wait(timeout=20)
+            first_task_id = linked_video_shared.get("first_task_id")
+            if not first_task_id:
+                logger.error("Linked video chain did not produce first task_id in time")
+                return jsonify({"success": False, "error": "Video chain failed to start"}), 500
+            task_ids = [first_task_id]
+            campaign['status'] = 'generating_video'
+            tasks_store[campaign_id] = campaign
+            logger.info(f"Started linked video chain for campaign {campaign_id}, first task: {first_task_id}")
+            return jsonify({
+                "success": True,
+                "message": "Started linked video sequence (each clip continues from the previous)",
+                "task_ids": task_ids,
+                "campaign_id": campaign_id,
+                "asset_type": asset_type,
+                "variations": num_variations,
+                "linked_chain": True,
+                "estimated_time": "2-5 minutes per clip; clips generate one after another",
+                "note": "Videos are linked: clip 2 starts where clip 1 ends, etc. Poll this task_id; when complete, poll the next_task_id from the response for the next clip.",
+            }), 200
+
         logger.info(f"📝 Starting loop to create {num_variations} tasks...")
         for i in range(num_variations):
             try:
                 logger.info(f"🔄 Creating task {i+1}/{num_variations}...")
-                if asset_type == 'image':
-                    # Generate trend-aware prompt for images
-                    base_prompt = f"Create a professional advertisement background for {ad_type}. Campaign goal: {campaign_goal}. Use modern, clean design with the product placed naturally."
-                    prompt_text = generate_trend_aware_prompt(
-                        base_prompt,
-                        ad_type,
-                        campaign_goal
-                    )
-                    
-                    task_id = create_image_generation_task(
-                        image_data_uri,
-                        prompt_text,
-                        i + 1
-                    )
-                else:  # video
-                    # Generate specific video prompt
-                    prompt_text = generate_video_prompt(
-                        ad_type,
-                        campaign_goal,
-                        i + 1
-                    )
-                    
-                    task_id = create_video_generation_task(
-                        image_data_uri,
-                        prompt_text,
-                        i + 1
-                    )
-                
-                # Store task info
+                # Images only (video handled above)
+                base_prompt = f"Create a professional advertisement background for {ad_type}. Campaign goal: {campaign_goal}. Use modern, clean design with the product placed naturally."
+                prompt_text = generate_trend_aware_prompt(
+                    base_prompt,
+                    ad_type,
+                    campaign_goal
+                )
+                task_id = create_image_generation_task(
+                    image_data_uri,
+                    prompt_text,
+                    i + 1
+                )
                 task_info = {
                     "task_id": task_id,
                     "campaign_id": campaign_id,
@@ -615,52 +763,34 @@ def generate_assets():
                     "started_at": time.time(),
                     "prompt": prompt_text
                 }
-                
-                # Store in generation tasks
                 if campaign_id not in generation_tasks:
                     generation_tasks[campaign_id] = []
                 generation_tasks[campaign_id].append(task_info)
-                
                 task_ids.append(task_id)
                 logger.info(f"✅ Created {asset_type} generation task {i+1}/{num_variations}: {task_id}")
-                logger.info(f"📊 Total tasks created so far: {len(task_ids)}")
-                
-                # Add small delay between task creation
                 if i < num_variations - 1:
                     time.sleep(1)
-                    
             except Exception as e:
                 logger.error(f"❌ Failed to create variation {i+1}/{num_variations}: {str(e)}")
-                logger.error(f"❌ Error type: {type(e).__name__}")
                 import traceback
-                logger.error(f"❌ Traceback: {traceback.format_exc()}")
-                logger.error(f"📊 Continuing with remaining tasks. Current task count: {len(task_ids)}")
-                # Continue with other variations even if one fails
-        
-        logger.info(f"🎬 Finished task creation loop. Total tasks created: {len(task_ids)}/{num_variations}")
-        
+                logger.error(traceback.format_exc())
+                # Continue with other variations
+
         if not task_ids:
-            logger.error("⚠️ No tasks were created successfully!")
             return jsonify({"success": False, "error": "Failed to create any generation tasks"}), 500
-        
-        logger.info(f"✅ Successfully created {len(task_ids)} tasks")
-        
-        # Update campaign status
+
         campaign['status'] = f'generating_{asset_type}'
         tasks_store[campaign_id] = campaign
-        
-        logger.info(f"Started {len(task_ids)} {asset_type} generation tasks for campaign: {campaign_id}")
-        logger.info(f"🚀 Returning response with {len(task_ids)} task_ids: {task_ids}")
-        
+
         return jsonify({
             "success": True,
             "message": f"Started {len(task_ids)} {asset_type} generation tasks",
             "task_ids": task_ids,
             "campaign_id": campaign_id,
             "asset_type": asset_type,
-            "variations": len(task_ids),  # Actual number of tasks created
-            "estimated_time": "2-5 minutes per video" if asset_type == 'video' else "1-3 minutes per image",
-            "note": f"Generating {len(task_ids)} {asset_type}s. They will appear one at a time as they're generated. All {len(task_ids)} will be available for download."
+            "variations": len(task_ids),
+            "estimated_time": "1-3 minutes per image",
+            "note": f"Generating {len(task_ids)} {asset_type}s. They will appear one at a time as they're generated."
         }), 200
         
     except Exception as e:
@@ -704,11 +834,13 @@ def check_status(task_id: str):
         campaign = tasks_store.get(campaign_id, {})
         generated_assets = campaign.get('generated_assets', [])
         
+        next_task_id = chain_next_task.get(campaign_id, {}).get(task_id)
+
         for asset in generated_assets:
             if asset.get('task_id') == task_id:
                 # Task already completed and stored
                 logger.info(f"Task {task_id} already completed, returning stored asset")
-                return jsonify({
+                resp = {
                     "success": True,
                     "status": "completed",
                     "asset_type": task_info.get('asset_type'),
@@ -722,8 +854,11 @@ def check_status(task_id: str):
                     },
                     "variation": task_info.get('variation'),
                     "message": f"{task_info.get('asset_type').capitalize()} generation completed"
-                }), 200
-        
+                }
+                if next_task_id is not None:
+                    resp["next_task_id"] = next_task_id
+                return jsonify(resp), 200
+
         # Poll Runway for status
         logger.info(f"Polling Runway for task status: {task_id}")
         result = poll_task_status(task_id)
@@ -772,8 +907,7 @@ def check_status(task_id: str):
                 tasks_store[campaign_id] = campaign
                 
                 logger.info(f"Task {task_id} completed and stored successfully")
-                
-                return jsonify({
+                resp = {
                     "success": True,
                     "status": "completed",
                     "asset_type": asset_type,
@@ -787,8 +921,11 @@ def check_status(task_id: str):
                     },
                     "variation": task_info.get('variation'),
                     "message": f"{asset_type.capitalize()} generation completed successfully"
-                }), 200
-                
+                }
+                if next_task_id is not None:
+                    resp["next_task_id"] = next_task_id
+                return jsonify(resp), 200
+
             except Exception as e:
                 logger.error(f"Error processing completed task {task_id}: {e}")
                 task_info['status'] = 'failed'

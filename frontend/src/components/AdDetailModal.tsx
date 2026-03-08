@@ -13,6 +13,7 @@ interface AdItem {
   engagement?: string;
   description?: string;
   url?: string;
+  thumbnail?: string;
 }
 
 interface AdDetailModalProps {
@@ -300,12 +301,13 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
             <X className="w-6 h-6 text-white" />
           </button>
 
-          {/* Hero Section */}
-          <div className="relative h-96">
+          {/* Hero Section - always show image or thumbnail */}
+          <div className="relative h-96 bg-gray-200">
             <img
-              src={ad.image}
+              src={ad.image || ad.thumbnail || 'https://via.placeholder.com/800x400?text=No+Image'}
               alt={ad.title}
               className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).src = ad.thumbnail || 'https://via.placeholder.com/800x400?text=No+Image'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
             
@@ -370,12 +372,13 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                           }
                         }}
                       >
-                        {/* Ad Image */}
-                        <div className="relative h-48 overflow-hidden">
+                        {/* Ad Image - always show image or thumbnail */}
+                        <div className="relative h-48 overflow-hidden bg-gray-200">
                           <img
-                            src={exampleAd.image}
+                            src={exampleAd.image || exampleAd.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'}
                             alt={exampleAd.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => { (e.target as HTMLImageElement).src = exampleAd.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'; }}
                           />
                           {/* Rating Badge */}
                           <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-black/80 px-3 py-1.5 backdrop-blur-sm">
@@ -438,11 +441,14 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                         }
                       }}
                     >
-                      <img
-                        src={relatedAd.image}
-                        alt={relatedAd.title}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shrink-0">
+                        <img
+                          src={relatedAd.image || relatedAd.thumbnail || 'https://via.placeholder.com/64?text=Ad'}
+                          alt={relatedAd.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = relatedAd.thumbnail || 'https://via.placeholder.com/64?text=Ad'; }}
+                        />
+                      </div>
                       <div>
                         <div className="font-semibold text-gray-900 line-clamp-1">
                           {relatedAd.title}

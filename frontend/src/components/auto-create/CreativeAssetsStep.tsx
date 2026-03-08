@@ -28,8 +28,8 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-// ─── Helper: poll task until done ─────────────────────────────
-async function pollTask(taskId: string): Promise<void> {
+// ─── Helper: poll task until done; returns response when completed ─────────────────────────────
+async function pollTask(taskId: string): Promise<{ status: string; next_task_id?: string; error?: string }> {
   const token = localStorage.getItem('token') ?? '';
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 3000));
@@ -37,14 +37,23 @@ async function pollTask(taskId: string): Promise<void> {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) continue;
-    const data = await res.json() as { status?: string; error?: string };
-    if (data.status === 'completed') return;
+    const data = await res.json() as { status?: string; next_task_id?: string; error?: string };
+    if (data.status === 'completed') return { status: 'completed', next_task_id: data.next_task_id, error: data.error };
     if (data.status === 'failed') {
       const msg = data.error && typeof data.error === 'string' ? data.error : 'Generation task failed';
       throw new Error(msg);
     }
   }
   throw new Error('Generation timed out after 3 minutes');
+}
+
+// ─── For linked video chain: poll first task, then each next_task_id until no more ─────────────────────────────
+async function pollLinkedVideoChain(firstTaskId: string): Promise<void> {
+  let currentId: string | undefined = firstTaskId;
+  while (currentId) {
+    const data = await pollTask(currentId);
+    currentId = data.next_task_id;
+  }
 }
 
 /* ─── Big choice card ───────────────────────────────────────── */
@@ -219,13 +228,22 @@ const UploadView = ({
         throw new Error(err.error ?? `Generation failed (${genRes.status})`);
       }
 
-      const genData = await genRes.json() as { task_ids?: string[] };
+      const genData = await genRes.json() as {
+        task_ids?: string[];
+        linked_chain?: boolean;
+      };
       const taskIds = genData.task_ids ?? [];
+      const linkedChain = genData.linked_chain === true;
 
-      // Step 4 — poll tasks
+      // Step 4 — poll tasks (linked video: poll first then each next_task_id in sequence)
       if (taskIds.length > 0) {
-        setProgress(`Generating ${type === 'image' ? 'images' : 'videos'} (this can take 1–2 min)…`);
-        await Promise.all(taskIds.map(id => pollTask(id)));
+        if (linkedChain && type === 'video') {
+          setProgress('Generating linked video sequence (each clip continues from the previous; 2–5 min per clip)…');
+          await pollLinkedVideoChain(taskIds[0]);
+        } else {
+          setProgress(`Generating ${type === 'image' ? 'images' : 'videos'} (this can take 1–2 min)…`);
+          await Promise.all(taskIds.map(id => pollTask(id)));
+        }
       }
 
       // Step 5 — fetch results

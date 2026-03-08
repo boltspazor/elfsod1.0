@@ -1,24 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import AdCarousel from '../components/AdCarousel';
 import AdDetailModal from '../components/AdDetailModal';
 import Footer from '../components/Footer';
 import AnimatedTileGrid from '../components/AnimatedTileGrid';
-import { AUTOCREATE_API_URL } from '../config';
 import { TrendingAPI, TrendingAd as TrendingAdType } from '../services/adsurv';
-
-interface PublishedCampaign {
-  id: number;
-  campaign_goal?: string;
-  budget_amount?: number;
-  campaign_duration?: number;
-  budget_type?: string;
-  campaign_status?: string;
-  published_at?: string;
-  created_at?: string;
-  selected_tests?: string[];
-}
 
 interface AdItem {
   id: number | string;
@@ -34,18 +21,17 @@ interface AdItem {
   url?: string;
   platform?: string;
   score?: number;
+  /** Fallback when image fails to load */
+  thumbnail?: string;
 }
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [selectedAd, setSelectedAd] = useState<AdItem | null>(null);
   const [relatedAds, setRelatedAds] = useState<AdItem[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedCategory, _setSelectedCategory] = useState<string>('recommended');
-  const [publishedCampaigns, setPublishedCampaigns] = useState<PublishedCampaign[]>([]);
-  const [launchSuccessId, setLaunchSuccessId] = useState<string | null>(null);
   const [trendingExampleAds, setTrendingExampleAds] = useState<AdItem[]>([]);
   const [cachedByCategory, setCachedByCategory] = useState<Record<string, TrendingAdType[]>>({});
   const [isLoadingCache, setIsLoadingCache] = useState(true);
@@ -70,6 +56,9 @@ const Home: React.FC = () => {
   const [showTrendingWhiteModal, setShowTrendingWhiteModal] = useState(false);
   const [trendingWhiteAds, setTrendingWhiteAds] = useState<AdItem[] | null>(null);
   const [loadingTrendingWhite, setLoadingTrendingWhite] = useState(false);
+  // Category-specific ads for main section carousel (food / fashion / sports only)
+  const [sectionCategoryAds, setSectionCategoryAds] = useState<Record<string, AdItem[] | null>>({});
+  const [loadingSectionCategory, setLoadingSectionCategory] = useState<Record<string, boolean>>({});
   const isLoggedIn = !!localStorage.getItem('token');
 
   const RECOMMENDED_KEYWORDS = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
@@ -112,10 +101,12 @@ const Home: React.FC = () => {
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
     return items.map((item, index) => {
       const rawImage = item.image_url || item.thumbnail || '';
+      const rawThumb = item.thumbnail || item.image_url || '';
       return {
       id: item.id || `trending-${index}`,
       title: item.title || item.headline || 'Trending Ad',
       image: rawImage ? proxyImageUrl(rawImage) : 'https://via.placeholder.com/400x300?text=No+Image',
+      thumbnail: rawThumb ? proxyImageUrl(rawThumb) : undefined,
       rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
       votes: formatVotes(item.views || item.likes || 0),
       tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
@@ -137,11 +128,28 @@ const Home: React.FC = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Fetch category-specific ads for main section when user is on Food / Fashion / Sports
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const cid = params.get('campaign');
-    if (cid) setLaunchSuccessId(cid);
-  }, [location.search]);
+    const cat = selectedCategory;
+    if (cat !== 'food' && cat !== 'fashion' && cat !== 'sports') return;
+    if (sectionCategoryAds[cat] !== undefined) return; // already loaded
+    setLoadingSectionCategory((prev) => ({ ...prev, [cat]: true }));
+    const keyword = categorySearchKeywords[cat];
+    TrendingAPI.search({
+      keyword,
+      platforms: ['meta', 'instagram', 'youtube'],
+      limit_per_platform: 6,
+      async_mode: false,
+    })
+      .then((result) => {
+        const raw = result?.top_trending ?? [];
+        const mapped = mapTrendingToAdFormat(raw.slice(0, 20), cat);
+        const filtered = mapped.filter((ad) => (ad.genre || '').toLowerCase() === cat);
+        setSectionCategoryAds((prev) => ({ ...prev, [cat]: filtered.length > 0 ? filtered : mapped }));
+      })
+      .catch(() => setSectionCategoryAds((prev) => ({ ...prev, [cat]: null })))
+      .finally(() => setLoadingSectionCategory((prev) => ({ ...prev, [cat]: false })));
+  }, [selectedCategory]);
 
   // Fetch 24h-cached trending ads once on load (no fetch on category click or card click)
   useEffect(() => {
@@ -156,21 +164,6 @@ const Home: React.FC = () => {
       .finally(() => { if (!cancelled) setIsLoadingCache(false); });
     return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const token = localStorage.getItem('token') ?? '';
-    fetch(`${AUTOCREATE_API_URL}/api/campaigns/my-campaigns`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then((data: { success?: boolean; campaigns?: PublishedCampaign[] }) => {
-        if (data.success && data.campaigns) {
-          setPublishedCampaigns(data.campaigns.filter(c => c.campaign_status === 'published'));
-        }
-      })
-      .catch(() => { /* silently ignore */ });
-  }, [isLoggedIn]);
 
   // Sample data for all ads
   const allAds = [
@@ -260,7 +253,7 @@ const Home: React.FC = () => {
     trending: 'trending ads',
   };
 
-  // Open category modal and fetch ads (Fashion, Sports, Food, Recommended, Trending – same as Ad Surveillance)
+  // Open category modal and fetch ads (Fashion, Sports, Food – single keyword per category)
   const openCategoryModalAndFetch = (key: typeof categoryModalKey) => {
     setCategoryModalKey(key);
     setShowCategoryModal(true);
@@ -280,7 +273,19 @@ const Home: React.FC = () => {
         return mapTrendingToAdFormat(raw.slice(0, 20), key);
       }).catch(() => [] as AdItem[]),
       minDelay,
-    ]).then(([ads]) => setCategoryFetchedAds(ads))
+    ]).then(([ads]) => {
+      // Only show ads that match this category (genre was set to key)
+      const filtered = ads.filter((ad) => (ad.genre || '').toLowerCase() === key.toLowerCase());
+      const list = filtered.length > 0 ? filtered : ads;
+      setCategoryFetchedAds(list);
+      if (list.length > 0) {
+        setSelectedAd(list[0]);
+        setRelatedAds(list.slice(1, 4));
+        setTrendingExampleAds(list.slice(0, 8));
+        setShowCategoryModal(false);
+        document.body.style.overflow = 'hidden';
+      }
+    })
       .finally(() => setLoadingCategory(false));
   };
 
@@ -334,7 +339,16 @@ const Home: React.FC = () => {
         return merged.slice(0, 20);
       })
       .then((ads) => minDelay.then(() => ads))
-      .then((ads) => setRecommendedWhiteAds(ads))
+      .then((ads) => {
+        setRecommendedWhiteAds(ads);
+        if (ads.length > 0) {
+          setSelectedAd(ads[0]);
+          setRelatedAds(ads.slice(1, 4));
+          setTrendingExampleAds(ads.slice(0, 8));
+          setShowRecommendedWhiteModal(false);
+          document.body.style.overflow = 'hidden';
+        }
+      })
       .finally(() => setLoadingRecommendedWhite(false));
   };
 
@@ -388,7 +402,16 @@ const Home: React.FC = () => {
         return merged.slice(0, 20);
       })
       .then((ads) => minDelay.then(() => ads))
-      .then((ads) => setTrendingWhiteAds(ads))
+      .then((ads) => {
+        setTrendingWhiteAds(ads);
+        if (ads.length > 0) {
+          setSelectedAd(ads[0]);
+          setRelatedAds(ads.slice(1, 4));
+          setTrendingExampleAds(ads.slice(0, 8));
+          setShowTrendingWhiteModal(false);
+          document.body.style.overflow = 'hidden';
+        }
+      })
       .finally(() => setLoadingTrendingWhite(false));
   };
 
@@ -420,121 +443,6 @@ const Home: React.FC = () => {
 
         {/* ✅ ADDED: Animated Tile Grid Section */}
       <AnimatedTileGrid />
-
-      {/* ✅ My Published Campaigns (logged-in only) */}
-      {isLoggedIn && (publishedCampaigns.length > 0 || launchSuccessId) && (
-        <section className="px-6 py-10 max-w-7xl mx-auto">
-          {launchSuccessId && (
-            <div style={{
-              background: 'rgba(0,229,212,0.10)',
-              border: '1px solid rgba(0,229,212,0.4)',
-              borderRadius: 12,
-              padding: '14px 20px',
-              color: '#00e5d4',
-              fontSize: 15,
-              fontWeight: 600,
-              marginBottom: 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <span>🚀 Campaign #{launchSuccessId} published successfully!</span>
-              <button
-                onClick={() => navigate('/my-campaigns')}
-                style={{
-                  background: '#00e5d4',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 18px',
-                  color: '#000',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
-              >
-                View All My Campaigns →
-              </button>
-            </div>
-          )}
-
-          {publishedCampaigns.length > 0 && (
-            <>
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="text-gray-100 text-[36px] font-semibold leading-[1] tracking-[-0.03em]"
-                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
-                >
-                  My Published Campaigns
-                </h2>
-                <button
-                  onClick={() => navigate('/my-campaigns')}
-                  className="flex items-center gap-2 text-[16px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
-                  style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
-                >
-                  See All
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {publishedCampaigns.slice(0, 3).map(campaign => (
-                  <div
-                    key={campaign.id}
-                    onClick={() => navigate(`/my-campaigns/${campaign.id}`, { state: { campaign } })}
-                    style={{
-
-                      borderRadius: 16,
-                      padding: '20px 24px',
-                      cursor: 'pointer',
-                      transition: 'transform 0.15s',
-                      background: `linear-gradient(#131313, #131313) padding-box,
-                        linear-gradient(135deg, #00e5d4, #8b6fff, #ff4fcb) border-box`,
-                      border: '1px solid transparent',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
-                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <span style={{ color: '#8b6fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Campaign #{campaign.id}
-                      </span>
-                      <span style={{
-                        background: 'rgba(0,229,212,0.15)',
-                        color: '#00e5d4',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: '3px 10px',
-                        borderRadius: 20,
-                        border: '1px solid rgba(0,229,212,0.3)',
-                      }}>
-                        Published
-                      </span>
-                    </div>
-                    <p style={{ color: '#fff', fontSize: 16, fontWeight: 600, marginBottom: 8, textTransform: 'capitalize' }}>
-                      {campaign.campaign_goal ?? 'Campaign'} Strategy
-                    </p>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8 }}>
-                      {campaign.budget_amount && (
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-                          💰 ${campaign.budget_amount.toLocaleString()}
-                          {campaign.budget_type === 'daily' ? '/day' : ' total'}
-                        </span>
-                      )}
-                      {campaign.campaign_duration && (
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-                          📅 {campaign.campaign_duration} days
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-      )}
 
       {/* Background Effects */}
       <div className="pointer-events-none fixed inset-0">
@@ -641,16 +549,19 @@ const Home: React.FC = () => {
       <AdCarousel
         category="fashion"
         onCardClick={() => openCategoryModalAndFetch('fashion')}
+        ads={sectionCategoryAds.fashion ?? undefined}
       />
     ) : selectedCategory === 'sports' ? (
       <AdCarousel
         category="sports"
         onCardClick={() => openCategoryModalAndFetch('sports')}
+        ads={sectionCategoryAds.sports ?? undefined}
       />
     ) : selectedCategory === 'food' ? (
       <AdCarousel
         category="food"
         onCardClick={() => openCategoryModalAndFetch('food')}
+        ads={sectionCategoryAds.food ?? undefined}
       />
     ) : (
       <AdCarousel
@@ -761,7 +672,7 @@ const Home: React.FC = () => {
                             src={ad.image}
                             alt={ad.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = ad.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'; }}
                           />
                         </div>
                         <div className="p-3">
@@ -827,7 +738,7 @@ const Home: React.FC = () => {
                             src={ad.image}
                             alt={ad.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = ad.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'; }}
                           />
                         </div>
                         <div className="p-3">
@@ -874,7 +785,14 @@ const Home: React.FC = () => {
                 <p className="text-gray-400">Fetching campaigns…</p>
               </div>
             ) : categoryFetchedAds && categoryFetchedAds.length > 0 ? (
-              <AdCarousel category={categoryModalKey} onCardClick={handleCardClick} ads={categoryFetchedAds} />
+              <AdCarousel
+                category={categoryModalKey}
+                onCardClick={handleCardClick}
+                ads={(() => {
+                  const filtered = categoryFetchedAds.filter((ad) => (ad.genre || '').toLowerCase() === categoryModalKey.toLowerCase());
+                  return filtered.length > 0 ? filtered : categoryFetchedAds;
+                })()}
+              />
             ) : (
               <div className="text-gray-400 text-center py-16">No campaigns right now. Try again later.</div>
             )}

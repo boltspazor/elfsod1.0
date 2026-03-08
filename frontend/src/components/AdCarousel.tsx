@@ -15,6 +15,7 @@ interface CarouselAd {
   url?: string;
   description?: string;
   engagement?: string;
+  thumbnail?: string;
 }
 
 interface AdCarouselProps {

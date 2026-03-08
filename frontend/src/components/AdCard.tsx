@@ -15,6 +15,8 @@ interface AdCardProps {
     url?: string;
     description?: string;
     engagement?: string;
+    /** Fallback when image fails to load */
+    thumbnail?: string;
   };
   /** When set, card click opens modal; "View Campaign" opens ad URL. When unset, card click opens URL. */
   onCardClick?: (ad: AdCardProps['ad']) => void;
@@ -22,6 +24,12 @@ interface AdCardProps {
 
 const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
   const navigate = useNavigate();
+  const [imgSrc, setImgSrc] = React.useState(ad.image);
+  const fallbackSrc = ad.thumbnail || ad.image || 'https://via.placeholder.com/400x300?text=No+Image';
+
+  React.useEffect(() => {
+    setImgSrc(ad.image);
+  }, [ad.image]);
 
   const handleCardAreaClick = () => {
     if (onCardClick) {
@@ -50,13 +58,22 @@ const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
           width: '100%',
           height: '100%',
           borderRadius: 15,
-          background: `
-            linear-gradient(#00000059, #00000059),
-            url(${ad.image}) center/cover
-          `,
           boxShadow: '2px 4px 10px rgba(255,255,255,0.7)'
         }}
       >
+        <img
+          src={imgSrc}
+          alt={ad.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => setImgSrc(fallbackSrc)}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(#00000059, #00000059)',
+            pointerEvents: 'none'
+          }}
+        />
 
         {/* PROMOTED badge */}
         {ad.type && (
