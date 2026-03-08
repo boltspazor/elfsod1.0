@@ -307,7 +307,11 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
               src={ad.image || ad.thumbnail || `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`}
               alt={ad.title}
               className="w-full h-full object-cover"
-              onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+              onError={(e) => {
+                const el = e.target as HTMLImageElement;
+                el.onerror = null;
+                el.src = `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
             
@@ -378,7 +382,11 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                             src={exampleAd.image || exampleAd.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(exampleAd.genre || 'Ad')}`}
                             alt={exampleAd.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            onError={(e) => { const el = e.target as HTMLImageElement; el.src = exampleAd.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(exampleAd.genre || 'Ad')}`; }}
+                            onError={(e) => {
+                              const el = e.target as HTMLImageElement;
+                              el.onerror = null;
+                              el.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(exampleAd.genre || 'Ad')}`;
+                            }}
                           />
                           {/* Rating Badge */}
                           <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-black/80 px-3 py-1.5 backdrop-blur-sm">
@@ -446,7 +454,11 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                           src={relatedAd.image || relatedAd.thumbnail || `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`}
                           alt={relatedAd.title}
                           className="w-full h-full object-cover"
-                          onError={(e) => { const el = e.target as HTMLImageElement; el.src = relatedAd.thumbnail || `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`; }}
+                          onError={(e) => {
+                            const el = e.target as HTMLImageElement;
+                            el.onerror = null;
+                            el.src = `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`;
+                          }}
                         />
                       </div>
                       <div>

@@ -73,7 +73,8 @@ const Home: React.FC = () => {
     'fashion': 'fashion clothing brands apparel',
     'Fashion': 'fashion clothing brands apparel',
     'Shoes': 'Shoes ads',
-    'Tech': 'Tech gadgets',
+    'Tech': 'technology electronics software gadgets computers ads',
+    'tech': 'technology electronics software gadgets computers ads',
     'Cars': 'Car commercials',
     'Home Decor': 'Home decor',
     'Fitness': 'Fitness products',
@@ -321,9 +322,11 @@ const Home: React.FC = () => {
       .then((results) => {
         const byCategory: Record<string, AdItem[]> = {};
         const flat: AdItem[] = [];
-        results.forEach((r) => {
-          if (r.keyword) byCategory[r.keyword] = r.ads;
-          r.ads.forEach((ad) => flat.push(ad));
+        // Key by RECOMMENDED_KEYWORDS index so row 1 = Shoes, row 2 = Fashion, etc. (title and ads stay in sync)
+        results.forEach((r, i) => {
+          const rowKeyword = RECOMMENDED_KEYWORDS[i];
+          byCategory[rowKeyword] = r.ads ?? [];
+          (r.ads ?? []).forEach((ad) => flat.push(ad));
         });
         return { byCategory, flat };
       })
@@ -369,9 +372,10 @@ const Home: React.FC = () => {
       .then((results) => {
         const byCategory: Record<string, AdItem[]> = {};
         const flat: AdItem[] = [];
-        results.forEach((r) => {
-          if (r.keyword) byCategory[r.keyword] = r.ads;
-          r.ads.forEach((ad) => flat.push(ad));
+        results.forEach((r, i) => {
+          const rowKeyword = RECOMMENDED_KEYWORDS[i];
+          byCategory[rowKeyword] = r.ads ?? [];
+          (r.ads ?? []).forEach((ad) => flat.push(ad));
         });
         return { byCategory, flat };
       })
@@ -681,7 +685,9 @@ const Home: React.FC = () => {
                         <div key={keyword}>
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {ads.map((ad) => (
+                            {ads.map((ad) => {
+                              const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                              return (
                               <div
                                 key={ad.id}
                                 className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -697,10 +703,14 @@ const Home: React.FC = () => {
                               >
                                 <div className="aspect-video bg-gray-100 relative">
                                   <img
-                                    src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                                    src={ad.image || ad.thumbnail || safePlaceholder}
                                     alt={ad.title}
                                     className="w-full h-full object-cover"
-                                    onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                                    onError={(e) => {
+                                      const el = e.target as HTMLImageElement;
+                                      el.onerror = null;
+                                      el.src = safePlaceholder;
+                                    }}
                                   />
                                 </div>
                                 <div className="p-3">
@@ -719,7 +729,7 @@ const Home: React.FC = () => {
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                            ); })}
                           </div>
                         </div>
                       );
@@ -760,7 +770,9 @@ const Home: React.FC = () => {
                           <div key={keyword}>
                             <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                              {ads.map((ad) => (
+                              {ads.map((ad) => {
+                                const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                                return (
                                 <div
                                   key={ad.id}
                                   className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -776,10 +788,14 @@ const Home: React.FC = () => {
                                 >
                                   <div className="aspect-video bg-gray-100 relative">
                                     <img
-                                      src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                                      src={ad.image || ad.thumbnail || safePlaceholder}
                                       alt={ad.title}
                                       className="w-full h-full object-cover"
-                                      onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                                      onError={(e) => {
+                                        const el = e.target as HTMLImageElement;
+                                        el.onerror = null;
+                                        el.src = safePlaceholder;
+                                      }}
                                     />
                                   </div>
                                   <div className="p-3">
@@ -798,7 +814,7 @@ const Home: React.FC = () => {
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                              ); })}
                             </div>
                           </div>
                         );
@@ -806,7 +822,9 @@ const Home: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {trendingWhiteAds!.map((ad) => (
+                      {trendingWhiteAds!.map((ad) => {
+                        const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                        return (
                         <div
                           key={ad.id}
                           className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -821,10 +839,14 @@ const Home: React.FC = () => {
                         >
                           <div className="aspect-video bg-gray-100 relative">
                             <img
-                              src={ad.image || ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`}
+                              src={ad.image || ad.thumbnail || safePlaceholder}
                               alt={ad.title}
                               className="w-full h-full object-cover"
-                              onError={(e) => { const el = e.target as HTMLImageElement; el.src = ad.thumbnail || `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`; }}
+                              onError={(e) => {
+                                const el = e.target as HTMLImageElement;
+                                el.onerror = null;
+                                el.src = safePlaceholder;
+                              }}
                             />
                           </div>
                           <div className="p-3">
@@ -843,7 +865,7 @@ const Home: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ); })}
                     </div>
                   )
                 ) : (

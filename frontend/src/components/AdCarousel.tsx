@@ -319,6 +319,16 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: ads
         tags: ['E-Commerce'],
         genre: 'E-commerce'
       },
+      {
+        id: 12,
+        title: 'Tech Ads',
+        type: null,
+        image: 'https://via.placeholder.com/400x300?text=Tech',
+        rating: '4.6',
+        votes: '178K',
+        tags: ['Technology', 'Electronics'],
+        genre: 'Tech'
+      },
       // {
       //   id: 12,
       //   title: 'Metaverse Brand Experiences',

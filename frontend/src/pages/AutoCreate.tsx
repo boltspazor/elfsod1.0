@@ -60,7 +60,10 @@ const AutoCreate: React.FC = () => {
     if (currentStep > 0) setCurrentStep(s => s - 1);
   };
 
+  const FACEBOOK_ADS_MANAGER_URL = 'https://www.facebook.com/business/tools/ads-manager';
+
   const handleLaunchCampaign = async () => {
+    window.open(FACEBOOK_ADS_MANAGER_URL, '_blank', 'noopener,noreferrer');
     setIsLaunching(true);
     setLaunchError(null);
     try {

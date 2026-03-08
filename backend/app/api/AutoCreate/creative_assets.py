@@ -732,9 +732,9 @@ def generate_assets():
                 "error": "Runway API key not configured. Please set RUNWAY_API_KEY environment variable."
             }), 500
         
-        # Generate 5 variations to provide more options
-        num_variations = 5
-        logger.info(f"🎯 Target: {num_variations} {asset_type} variations")
+        # Images: 5 variations. Video: single output only (multi-video chain commented out for now).
+        num_variations = 5 if asset_type == 'image' else 1
+        logger.info(f"🎯 Target: {num_variations} {asset_type} variation(s)")
         
         # Clear any existing assets of this type to start fresh
         if 'generated_assets' in campaign:
@@ -745,50 +745,67 @@ def generate_assets():
                 campaign['generated_assets'] = [a for a in campaign['generated_assets'] if a.get('type') != asset_type]
         
         task_ids = []
-        linked_video_shared = None  # for video: shared state with background thread
 
+        # --- VIDEO: single clip only (linked multi-clip chain commented out) ---
         if asset_type == 'video':
-            # Linked video chain: clip 1 = image_to_video, clip 2..N = video_to_video (gen4_aleph)
-            # Run in background thread; we return the first task_id so frontend can poll.
-            # Mark campaign so check_status does not store assets one-by-one; thread stores all at once at the end.
-            campaign['linked_chain'] = True
-            tasks_store[campaign_id] = campaign
-            linked_video_shared = {"first_task_id": None, "event": threading.Event()}
-            thread = threading.Thread(
-                target=run_linked_video_chain,
-                kwargs={
-                    "campaign_id": campaign_id,
-                    "image_data_uri": image_data_uri,
-                    "user_id": user_id,
-                    "ad_type": ad_type,
-                    "campaign_goal": campaign_goal,
-                    "num_clips": num_variations,
-                    "shared": linked_video_shared,
-                },
-                daemon=True,
-            )
-            thread.start()
-            # Wait up to 20s for first task to be created
-            linked_video_shared["event"].wait(timeout=20)
-            first_task_id = linked_video_shared.get("first_task_id")
-            if not first_task_id:
-                logger.error("Linked video chain did not produce first task_id in time")
-                return jsonify({"success": False, "error": "Video chain failed to start"}), 500
-            task_ids = [first_task_id]
+            prompt_text = generate_video_prompt(ad_type, campaign_goal, 1)
+            task_id = create_video_generation_task(image_data_uri, prompt_text, 1)
+            task_info = {
+                "task_id": task_id,
+                "campaign_id": campaign_id,
+                "user_id": user_id,
+                "asset_type": "video",
+                "ad_type": ad_type,
+                "campaign_goal": campaign_goal,
+                "status": "processing",
+                "variation": 1,
+                "started_at": time.time(),
+                "prompt": prompt_text,
+            }
+            if campaign_id not in generation_tasks:
+                generation_tasks[campaign_id] = []
+            generation_tasks[campaign_id].append(task_info)
+            task_ids = [task_id]
             campaign['status'] = 'generating_video'
             tasks_store[campaign_id] = campaign
-            logger.info(f"Started linked video chain for campaign {campaign_id}, first task: {first_task_id}")
+            logger.info(f"Started single video generation for campaign {campaign_id}, task: {task_id}")
             return jsonify({
                 "success": True,
-                "message": "Started linked video sequence (each clip continues from the previous)",
+                "message": "Started video generation (1 video)",
                 "task_ids": task_ids,
                 "campaign_id": campaign_id,
                 "asset_type": asset_type,
-                "variations": num_variations,
-                "linked_chain": True,
-                "estimated_time": "2-5 minutes per clip; clips generate one after another",
-                "note": "Videos are linked: clip 2 starts where clip 1 ends, etc. Poll this task_id; when complete, poll the next_task_id from the response for the next clip.",
+                "variations": 1,
+                "linked_chain": False,
+                "estimated_time": "About 2–5 minutes",
             }), 200
+
+        # --- IMAGES: multiple variations ---
+        # (Linked video chain for 4–5 clips commented out; uncomment block below to restore.)
+        # if asset_type == 'video':
+        #     campaign['linked_chain'] = True
+        #     tasks_store[campaign_id] = campaign
+        #     linked_video_shared = {"first_task_id": None, "event": threading.Event()}
+        #     thread = threading.Thread(
+        #         target=run_linked_video_chain,
+        #         kwargs={
+        #             "campaign_id": campaign_id,
+        #             "image_data_uri": image_data_uri,
+        #             "user_id": user_id,
+        #             "ad_type": ad_type,
+        #             "campaign_goal": campaign_goal,
+        #             "num_clips": num_variations,
+        #             "shared": linked_video_shared,
+        #         },
+        #         daemon=True,
+        #     )
+        #     thread.start()
+        #     linked_video_shared["event"].wait(timeout=20)
+        #     first_task_id = linked_video_shared.get("first_task_id")
+        #     if not first_task_id:
+        #         return jsonify({"success": False, "error": "Video chain failed to start"}), 500
+        #     task_ids = [first_task_id]
+        #     return jsonify({...}), 200
 
         logger.info(f"📝 Starting loop to create {num_variations} tasks...")
         for i in range(num_variations):
