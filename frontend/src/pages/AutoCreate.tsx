@@ -28,9 +28,15 @@ const AutoCreate: React.FC = () => {
   const [selectedGoal, setSelectedGoal] = useState<CampaignGoal>(null);
   const [selectedPlatforms] = useState<string[]>(['meta']);
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(null);
+  const [selectedCopyVariation, setSelectedCopyVariation] = useState<unknown>(null);
   const [isLaunching, setIsLaunching] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
   const budgetRef = useRef<BudgetTestingRef>(null);
+
+  const handleCopyGenerated = (data: { selectedVariation?: unknown; campaignId?: string; variations?: unknown[]; tone?: string }) => {
+    if (data.selectedVariation != null) setSelectedCopyVariation(data.selectedVariation);
+    if (data.campaignId) setSavedCampaignId(data.campaignId);
+  };
 
   const steps = [
     { id: 'goal', label: 'Campaign Goal', component: CampaignGoalStep },
@@ -123,6 +129,15 @@ const AutoCreate: React.FC = () => {
                   ref={budgetRef}
                   {...getStepProps()}
                   onSave={(id) => setSavedCampaignId(id)}
+                />
+              ) : currentStep === 2 ? (
+                <CopyMessagingStep
+                  {...getStepProps()}
+                  campaignId={savedCampaignId ?? undefined}
+                  onCopyGenerated={(data) => {
+                    handleCopyGenerated(data);
+                    handleNext();
+                  }}
                 />
               ) : (
                 <CurrentStepComponent {...getStepProps()} />
