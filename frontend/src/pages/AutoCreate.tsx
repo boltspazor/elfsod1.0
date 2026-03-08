@@ -66,31 +66,33 @@ const AutoCreate: React.FC = () => {
     try {
       const token = localStorage.getItem('token') ?? '';
 
-      // Step 1: Save budget data and get campaign ID
-      let campaignId = savedCampaignId;
-      if (!campaignId && budgetRef.current) {
+      // Step 1: Save budget data and get campaign ID (integer from Supabase – required for publish)
+      let campaignId: string | null = null;
+      if (budgetRef.current) {
         campaignId = await budgetRef.current.saveAndGetCampaignId();
       }
-
       if (!campaignId) {
         setLaunchError('Failed to save campaign data. Please try again.');
         setIsLaunching(false);
         return;
       }
 
-      // Step 2: Fetch generated creatives so we can store them with the published campaign
+      // Step 2: Fetch generated creatives (creative service may use different id – 404 is OK)
       let assets: unknown[] = [];
       try {
         const assetsRes = await fetch(`${AUTOCREATE_API_URL}/api/get-generated-assets/${campaignId}`);
-        const assetsData = await assetsRes.json();
-        if (assetsData?.success && Array.isArray(assetsData?.assets)) {
-          assets = assetsData.assets;
+        if (assetsRes.ok) {
+          const assetsData = await assetsRes.json();
+          if (assetsData?.success && Array.isArray(assetsData?.assets)) {
+            assets = assetsData.assets;
+          }
         }
+        // 404 or other error: proceed with empty assets
       } catch {
         // Proceed without assets if creative service unavailable
       }
 
-      // Step 3: Publish the campaign (with creatives so they are stored in DB)
+      // Step 3: Publish the campaign (campaign_id must be the integer from Budget step)
       const res = await fetch(`${AUTOCREATE_API_URL}/api/campaigns/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +150,10 @@ const AutoCreate: React.FC = () => {
                   campaignId={savedCampaignId ?? undefined}
                   onCopyGenerated={(data) => {
                     handleCopyGenerated(data);
-                    handleNext();
+                    // Only advance to next step when user selects a variation (clicks "Use This Copy")
+                    if (data.selectedVariation != null) {
+                      handleNext();
+                    }
                   }}
                 />
               ) : (

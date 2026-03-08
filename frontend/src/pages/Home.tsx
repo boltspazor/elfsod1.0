@@ -201,12 +201,15 @@ const Home: React.FC = () => {
     setShowRecommendedModal(true);
     setLoadingRecommended(true);
     setRecommendedFetchedAds(null);
-    TrendingAPI.getCached()
-      .then((data: { categories?: Record<string, TrendingAdType[]> }) => {
-        const raw = data?.categories?.recommended ?? [];
-        setRecommendedFetchedAds(mapTrendingToAdFormat(raw.slice(0, 20), 'recommended'));
-      })
-      .catch(() => setRecommendedFetchedAds([]))
+    const minLoaderMs = 800;
+    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    Promise.all([
+      TrendingAPI.getCached().then((data: { categories?: Record<string, TrendingAdType[]>; ads?: TrendingAdType[] }) => {
+        const raw = data?.categories?.recommended ?? data?.ads ?? [];
+        return mapTrendingToAdFormat(raw.slice(0, 20), 'recommended');
+      }).catch(() => [] as AdItem[]),
+      minDelay,
+    ]).then(([ads]) => setRecommendedFetchedAds(ads))
       .finally(() => setLoadingRecommended(false));
   };
 
@@ -214,12 +217,15 @@ const Home: React.FC = () => {
     setShowTrendingModal(true);
     setLoadingTrending(true);
     setTrendingFetchedAds(null);
-    TrendingAPI.getCached()
-      .then((data: { categories?: Record<string, TrendingAdType[]> }) => {
-        const raw = data?.categories?.trending ?? [];
-        setTrendingFetchedAds(mapTrendingToAdFormat(raw.slice(0, 20), 'trending'));
-      })
-      .catch(() => setTrendingFetchedAds([]))
+    const minLoaderMs = 800;
+    const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
+    Promise.all([
+      TrendingAPI.getCached().then((data: { categories?: Record<string, TrendingAdType[]>; ads?: TrendingAdType[] }) => {
+        const raw = data?.categories?.trending ?? data?.ads ?? [];
+        return mapTrendingToAdFormat(raw.slice(0, 20), 'trending');
+      }).catch(() => [] as AdItem[]),
+      minDelay,
+    ]).then(([ads]) => setTrendingFetchedAds(ads))
       .finally(() => setLoadingTrending(false));
   };
 
@@ -548,7 +554,10 @@ const Home: React.FC = () => {
               <button type="button" onClick={() => setShowRecommendedModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             {loadingRecommended ? (
-              <div className="text-gray-400 text-center py-16">Loading recommended campaigns…</div>
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+                <p className="text-gray-400">Fetching recommended campaigns…</p>
+              </div>
             ) : recommendedFetchedAds && recommendedFetchedAds.length > 0 ? (
               <AdCarousel category="recommended" onCardClick={handleCardClick} ads={recommendedFetchedAds} />
             ) : (
@@ -567,7 +576,10 @@ const Home: React.FC = () => {
               <button type="button" onClick={() => setShowTrendingModal(false)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             {loadingTrending ? (
-              <div className="text-gray-400 text-center py-16">Loading trending…</div>
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+                <p className="text-gray-400">Fetching trending campaigns…</p>
+              </div>
             ) : trendingFetchedAds && trendingFetchedAds.length > 0 ? (
               <AdCarousel category="trending" onCardClick={handleCardClick} ads={trendingFetchedAds} />
             ) : (
