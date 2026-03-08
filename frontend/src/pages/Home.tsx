@@ -367,7 +367,7 @@ const Home: React.FC = () => {
       </h2> */}
 
       <button
-        className="flex items-center gap-2 text-[18px] font-semibold text-purple-400 hover:text-purple-300 transition-colors"
+        className="flex items-center gap-2 ml-auto text-[18px] font-semibold text-purple-400 hover:text-purple-300 transition-colors"
         style={{ fontFamily: "'Montserrat Alternates', sans-serif" }}
       >
         See All
