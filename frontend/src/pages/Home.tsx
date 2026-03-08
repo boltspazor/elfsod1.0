@@ -62,11 +62,13 @@ const Home: React.FC = () => {
   const [loadingCategory, setLoadingCategory] = useState(false);
   // Fetched ads for AdDetailModal "Top Campaign Examples" (by genre when opening from a card)
   const [modalExampleAds, setModalExampleAds] = useState<AdItem[] | null>(null);
-  // Recommended: white modal only (Ad Surveillance trending), no dark modal
+  // Recommended: white modal – fetch using hardcoded category keywords (Shoes, Fashion, Food, Sports)
   const [showRecommendedWhiteModal, setShowRecommendedWhiteModal] = useState(false);
   const [recommendedWhiteAds, setRecommendedWhiteAds] = useState<AdItem[] | null>(null);
   const [loadingRecommendedWhite, setLoadingRecommendedWhite] = useState(false);
   const isLoggedIn = !!localStorage.getItem('token');
+
+  const RECOMMENDED_KEYWORDS = ['Shoes ads', 'Fashion ads', 'Food ads', 'Sports ads'];
 
   // Map carousel card genres to trending search keywords (aligned with category modal)
   const genreToKeyword: Record<string, string> = {
@@ -278,27 +280,44 @@ const Home: React.FC = () => {
       .finally(() => setLoadingCategory(false));
   };
 
-  // Recommended: open white modal directly, use same trending API as Ad Surveillance (no dark modal)
+  // Recommended: fetch using hardcoded category names (Shoes, Fashion, Food, Sports), merge results
   const openRecommendedWhiteModal = () => {
     setShowRecommendedWhiteModal(true);
-    setLoadingRecommendedWhite(true);
     setRecommendedWhiteAds(null);
+    setLoadingRecommendedWhite(true);
     const minLoaderMs = 600;
     const minDelay = new Promise<void>(r => setTimeout(r, minLoaderMs));
-    TrendingAPI.search({
-      keyword: 'advertising campaigns',
-      platforms: ['meta', 'instagram', 'youtube'],
-      limit_per_platform: 6,
-      async_mode: false,
-    })
-      .then((result) => {
-        const raw = result?.top_trending ?? [];
-        return mapTrendingToAdFormat(raw.slice(0, 20), 'recommended');
+    Promise.all(
+      RECOMMENDED_KEYWORDS.map((keyword) =>
+        TrendingAPI.search({
+          keyword,
+          platforms: ['meta', 'instagram', 'youtube'],
+          limit_per_platform: 3,
+          async_mode: false,
+        })
+          .then((result) => {
+            const raw = result?.top_trending ?? [];
+            return mapTrendingToAdFormat(raw.slice(0, 5), 'recommended');
+          })
+          .catch(() => [] as AdItem[])
+      )
+    )
+      .then((results) => {
+        const seen = new Set<string>();
+        const merged: AdItem[] = [];
+        for (const ads of results) {
+          for (const ad of ads) {
+            const key = String(ad.id);
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(ad);
+            }
+          }
+        }
+        return merged.slice(0, 20);
       })
-      .catch(() => [] as AdItem[])
-      .then((ads) => {
-        minDelay.then(() => setRecommendedWhiteAds(ads));
-      })
+      .then((ads) => minDelay.then(() => ads))
+      .then((ads) => setRecommendedWhiteAds(ads))
       .finally(() => setLoadingRecommendedWhite(false));
   };
 
@@ -635,7 +654,7 @@ const Home: React.FC = () => {
   </div>
 </section> */}
 
-      {/* Recommended: white modal only – same trending as Ad Surveillance, no dark modal */}
+      {/* Recommended: white modal – fetch by category keywords (Shoes, Fashion, Food, Sports), no search bar */}
       {showRecommendedWhiteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="fixed inset-0 bg-black/60" onClick={() => setShowRecommendedWhiteModal(false)} />
@@ -649,7 +668,7 @@ const Home: React.FC = () => {
                 {loadingRecommendedWhite ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-4">
                     <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                    <p className="text-gray-500">Fetching trending campaigns…</p>
+                    <p className="text-gray-500">Fetching recommended campaigns…</p>
                   </div>
                 ) : recommendedWhiteAds && recommendedWhiteAds.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
