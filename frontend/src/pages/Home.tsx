@@ -92,11 +92,24 @@ const Home: React.FC = () => {
     return num.toString();
   };
 
+  // Proxy external image URLs (e.g. Instagram CDN) to avoid ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
+  const proxyImageUrl = (url: string | undefined): string => {
+    if (!url) return 'https://via.placeholder.com/400x300?text=No+Image';
+    if (url.includes('via.placeholder.com')) return url;
+    try {
+      return 'https://corsproxy.io/?' + encodeURIComponent(url);
+    } catch {
+      return url;
+    }
+  };
+
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
-    return items.map((item, index) => ({
+    return items.map((item, index) => {
+      const rawImage = item.image_url || item.thumbnail || '';
+      return {
       id: item.id || `trending-${index}`,
       title: item.title || item.headline || 'Trending Ad',
-      image: item.image_url || item.thumbnail || 'https://via.placeholder.com/400x300?text=No+Image',
+      image: rawImage ? proxyImageUrl(rawImage) : 'https://via.placeholder.com/400x300?text=No+Image',
       rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
       votes: formatVotes(item.views || item.likes || 0),
       tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
@@ -106,7 +119,8 @@ const Home: React.FC = () => {
       url: item.url,
       platform: item.platform,
       score: item.score,
-    }));
+    };
+    });
   };
 
   useEffect(() => {
@@ -653,7 +667,12 @@ const Home: React.FC = () => {
                         }}
                       >
                         <div className="aspect-video bg-gray-100 relative">
-                          <img src={ad.image} alt={ad.title} className="w-full h-full object-cover" />
+                          <img
+                            src={ad.image}
+                            alt={ad.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'; }}
+                          />
                         </div>
                         <div className="p-3">
                           <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm">{ad.title}</h3>
