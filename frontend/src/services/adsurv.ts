@@ -538,7 +538,7 @@ export const VideoAnalysisAPI = {
       method: 'POST',
       body: JSON.stringify({ url }),
     }),
-  listAds: (): Promise<Array<{
+  listAds: (opts?: { scope?: 'all' }): Promise<Array<{
     id: string;
     company: string;
     ad_title: string;
@@ -552,7 +552,12 @@ export const VideoAnalysisAPI = {
     platform?: string;
     source_url?: string;
     status?: string;
-  }>> => fetchWithAuth('/api/video-analysis/ads'),
+  }>> => {
+    const url = opts?.scope === 'all'
+      ? '/api/video-analysis/ads?scope=all'
+      : '/api/video-analysis/ads';
+    return fetchWithAuth(url);
+  },
 };
 
 /* =====================================================

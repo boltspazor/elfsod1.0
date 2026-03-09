@@ -111,7 +111,7 @@ const VideoAnalysis: React.FC = () => {
         setAds([]);
         return;
       }
-      const data = await VideoAnalysisAPI.listAds();
+      const data = await VideoAnalysisAPI.listAds({ scope: 'all' });
       const sorted = (data || []).sort((a, b) => {
         const aScore = (a.analysis as { scores?: { total_score?: number } } | null)?.scores?.total_score ?? 0;
         const bScore = (b.analysis as { scores?: { total_score?: number } } | null)?.scores?.total_score ?? 0;

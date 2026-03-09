@@ -94,15 +94,20 @@ async def add_and_analyze_ad(
 
 @router.get("/ads", response_model=List[dict])
 async def list_my_ads(
+    scope: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return analyzed ads for the current user only."""
+    """
+    Return analyzed ads. Default: current user only.
+    Use ?scope=all to return all analyzed ads in the database (shared library of past analyses).
+    """
+    q = db.query(UserAnalyzedAd)
+    if scope != "all":
+        q = q.filter(UserAnalyzedAd.user_id == current_user.user_id)
     rows = (
-        db.query(UserAnalyzedAd)
-        .filter(UserAnalyzedAd.user_id == current_user.user_id)
-        .order_by(UserAnalyzedAd.updated_at.desc().nullslast(), UserAnalyzedAd.created_at.desc())
-        .limit(100)
+        q.order_by(UserAnalyzedAd.updated_at.desc().nullslast(), UserAnalyzedAd.created_at.desc())
+        .limit(200)
         .all()
     )
     out = []
