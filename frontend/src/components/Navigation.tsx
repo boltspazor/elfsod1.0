@@ -35,12 +35,12 @@ const Navigation: React.FC = () => {
   }, []);
 
   const navItems = [
-    { name: "Home", link: "/home" },
     { name: "Command Center", link: "/command-center" },
     { name: "Targeting Intel", link: "/targeting_intel" },
     { name: "Ad Surveillance", link: "/ad-surveillance" },
     { name: "Auto Create", link: "/auto-create" },
     { name: "Ad Inspiration", link: "/ad-inspiration" },
+    { name: "Reverse Engineering", link: "/video-analysis" },
   ];
 
   const logout = () => {
@@ -59,11 +59,17 @@ const Navigation: React.FC = () => {
       {!isLoggedIn && (
         <div className="flex items-center justify-between">
 
-          <img
-            src={NavbarLogoImg}
-            className="h-8 object-contain"
-            alt="ELFSOD"
-          />
+          <button
+            type="button"
+            onClick={() => navigate("/home")}
+            className="focus:outline-none"
+          >
+            <img
+              src={NavbarLogoImg}
+              className="h-8 object-contain"
+              alt="ELFSOD"
+            />
+          </button>
 
           <div className="flex gap-4">
             <button
@@ -102,9 +108,7 @@ const Navigation: React.FC = () => {
                 <button
                   key={i}
                   onClick={() => navigate(item.link)}
-                  className={`relative hover:text-white transition ${
-                    item.name === "Home" && "text-white"
-                  }`}
+                  className="relative hover:text-white transition"
                 >
                   {item.name}
 
