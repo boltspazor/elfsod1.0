@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Star, Users, TrendingUp } from 'lucide-react';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface AdItem {
   id: number | string;
@@ -28,7 +29,7 @@ interface AdDetailModalProps {
 const VIDEO_EXT = /\.(mp4|webm|ogg|mov)(\?|$)/i;
 const isVideoUrl = (url: string) => VIDEO_EXT.test(url) || /^data:video\//i.test(url);
 function staticThumbnail(item: { image?: string; thumbnail?: string; genre?: string }): string {
-  const placeholder = `https://via.placeholder.com/800x400?text=${encodeURIComponent(item.genre || 'Ad')}`;
+  const placeholder = svgPlaceholder(item.genre || 'Ad', 800, 400);
   const thumb = item.thumbnail?.trim();
   const img = item.image?.trim();
   if (thumb && !isVideoUrl(thumb)) return thumb;
@@ -323,7 +324,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
               onError={(e) => {
                 const el = e.target as HTMLImageElement;
                 el.onerror = null;
-                el.src = `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+              el.src = svgPlaceholder(ad.genre || 'Ad', 800, 400);
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
@@ -391,7 +392,7 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                             onError={(e) => {
                               const el = e.target as HTMLImageElement;
                               el.onerror = null;
-                              el.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(exampleAd.genre || 'Ad')}`;
+                              el.src = svgPlaceholder(exampleAd.genre || 'Ad', 400, 300);
                             }}
                           />
                           {/* Rating Badge */}
@@ -457,13 +458,13 @@ const AdDetailModal: React.FC<AdDetailModalProps> = ({ ad, onClose, relatedAds, 
                     >
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shrink-0">
                         <img
-                          src={staticThumbnail(relatedAd) || `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`}
+                          src={staticThumbnail(relatedAd) || svgPlaceholder((relatedAd.genre || 'Ad').slice(0, 8), 64, 64)}
                           alt={relatedAd.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             const el = e.target as HTMLImageElement;
                             el.onerror = null;
-                            el.src = `https://via.placeholder.com/64?text=${encodeURIComponent((relatedAd.genre || 'Ad').slice(0, 8))}`;
+                            el.src = svgPlaceholder((relatedAd.genre || 'Ad').slice(0, 8), 64, 64);
                           }}
                         />
                       </div>

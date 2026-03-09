@@ -2,6 +2,7 @@
 import React, { useRef } from 'react';
 import AdCard from './AdCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface CarouselAd {
   id: number | string;
@@ -323,7 +324,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: ads
         id: 12,
         title: 'Tech Ads',
         type: null,
-        image: 'https://via.placeholder.com/400x300?text=Tech',
+        image: svgPlaceholder('Tech', 400, 300),
         rating: '4.6',
         votes: '178K',
         tags: ['Technology', 'Electronics'],

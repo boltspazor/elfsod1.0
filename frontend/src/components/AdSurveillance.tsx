@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { svgPlaceholder } from "@/utils/imageFallback";
 import {
   TrendingUp,
   TrendingDown,
@@ -237,7 +238,8 @@ const VideoPlayer: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
     videoUrl.includes("fbcdn") ||
     videoUrl.includes("scontent");
 
-  const proxiedUrl = "https://corsproxy.io/?" + encodeURIComponent(videoUrl);
+  // Use direct URL — no third-party proxy needed
+  const proxiedUrl = videoUrl;
 
   if (mode === "fallback" || !isDirectVideo) {
     return (
@@ -1526,14 +1528,10 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
   };
 
   const proxyImageUrl = (url: string | undefined): string => {
-    if (!url) return "https://via.placeholder.com/300x200?text=No+Image";
-
-    // Skip proxy for placeholder images
-    if (url.includes("via.placeholder.com")) return url;
-
-    // Use a public CORS proxy
-    const proxyUrl = "https://corsproxy.io/?";
-    return proxyUrl + encodeURIComponent(url);
+    if (!url) return svgPlaceholder('No Image', 300, 200);
+    if (url.startsWith('data:')) return url;
+    // Return direct URL — no third-party proxy
+    return url;
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -2382,14 +2380,14 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                                     ? (proxyImageUrl(ad.image_url) || ad.image_url)
                                     : (ad.thumbnail && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(ad.thumbnail) && !/^data:video\//i.test(ad.thumbnail))
                                       ? (proxyImageUrl(ad.thumbnail) || ad.thumbnail)
-                                      : 'https://via.placeholder.com/300x200?text=Ad'
+                                      : svgPlaceholder('Ad', 300, 200)
                                 }
                                 alt={ad.title}
                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                 onError={(e) => {
                                   const el = e.target as HTMLImageElement;
                                   el.onerror = null;
-                                  el.src = 'https://via.placeholder.com/300x200?text=Ad';
+                                  el.src = svgPlaceholder('Ad', 300, 200);
                                 }}
                               />
                               <div className="absolute top-2 left-2">
@@ -2890,7 +2888,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     ? proxyImageUrl(analyzeAd.image_url)
                     : (analyzeAd.thumbnail && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(analyzeAd.thumbnail) && !/^data:video\//i.test(analyzeAd.thumbnail))
                       ? proxyImageUrl(analyzeAd.thumbnail)
-                      : 'https://via.placeholder.com/600x340?text=Ad'
+                      : svgPlaceholder('Ad', 600, 340)
                 }
                 alt="Ad creative"
                 className="w-full max-h-56 object-cover"
@@ -2898,7 +2896,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 onError={(e) => {
                   const el = e.target as HTMLImageElement;
                   el.onerror = null;
-                  el.src = 'https://via.placeholder.com/600x340?text=Ad';
+                  el.src = svgPlaceholder('Ad', 600, 340);
                 }}
               />
             </div>

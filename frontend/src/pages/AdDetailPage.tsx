@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Star, Clock, Globe, Award, Play, Users, TrendingUp, ArrowLeft, Share2, Bookmark, ChevronRight, Heart, Target, BarChart3, TrendingUp as TrendingUpIcon, Users as UsersIcon } from 'lucide-react';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 const AdDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -516,14 +517,14 @@ const AdDetailPage: React.FC = () => {
                 ? ad.image
                 : (ad.thumbnail && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(ad.thumbnail) && !/^data:video\//i.test(ad.thumbnail))
                   ? ad.thumbnail
-                  : `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`
+                  : svgPlaceholder(ad.genre || 'Ad', 800, 400)
             }
             alt={ad.title}
             className="w-full h-full object-cover opacity-20"
             onError={(e) => {
               const el = e.target as HTMLImageElement;
               el.onerror = null;
-              el.src = `https://via.placeholder.com/800x400?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+              el.src = svgPlaceholder(ad.genre || 'Ad', 800, 400);
             }}
           />
         </div>
