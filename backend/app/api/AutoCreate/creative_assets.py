@@ -6,7 +6,7 @@ import json
 import time
 import threading
 import requests
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from dotenv import load_dotenv
 import logging
 import mimetypes
@@ -38,6 +38,8 @@ NANOBANANA_API_KEY = os.environ.get('NANOBANANA_API_KEY', '')
 NANOBANANA_BASE_URL = os.environ.get('NANOBANANA_BASE_URL', 'https://api.nanobananaapi.ai')
 # Callback URL required by API; set in production to your backend URL if you implement a callback route
 NANOBANANA_CALLBACK_URL = os.environ.get('NANOBANANA_CALLBACK_URL', 'https://example.com/nanobanana-callback')
+# Base URL of this backend (e.g. https://your-api.com) so NanoBanana can fetch the uploaded image for IMAGETOIAMGE
+BACKEND_PUBLIC_URL = (os.environ.get('BACKEND_PUBLIC_URL') or '').rstrip('/')
 
 # Valid ratios for Runway ML API (from error message)
 VALID_RATIOS = [
@@ -127,21 +129,38 @@ def save_image_locally(image_data: str, filename: str) -> str:
         logger.error(f"Error saving image: {e}")
         return None
 
-def create_image_generation_task(image_data_uri: str, prompt_text: str, variation_number: int = 1):
+def create_image_generation_task(
+    image_data_uri: str,
+    prompt_text: str,
+    variation_number: int = 1,
+    campaign_id: str = None,
+):
     """
-    Create image generation task using NanoBanana API (text-to-image).
+    Create image generation task using NanoBanana API.
+    Uses IMAGETOIAMGE with the uploaded product image when possible so the output matches the product (e.g. red shoe).
     Video generation still uses Runway (create_video_generation_task).
     """
     try:
-        # NanoBanana text-to-image
+        # Prefer public URL so NanoBanana can fetch the image; fallback to data URI (some APIs accept it)
+        image_urls = []
+        if campaign_id and BACKEND_PUBLIC_URL:
+            image_urls = [f"{BACKEND_PUBLIC_URL}/api/campaign/{campaign_id}/uploaded-image"]
+            logger.info(f"Using public image URL for IMAGETOIAMGE: {image_urls[0][:60]}...")
+        elif image_data_uri and image_data_uri.startswith("data:"):
+            image_urls = [image_data_uri]
+            logger.info("Using data URI for IMAGETOIAMGE. If your product image is not used, set BACKEND_PUBLIC_URL to your backend base URL (e.g. https://your-api.com).")
+
+        use_image_to_image = len(image_urls) > 0
         payload = {
             "prompt": prompt_text,
-            "type": "TEXTTOIAMGE",
+            "type": "IMAGETOIAMGE" if use_image_to_image else "TEXTTOIAMGE",
             "numImages": 1,
             "image_size": "1:1",
             "callBackUrl": NANOBANANA_CALLBACK_URL,
         }
-        logger.info(f"Creating NanoBanana image task; prompt: {prompt_text[:80]}...")
+        if use_image_to_image:
+            payload["imageUrls"] = image_urls
+        logger.info(f"Creating NanoBanana image task (type={payload['type']}); prompt: {prompt_text[:80]}...")
         response = requests.post(
             f"{NANOBANANA_BASE_URL}/api/v1/nanobanana/generate",
             headers={
@@ -716,6 +735,19 @@ def upload_image():
         logger.error(f"Error uploading image: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+@creative_assets_bp.route('/api/campaign/<campaign_id>/uploaded-image', methods=['GET'])
+def serve_uploaded_image(campaign_id: str):
+    """Serve the campaign's uploaded product image so NanoBanana can fetch it for IMAGETOIAMGE."""
+    if campaign_id not in tasks_store:
+        return jsonify({"error": "Campaign not found"}), 404
+    campaign = tasks_store[campaign_id]
+    filepath = campaign.get("filepath")
+    if not filepath or not os.path.isfile(filepath):
+        return jsonify({"error": "Uploaded image not found"}), 404
+    return send_file(filepath, mimetype=mimetypes.guess_type(filepath)[0] or "image/jpeg")
+
+
 @creative_assets_bp.route('/api/generate-assets', methods=['POST', 'OPTIONS'])
 def generate_assets():
     """Generate multiple AI assets (images or videos)"""
@@ -858,7 +890,8 @@ def generate_assets():
                 task_id = create_image_generation_task(
                     image_data_uri,
                     prompt_text,
-                    i + 1
+                    i + 1,
+                    campaign_id=campaign_id,
                 )
                 task_info = {
                     "task_id": task_id,
