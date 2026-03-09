@@ -33,6 +33,12 @@ RUNWAY_HEADERS = {
     "Content-Type": "application/json",
 }
 
+# NanoBanana API (image generation; set NANOBANANA_API_KEY in production)
+NANOBANANA_API_KEY = os.environ.get('NANOBANANA_API_KEY', '')
+NANOBANANA_BASE_URL = os.environ.get('NANOBANANA_BASE_URL', 'https://api.nanobananaapi.ai')
+# Callback URL required by API; set in production to your backend URL if you implement a callback route
+NANOBANANA_CALLBACK_URL = os.environ.get('NANOBANANA_CALLBACK_URL', 'https://example.com/nanobanana-callback')
+
 # Valid ratios for Runway ML API (from error message)
 VALID_RATIOS = [
     "1024:1024",  # Square
@@ -123,55 +129,39 @@ def save_image_locally(image_data: str, filename: str) -> str:
 
 def create_image_generation_task(image_data_uri: str, prompt_text: str, variation_number: int = 1):
     """
-    Create image generation task using Runway ML with proper format as per documentation
-    Uses @product to reference the uploaded image in the prompt
+    Create image generation task using NanoBanana API (text-to-image).
+    Video generation still uses Runway (create_video_generation_task).
     """
     try:
-        # Choose a valid ratio - using 1:1 square for product images
-        ratio = "1024:1024"  # Square ratio for social media/product images
-        
-        # Prepare request payload according to Runway documentation
-        # Use @product to reference the uploaded image in the prompt
+        # NanoBanana text-to-image
         payload = {
-            "model": "gen4_image",  # Using gen4_image model as per documentation
-            "ratio": ratio,
-            "promptText": f"@product {prompt_text}",
-            "referenceImages": [
-                {
-                    "uri": image_data_uri,
-                    "tag": "product"
-                }
-            ]
+            "prompt": prompt_text,
+            "type": "TEXTTOIAMGE",
+            "numImages": 1,
+            "image_size": "1:1",
+            "callBackUrl": NANOBANANA_CALLBACK_URL,
         }
-        
-        logger.info(f"Creating image generation task with ratio: {ratio}")
-        logger.info(f"Prompt: {prompt_text[:100]}...")
-        
-        # Make API call
+        logger.info(f"Creating NanoBanana image task; prompt: {prompt_text[:80]}...")
         response = requests.post(
-            f"{RUNWAY_BASE_URL}/v1/text_to_image",
-            headers=RUNWAY_HEADERS,
+            f"{NANOBANANA_BASE_URL}/api/v1/nanobanana/generate",
+            headers={
+                "Authorization": f"Bearer {NANOBANANA_API_KEY}",
+                "Content-Type": "application/json",
+            },
             json=payload,
-            timeout=30
+            timeout=30,
         )
-        
-        # Log the response for debugging
-        logger.info(f"Runway API Response Status: {response.status_code}")
-        
         if response.status_code != 200:
-            logger.error(f"Runway API Error: {response.text}")
+            logger.error(f"NanoBanana API Error: {response.status_code} {response.text}")
             response.raise_for_status()
-        
-        task_data = response.json()
-        task_id = task_data.get("id")
-        
+        data = response.json()
+        if data.get("code") != 200:
+            raise Exception(data.get("msg", "NanoBanana API error"))
+        task_id = (data.get("data") or {}).get("taskId")
         if not task_id:
-            logger.error(f"No task ID returned: {task_data}")
-            raise Exception("No task ID returned from Runway API")
-        
-        logger.info(f"Image generation task created: {task_id}")
+            raise Exception("No taskId from NanoBanana API")
+        logger.info(f"NanoBanana image task created: {task_id}")
         return task_id
-        
     except Exception as e:
         logger.error(f"Error creating image generation task: {e}")
         raise
@@ -478,6 +468,45 @@ def poll_task_status(task_id: str):
         "error": f"Task polling timeout after {max_attempts} seconds"
     }
 
+
+def nanobanana_get_task_status(task_id: str):
+    """
+    Poll NanoBanana task status once. Returns same shape as poll_task_status:
+    { success, output_url?, status?, error? }.
+    successFlag: 0=GENERATING, 1=SUCCESS, 2=CREATE_TASK_FAILED, 3=GENERATE_FAILED.
+    """
+    try:
+        resp = requests.get(
+            f"{NANOBANANA_BASE_URL}/api/v1/nanobanana/record-info",
+            params={"taskId": task_id},
+            headers={"Authorization": f"Bearer {NANOBANANA_API_KEY}"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return {"success": False, "status": "error", "error": f"API returned {resp.status_code}"}
+        data = resp.json()
+        code = data.get("code")
+        if code != 200:
+            return {"success": False, "status": "error", "error": data.get("msg", "Unknown error")}
+        payload = data.get("data") or {}
+        success_flag = payload.get("successFlag", -1)
+        if success_flag == 1:
+            response_data = payload.get("response") or {}
+            output_url = response_data.get("resultImageUrl") or response_data.get("originImageUrl")
+            if output_url:
+                return {"success": True, "output_url": output_url, "task_id": task_id}
+            return {"success": False, "status": "error", "error": "No image URL in response"}
+        if success_flag == 2:
+            return {"success": False, "status": "FAILED", "error": "Create task failed"}
+        if success_flag == 3:
+            return {"success": False, "status": "FAILED", "error": "Generate failed"}
+        # 0 or other = still generating
+        return {"success": False, "status": "GENERATING", "error": "Still generating"}
+    except Exception as e:
+        logger.error(f"NanoBanana status check error for {task_id}: {e}")
+        return {"success": False, "status": "error", "error": str(e)}
+
+
 def download_and_store_asset(output_url: str, task_id: str, asset_type: str, campaign_id: str):
     """Download generated asset and store it"""
     try:
@@ -724,13 +753,21 @@ def generate_assets():
         
         logger.info(f"Starting {asset_type} generation for campaign: {campaign_id}, ad_type: {ad_type}")
         
-        # Check if Runway API key is configured
-        if not RUNWAY_API_KEY or RUNWAY_API_KEY == 'your_runway_api_key_here':
-            logger.error("❌ Runway API key not configured!")
-            return jsonify({
-                "success": False, 
-                "error": "Runway API key not configured. Please set RUNWAY_API_KEY environment variable."
-            }), 500
+        # Image generation uses NanoBanana; video uses Runway
+        if asset_type == 'image':
+            if not NANOBANANA_API_KEY or NANOBANANA_API_KEY.strip() == '':
+                logger.error("❌ NanoBanana API key not configured!")
+                return jsonify({
+                    "success": False,
+                    "error": "NanoBanana API key not configured. Please set NANOBANANA_API_KEY environment variable."
+                }), 500
+        else:
+            if not RUNWAY_API_KEY or RUNWAY_API_KEY == 'your_runway_api_key_here':
+                logger.error("❌ Runway API key not configured!")
+                return jsonify({
+                    "success": False,
+                    "error": "Runway API key not configured. Please set RUNWAY_API_KEY environment variable."
+                }), 500
         
         # Images: 5 variations. Video: single output only (multi-video chain commented out for now).
         num_variations = 5 if asset_type == 'image' else 1
@@ -833,7 +870,8 @@ def generate_assets():
                     "status": "processing",
                     "variation": i + 1,
                     "started_at": time.time(),
-                    "prompt": prompt_text
+                    "prompt": prompt_text,
+                    "provider": "nanobanana",
                 }
                 if campaign_id not in generation_tasks:
                     generation_tasks[campaign_id] = []
@@ -931,9 +969,13 @@ def check_status(task_id: str):
                     resp["next_task_id"] = next_task_id
                 return jsonify(resp), 200
 
-        # Poll Runway for status
-        logger.info(f"Polling Runway for task status: {task_id}")
-        result = poll_task_status(task_id)
+        # Poll provider for status (NanoBanana for images, Runway for video)
+        if task_info.get("provider") == "nanobanana":
+            logger.info(f"Polling NanoBanana for task status: {task_id}")
+            result = nanobanana_get_task_status(task_id)
+        else:
+            logger.info(f"Polling Runway for task status: {task_id}")
+            result = poll_task_status(task_id)
         
         if result['success']:
             campaign = tasks_store.get(campaign_id, {})
@@ -1045,12 +1087,17 @@ def check_status(task_id: str):
                 }), 500
         
         else:
-            # Task failed or timed out
+            # Still generating (NanoBanana) or failed/timed out
+            if result.get('status') == 'GENERATING':
+                return jsonify({
+                    "success": False,
+                    "status": "processing",
+                    "error": result.get('error', 'Still generating'),
+                    "task_id": task_id
+                }), 200
             task_info['status'] = 'failed'
             task_info['error'] = result.get('error', 'Unknown error')
-            
             logger.error(f"Task {task_id} failed: {result.get('error')}")
-            
             return jsonify({
                 "success": False,
                 "status": "failed",
