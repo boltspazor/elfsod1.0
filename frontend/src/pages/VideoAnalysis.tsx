@@ -95,9 +95,6 @@ const VideoAnalysis: React.FC = () => {
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [addAdLink, setAddAdLink] = useState("");
-  const [addAdLoading, setAddAdLoading] = useState(false);
-  const [addAdMessage, setAddAdMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     fetchAds();
@@ -132,32 +129,6 @@ const VideoAnalysis: React.FC = () => {
       setAds([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAddAndAnalyze = async () => {
-    const trimmed = addAdLink.trim();
-    if (!trimmed) {
-      setAddAdMessage({ type: "error", text: "Please paste an ad or content link." });
-      return;
-    }
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setAddAdMessage({ type: "error", text: "Please log in to add and analyze ads." });
-      return;
-    }
-    setAddAdLoading(true);
-    setAddAdMessage(null);
-    try {
-      const data = await VideoAnalysisAPI.addAd(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
-      setAddAdMessage({ type: "success", text: (data as { message?: string }).message || "Ad added. Refresh to see it in your list." });
-      setAddAdLink("");
-      fetchAds();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to add ad. Try a direct link from Facebook, Instagram, TikTok, YouTube, LinkedIn, or X.";
-      setAddAdMessage({ type: "error", text: msg });
-    } finally {
-      setAddAdLoading(false);
     }
   };
 
@@ -230,40 +201,6 @@ const VideoAnalysis: React.FC = () => {
                 </div>
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Add and analyze ad by link */}
-        <div className="max-w-7xl mx-auto mb-8">
-          <div className="bg-[#0B0F1A] rounded-[32px] px-8 py-6">
-            <h3 className="text-gray-200 font-semibold text-lg mb-3">Add and analyze ad</h3>
-            <p className="text-gray-500 text-sm mb-4">Paste a link from Facebook Ad Library, Instagram, TikTok, YouTube, LinkedIn, or X (Twitter) to add and analyze.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="url"
-                placeholder="Facebook, Instagram, TikTok, YouTube, LinkedIn, or X link..."
-                value={addAdLink}
-                onChange={(e) => setAddAdLink(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddAndAnalyze()}
-                className="flex-1 min-w-[280px] rounded-xl bg-[#1a1a1a] border border-gray-700 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddAndAnalyze}
-                disabled={addAdLoading}
-                className="rounded-full p-[2px] bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.25)] disabled:opacity-60"
-              >
-                <div className="rounded-full bg-gradient-to-r from-[#2c2c2c] to-[#3a3a3a] px-5 py-3 flex items-center gap-2 text-white font-semibold">
-                  {addAdLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                  {addAdLoading ? "Submitting…" : "Add & analyze"}
-                </div>
-              </button>
-            </div>
-            {addAdMessage && (
-              <p className={`mt-3 text-sm ${addAdMessage.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
-                {addAdMessage.text}
-              </p>
-            )}
           </div>
         </div>
 
