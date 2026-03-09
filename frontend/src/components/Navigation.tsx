@@ -40,6 +40,7 @@ const Navigation: React.FC = () => {
     { name: "Targeting Intel", link: "/targeting_intel" },
     { name: "Ad Surveillance", link: "/ad-surveillance" },
     { name: "Auto Create", link: "/auto-create" },
+    { name: "Ad Inspiration", link: "/ad-inspiration" },
   ];
 
   const logout = () => {

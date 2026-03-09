@@ -41,6 +41,10 @@ NANOBANANA_CALLBACK_URL = os.environ.get('NANOBANANA_CALLBACK_URL', 'https://exa
 # Base URL of this backend (e.g. https://your-api.com) so NanoBanana can fetch the uploaded image for IMAGETOIAMGE
 BACKEND_PUBLIC_URL = (os.environ.get('BACKEND_PUBLIC_URL') or '').rstrip('/')
 
+# Pinterest search (ScrapeCreators API) for Ad Inspiration page
+SCRAPECREATORS_API_KEY = os.environ.get('SCRAPECREATORS_API_KEY', '')
+PINTEREST_SEARCH_BASE_URL = "https://api.scrapecreators.com"
+
 # Valid ratios for Runway ML API (from error message)
 VALID_RATIOS = [
     "1024:1024",  # Square
@@ -746,6 +750,41 @@ def serve_uploaded_image(campaign_id: str):
     if not filepath or not os.path.isfile(filepath):
         return jsonify({"error": "Uploaded image not found"}), 404
     return send_file(filepath, mimetype=mimetypes.guess_type(filepath)[0] or "image/jpeg")
+
+
+@creative_assets_bp.route('/api/pinterest/search', methods=['GET', 'OPTIONS'])
+def pinterest_search():
+    """Proxy Pinterest search via ScrapeCreators API for Ad Inspiration page."""
+    if request.method == 'OPTIONS':
+        return '', 200
+    if not SCRAPECREATORS_API_KEY:
+        return jsonify({"success": False, "error": "Pinterest search API key not configured (SCRAPECREATORS_API_KEY)"}), 500
+    query = request.args.get('query', '').strip()
+    if not query:
+        return jsonify({"success": False, "error": "Missing required query parameter"}), 400
+    cursor = request.args.get('cursor', '')
+    trim = request.args.get('trim', 'false').lower() == 'true'
+    try:
+        params = {'query': query}
+        if cursor:
+            params['cursor'] = cursor
+        if trim:
+            params['trim'] = 'true'
+        resp = requests.get(
+            f"{PINTEREST_SEARCH_BASE_URL}/v1/pinterest/search",
+            headers={"x-api-key": SCRAPECREATORS_API_KEY},
+            params=params,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return jsonify(data)
+    except requests.RequestException as e:
+        logger.error(f"Pinterest search API error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 502
+    except Exception as e:
+        logger.error(f"Pinterest search error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @creative_assets_bp.route('/api/generate-assets', methods=['POST', 'OPTIONS'])

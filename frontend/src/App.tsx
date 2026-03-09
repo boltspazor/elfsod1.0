@@ -23,6 +23,7 @@ import TargetingIntel from './pages/targetingIntel';
 import MyCampaigns from './pages/MyCampaigns';
 import CampaignDetail from './pages/CampaignDetail';
 import BrandIdentity from './pages/BrandIdentity';
+import AdInspiration from './pages/AdInspiration';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -165,6 +166,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <BrandIdentity />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/ad-inspiration"
+              element={
+                <ProtectedRoute>
+                  <AdInspiration />
                 </ProtectedRoute>
               }
             />
