@@ -96,31 +96,35 @@ const Home: React.FC = () => {
   };
 
   const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
+  /** Only include ads that have at least one vote (views/likes) so 0-vote ads are not shown and redirects don't fail. */
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
     const categoryPlaceholder = svgPlaceholder(genre || 'Ad', 400, 300);
-    return items.map((item, index) => {
-      const rawImage = (item.image_url || item.thumbnail || '').trim();
-      const rawThumb = (item.thumbnail || item.image_url || '').trim();
-      const validImage = rawImage && !isVideoUrl(rawImage) ? rawImage : '';
-      const validThumb = rawThumb && !isVideoUrl(rawThumb) ? rawThumb : '';
-      const imageUrl = validImage || validThumb || categoryPlaceholder;
-      const thumbUrl = validThumb || validImage || categoryPlaceholder;
-      return {
-      id: item.id || `trending-${index}`,
-      title: item.title || item.headline || 'Trending Ad',
-      image: imageUrl,
-      thumbnail: thumbUrl,
-      rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
-      votes: formatVotes(item.views || item.likes || 0),
-      tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
-      genre,
-      engagement: item.score ? `${Math.min(item.score, 100)}%` : 'N/A',
-      description: item.description || 'Trending ad content',
-      url: item.url,
-      platform: item.platform,
-      score: item.score,
-    };
-    });
+    const voteCount = (item: TrendingAdType) => Number(item.views) || Number(item.likes) || 0;
+    return items
+      .filter((item) => voteCount(item) > 0)
+      .map((item, index) => {
+        const rawImage = (item.image_url || item.thumbnail || '').trim();
+        const rawThumb = (item.thumbnail || item.image_url || '').trim();
+        const validImage = rawImage && !isVideoUrl(rawImage) ? rawImage : '';
+        const validThumb = rawThumb && !isVideoUrl(rawThumb) ? rawThumb : '';
+        const imageUrl = validImage || validThumb || categoryPlaceholder;
+        const thumbUrl = validThumb || validImage || categoryPlaceholder;
+        return {
+          id: item.id || `trending-${index}`,
+          title: item.title || item.headline || 'Trending Ad',
+          image: imageUrl,
+          thumbnail: thumbUrl,
+          rating: item.score ? Math.min(item.score / 20, 5).toFixed(1) : '4.5',
+          votes: formatVotes(item.views || item.likes || 0),
+          tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
+          genre,
+          engagement: item.score ? `${Math.min(item.score, 100)}%` : 'N/A',
+          description: item.description || 'Trending ad content',
+          url: item.url,
+          platform: item.platform,
+          score: item.score,
+        };
+      });
   };
 
   useEffect(() => {
