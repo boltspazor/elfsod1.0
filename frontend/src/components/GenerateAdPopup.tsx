@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { colors } from '../styles/colors';
 import { IMAGE_GEN_API_URL } from '../config';
 import { useBrandIdentityOptional } from '../contexts/BrandIdentityContext';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface GenerateAdPopupProps {
   isOpen: boolean;
@@ -813,7 +814,7 @@ const GenerateAdPopup: React.FC<GenerateAdPopupProps> = ({ isOpen, onClose }) =>
                               alt="Generated ad"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/300x200?text=Image+Expired';
+                                e.currentTarget.src = svgPlaceholder('Image Expired', 300, 200);
                               }}
                             />
                           </div>

@@ -5,6 +5,7 @@ import AdCarousel from '../components/AdCarousel';
 import AdDetailModal from '../components/AdDetailModal';
 import { AUTOCREATE_API_URL } from '../config';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface Campaign {
   id: number;
@@ -46,7 +47,7 @@ const mapApiAdsToAdItem = (ads: Record<string, unknown>[]): AdItem[] => {
   return ads.map((item: Record<string, unknown>, index: number) => ({
     id: (item.id as string) ?? String(index),
     title: (item.title as string) || (item.headline as string) || 'Ad',
-    image: (item.image_url as string) || (item.data_uri as string) || (item.thumbnail as string) || 'https://via.placeholder.com/400x300?text=No+Image',
+    image: (item.image_url as string) || (item.data_uri as string) || (item.thumbnail as string) || svgPlaceholder('No Image', 400, 300),
     rating: item.score ? Math.min(Number(item.score) / 20, 5).toFixed(1) : '4.5',
     votes: formatVotes((item.views as number) ?? (item.likes as number)),
     tags: [item.platform, item.type, item.asset_type].filter(Boolean).map(String),

@@ -1,6 +1,7 @@
 // src/components/AdCard.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface AdCardProps {
   ad: {
@@ -24,7 +25,7 @@ interface AdCardProps {
 
 const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
 const safeImageSrc = (image?: string, thumbnail?: string, genre?: string) => {
-  const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(genre || 'Ad')}`;
+  const categoryPlaceholder = svgPlaceholder(genre || 'Ad', 400, 300);
   const img = (image || '').trim();
   const thumb = (thumbnail || '').trim();
   if (img && !isVideoUrl(img)) return img;
@@ -34,8 +35,7 @@ const safeImageSrc = (image?: string, thumbnail?: string, genre?: string) => {
 
 const AdCard: React.FC<AdCardProps> = ({ ad, onCardClick }) => {
   const navigate = useNavigate();
-  const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
-  const [imgSrc, setImgSrc] = React.useState(() => safeImageSrc(ad.image, ad.thumbnail, ad.genre));
+  const categoryPlaceholder = svgPlaceholder(ad.genre || 'Ad', 400, 300);  const [imgSrc, setImgSrc] = React.useState(() => safeImageSrc(ad.image, ad.thumbnail, ad.genre));
 
   React.useEffect(() => {
     setImgSrc(safeImageSrc(ad.image, ad.thumbnail, ad.genre));

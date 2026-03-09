@@ -6,6 +6,7 @@ import AdDetailModal from '../components/AdDetailModal';
 import Footer from '../components/Footer';
 import AnimatedTileGrid from '../components/AnimatedTileGrid';
 import { TrendingAPI, TrendingAd as TrendingAdType } from '../services/adsurv';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface AdItem {
   id: number | string;
@@ -94,25 +95,14 @@ const Home: React.FC = () => {
     return num.toString();
   };
 
-  // Proxy external image URLs (e.g. Instagram CDN) to avoid ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
-  const proxyImageUrl = (url: string | undefined): string => {
-    if (!url) return 'https://via.placeholder.com/400x300?text=No+Image';
-    if (url.includes('via.placeholder.com')) return url;
-    try {
-      return 'https://corsproxy.io/?' + encodeURIComponent(url);
-    } catch {
-      return url;
-    }
-  };
-
   const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
-    const categoryPlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(genre || 'Ad')}`;
+    const categoryPlaceholder = svgPlaceholder(genre || 'Ad', 400, 300);
     return items.map((item, index) => {
       const rawImage = (item.image_url || item.thumbnail || '').trim();
       const rawThumb = (item.thumbnail || item.image_url || '').trim();
-      const validImage = rawImage && !isVideoUrl(rawImage) ? proxyImageUrl(rawImage) : '';
-      const validThumb = rawThumb && !isVideoUrl(rawThumb) ? proxyImageUrl(rawThumb) : '';
+      const validImage = rawImage && !isVideoUrl(rawImage) ? rawImage : '';
+      const validThumb = rawThumb && !isVideoUrl(rawThumb) ? rawThumb : '';
       const imageUrl = validImage || validThumb || categoryPlaceholder;
       const thumbUrl = validThumb || validImage || categoryPlaceholder;
       return {
@@ -743,7 +733,7 @@ const Home: React.FC = () => {
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {ads.map((ad) => {
-                              const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                              const safePlaceholder = svgPlaceholder(ad.genre || 'Ad', 400, 300);
                               return (
                               <div
                                 key={ad.id}
@@ -796,7 +786,7 @@ const Home: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {(recommendedWhiteAds ?? []).map((ad) => {
-                        const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                        const safePlaceholder = svgPlaceholder(ad.genre || 'Ad', 400, 300);
                         return (
                           <div
                             key={ad.id}
@@ -870,7 +860,7 @@ const Home: React.FC = () => {
                             <h3 className="text-lg font-semibold text-gray-900 mb-3">{keyword}</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                               {ads.map((ad) => {
-                                const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                                const safePlaceholder = svgPlaceholder(ad.genre || 'Ad', 400, 300);
                                 return (
                                 <div
                                   key={ad.id}
@@ -922,7 +912,7 @@ const Home: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {trendingWhiteAds!.map((ad) => {
-                        const safePlaceholder = `https://via.placeholder.com/400x300?text=${encodeURIComponent(ad.genre || 'Ad')}`;
+                        const safePlaceholder = svgPlaceholder(ad.genre || 'Ad', 400, 300);
                         return (
                         <div
                           key={ad.id}
