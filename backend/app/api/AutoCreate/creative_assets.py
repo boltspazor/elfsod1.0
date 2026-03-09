@@ -189,35 +189,49 @@ def create_image_generation_task(
         logger.error(f"Error creating image generation task: {e}")
         raise
 
+def _simplify_video_prompt_for_runway(prompt_text: str, max_chars: int = 400) -> str:
+    """
+    Shorten and simplify prompt for Runway image_to_video. Runway recommends
+    simplicity: action verb + description (e.g. "Slow zoom towards the product with professional lighting").
+    Long prompts can trigger internal server errors.
+    """
+    clean = prompt_text.replace("@product", "").strip()
+    # Keep first sentence or first line; remove long instructions
+    first_sentence = clean.split(".")[0].strip() if "." in clean else clean.split("\n")[0].strip()
+    if not first_sentence:
+        first_sentence = "Smooth camera movement showcasing the product with professional lighting."
+    # Fallback to a single simple phrase if still too long
+    if len(first_sentence) > max_chars:
+        first_sentence = first_sentence[: max_chars - 3].rsplit(" ", 1)[0] + "..."
+    return first_sentence[:max_chars] if len(first_sentence) > max_chars else first_sentence
+
+
 def create_video_generation_task(image_data_uri: str, prompt_text: str, variation_number: int = 1):
     """
-    Create video generation task using Runway ML
-    Based on the working template from the user
+    Create video generation task using Runway ML image_to_video.
+    Uses a short, simple prompt and gen4_turbo for better reliability (fewer internal server errors).
     """
     try:
-        # Prepare request payload for video generation according to Runway API
-        # The API expects either a single promptImage (string) or an array of promptImages
-        
-        # Clean up the prompt - remove @product reference for videos
-        clean_prompt = prompt_text.replace("@product", "").strip()
-        
+        # Short prompt per Runway docs: "simplicity works best", 1-1000 chars
+        prompt_for_api = _simplify_video_prompt_for_runway(prompt_text)
+        # Optional: avoid sending oversized data URI (Runway limit 5242880 chars for data:image)
+        image_input = image_data_uri
+        if len(image_data_uri) > 4 * 1024 * 1024:  # 4MB
+            logger.warning("Image data URI is very large; Runway may reject. Consider using a smaller image.")
         payload = {
-            "model": "veo3.1",
-            "promptImage": image_data_uri,  # Single image as data URI
-            "promptText": clean_prompt,
-            "ratio": "1280:720",  # Valid ratio for video
-            "duration": 4,  # Must be 4, 6, or 8 seconds
+            "model": "gen4_turbo",  # Doc example; often more stable than veo3.1
+            "promptImage": image_input,
+            "promptText": prompt_for_api,
+            "ratio": "1280:720",
+            "duration": 4,  # Integer 2-10 per API
         }
-        
-        logger.info(f"Creating video generation task with prompt: {clean_prompt[:100]}...")
-        logger.info(f"Using image data URI: {image_data_uri[:80]}...")
-        
-        # Make API call
+        logger.info(f"Creating video task (gen4_turbo), prompt: {prompt_for_api[:80]}...")
+        logger.info(f"Image URI length: {len(image_data_uri)} chars")
         response = requests.post(
             f"{RUNWAY_BASE_URL}/v1/image_to_video",
             headers=RUNWAY_HEADERS,
             json=payload,
-            timeout=30
+            timeout=60
         )
         
         logger.info(f"Runway Video API Response Status: {response.status_code}")
@@ -251,15 +265,16 @@ def create_video_to_video_task(video_uri: str, prompt_text: str) -> str:
     """
     Create video-to-video task using Runway gen4_aleph.
     Input video is the previous clip's output; output continues from where it left off.
+    Uses a short prompt to reduce internal server errors.
     """
     try:
-        clean_prompt = prompt_text.replace("@product", "").strip()
+        prompt_for_api = _simplify_video_prompt_for_runway(prompt_text)
         payload = {
             "model": "gen4_aleph",
             "videoUri": video_uri,
-            "promptText": clean_prompt,
+            "promptText": prompt_for_api,
         }
-        logger.info(f"Creating video_to_video (gen4_aleph) task, prompt: {clean_prompt[:80]}...")
+        logger.info(f"Creating video_to_video (gen4_aleph) task, prompt: {prompt_for_api[:80]}...")
         response = requests.post(
             f"{RUNWAY_BASE_URL}/v1/video_to_video",
             headers=RUNWAY_HEADERS,

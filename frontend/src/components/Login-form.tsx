@@ -99,13 +99,7 @@ return (
 
       {/* Password */}
       <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label htmlFor="password" className="text-sm text-white">Password</label>
-          <a href="/forgot-password" className="text-xs text-gray-400 hover:text-white underline">
-            Forgot Password?
-          </a>
-        </div>
-
+        <label htmlFor="password" className="text-sm text-white">Password</label>
         <Input
           id="password"
           type="password"
