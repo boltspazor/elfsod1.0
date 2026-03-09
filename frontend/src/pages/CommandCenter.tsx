@@ -37,6 +37,8 @@ const ACTION_MAP: Record<string, string> = {
   'Generate Creative Concepts for my next Advertisement': 'generate_creatives',
 };
 
+const CHAT_SESSIONS_STORAGE_KEY = 'commandCenterChatSessions';
+
 /* ─── Simple markdown → JSX renderer ─────────────────────────── */
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split('\n');
@@ -203,25 +205,63 @@ const CommandCenter: React.FC = () => {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // ── Load history from DB on mount ─────────────────────────
+  // ── Load history from DB on mount; fallback to localStorage so chat persists across logout ──
   useEffect(() => {
-    if (!token) { setSessionsLoaded(true); return; }
+    if (!token) {
+      try {
+        const raw = localStorage.getItem(CHAT_SESSIONS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { id: string; title: string; messages: Message[]; createdAt: number }[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSessions(parsed);
+          }
+        }
+      } catch { /* ignore */ }
+      setSessionsLoaded(true);
+      return;
+    }
     fetch(`${GENAI_API_URL}/chat/history`, { headers: authHeader })
       .then(r => r.json())
       .then((data: { success?: boolean; sessions?: { session_id: string; title: string; messages: Message[]; created_at: string }[] }) => {
-        if (data.success && data.sessions) {
-          setSessions(data.sessions.map(s => ({
+        if (data.success && data.sessions && data.sessions.length > 0) {
+          const next = data.sessions.map(s => ({
             id: s.session_id,
             title: s.title,
             messages: s.messages,
             createdAt: new Date(s.created_at).getTime(),
-          })));
+          }));
+          setSessions(next);
+          try { localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+        } else {
+          try {
+            const raw = localStorage.getItem(CHAT_SESSIONS_STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw) as { id: string; title: string; messages: Message[]; createdAt: number }[];
+              if (Array.isArray(parsed) && parsed.length > 0) setSessions(parsed);
+            }
+          } catch { /* ignore */ }
         }
       })
-      .catch(() => { /* silently ignore if backend down */ })
+      .catch(() => {
+        try {
+          const raw = localStorage.getItem(CHAT_SESSIONS_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as { id: string; title: string; messages: Message[]; createdAt: number }[];
+            if (Array.isArray(parsed) && parsed.length > 0) setSessions(parsed);
+          }
+        } catch { /* ignore */ }
+      })
       .finally(() => setSessionsLoaded(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Persist sessions to localStorage whenever they change (so logout can preserve them) ──
+  useEffect(() => {
+    if (sessions.length === 0) return;
+    try {
+      localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    } catch { /* ignore */ }
+  }, [sessions]);
 
   // ── Persist session to DB ──────────────────────────────────
   const persistSession = useCallback((sessionId: string, msgs: Message[]) => {

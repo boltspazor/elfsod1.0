@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_current_user_optional
 from app.models import User
 from app.schemas import TrendingSearchRequest, TrendingSearchResponse, PlatformResult
 from app.services.trending_service import TrendingSearchService
@@ -22,10 +22,11 @@ router = APIRouter()
 async def search_trending_ads(
     request: TrendingSearchRequest,
     background_tasks: BackgroundTasks = None,
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
-    Search for trending ads/content across multiple platforms
+    Search for trending ads/content across multiple platforms.
+    Public: no auth required (e.g. for home page campaigns when not logged in).
     
     - **keyword**: Search term
     - **platforms**: Platforms to search (meta, reddit, linkedin, instagram, youtube)
@@ -60,7 +61,7 @@ async def search_trending_ads(
         task_info = {
             "task_id": task_id,
             "keyword": request.keyword,
-            "user_id": str(current_user.user_id),
+            "user_id": str(current_user.user_id) if current_user else None,
             "status": "processing",
             "started_at": datetime.utcnow().isoformat(),
             "platforms": request.platforms

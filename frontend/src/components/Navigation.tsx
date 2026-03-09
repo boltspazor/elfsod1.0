@@ -40,14 +40,15 @@ const Navigation: React.FC = () => {
     { name: "Ad Surveillance", link: "/ad-surveillance" },
     { name: "Auto Create", link: "/auto-create" },
     { name: "Ad Inspiration", link: "/ad-inspiration" },
-    { name: "Reverse Engineering", link: "/video-analysis" },
   ];
 
   const logout = () => {
-    // Clear only auth-related keys so brand identity and other preferences persist
+    // Preserve brand identity, chat history, and other preferences across logout
     const brandAssets = localStorage.getItem('brandIdentityAssets');
+    const chatSessions = localStorage.getItem('commandCenterChatSessions');
     localStorage.clear();
     if (brandAssets) localStorage.setItem('brandIdentityAssets', brandAssets);
+    if (chatSessions) localStorage.setItem('commandCenterChatSessions', chatSessions);
     navigate("/");
     window.location.reload();
   };
@@ -94,12 +95,18 @@ const Navigation: React.FC = () => {
         <>
           <div className="flex items-center justify-between">
 
-            {/* LOGO */}
-            <img
-              src={NavbarLogoImg}
-              className="h-8 object-contain"
-              alt="ELFSOD"
-            />
+            {/* LOGO -> Home */}
+            <button
+              type="button"
+              onClick={() => navigate("/home")}
+              className="focus:outline-none"
+            >
+              <img
+                src={NavbarLogoImg}
+                className="h-8 object-contain"
+                alt="ELFSOD"
+              />
+            </button>
 
             {/* CENTER MENU */}
             <div className="flex gap-10 text-gray-300 font-medium">
