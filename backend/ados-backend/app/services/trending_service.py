@@ -129,13 +129,22 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # Relaxed filtering: remove weak content with almost no engagement AND low views
+                    # PART 1 — Minimum reach threshold: require strong reach or high engagement
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
-                    engagement = likes + comments + shares
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if engagement < 10 and views < 100000:
+                    impressions = self._safe_int(item.get("impressions"))
+                    engagement = likes + comments + shares
+
+                    allow = False
+                    if views >= 100000:
+                        allow = True
+                    elif impressions >= 100000:
+                        allow = True
+                    elif engagement >= 5000:
+                        allow = True
+                    if not allow:
                         continue
 
                     # Ensure item has title field (required by schema)
@@ -162,7 +171,11 @@ class TrendingSearchService:
                     # Clean up spend field if it's a string
                     if "spend" in item and isinstance(item["spend"], str):
                         item["spend"] = self._parse_float(item["spend"])
-                    
+
+                    # PART 3 — Remove non-ad content (documentaries, educational, etc.)
+                    if not self._is_commercial_content(item):
+                        continue
+
                     # Ensure item has score field (pass keyword for relevance scoring)
                     if "score" not in item:
                         item["score"] = self._calculate_item_score(item, keyword)
@@ -433,6 +446,34 @@ class TrendingSearchService:
                 score += 1
         return min(score, 15.0)
 
+    def _is_commercial_content(self, item: Dict[str, Any]) -> bool:
+        """Detect if content likely has commercial / advertising intent."""
+        title = self._safe_str(item.get("title", "")).lower()
+        description = self._safe_str(item.get("description", "")).lower()
+        text = title + " " + description
+
+        commercial_signals = [
+            "shop", "buy", "order", "deal", "sale", "offer", "limited",
+            "launch", "new product", "available now", "get yours", "discount",
+            "promotion", "promo", "store", "collection", "link in bio",
+            "use code", "save", "free shipping", "subscribe",
+        ]
+        product_keywords = [
+            "shoe", "sneaker", "phone", "laptop", "tablet", "watch", "camera",
+            "gadget", "headphones", "charger", "gaming", "pc", "monitor",
+            "keyboard", "mouse",
+        ]
+        score = 0
+        for signal in commercial_signals:
+            if signal in text:
+                score += 2
+        for keyword in product_keywords:
+            if keyword in text:
+                score += 1
+        if "http://" in text or "https://" in text:
+            score += 1
+        return score >= 2
+
     def _calculate_item_score(self, item: Dict[str, Any], keyword: str = "") -> float:
         """Calculate trending score based on available metrics (ignoring unreliable impressions)."""
         # Extract engagement metrics (raw counts for filtering/velocity)
@@ -449,11 +490,18 @@ class TrendingSearchService:
         total_engagement = likes + (comments * 5) + (shares * 3)
         engagement_score = min(70, (total_engagement ** 0.4) * 3)
 
-        # View bonus
+        # View bonus (general)
         views = self._safe_int(item.get("views") or item.get("video_view_count") or 0)
         view_bonus = 0.0
         if views > 100:
             view_bonus = min(15, (views ** 0.3))
+        # PART 4 — Boost large campaigns
+        if views >= 1000000:
+            view_bonus += 15
+        elif views >= 500000:
+            view_bonus += 10
+        elif views >= 100000:
+            view_bonus += 5
 
         # Recency bonus
         recency_bonus = self._calculate_recency_bonus(item)
