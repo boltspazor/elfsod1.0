@@ -30,15 +30,10 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting ADOS Ad Surveillance API")
 
-    # NOTE: In production use Alembic migrations.
-    # Wrapped in try/except so a DB connection failure doesn't prevent the
-    # server from starting (useful when DB is temporarily unreachable).
-    try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("✅ Database tables verified / created")
-    except Exception as db_err:
-        logger.warning(f"⚠️  Could not run create_all (DB unreachable?): {db_err}")
-        logger.warning("   Server will start anyway — DB-backed endpoints will fail until connection is restored.")
+    # NOTE:
+    # In production, DO NOT auto-create tables.
+    # Use Alembic migrations instead.
+    Base.metadata.create_all(bind=engine)
 
     yield
 

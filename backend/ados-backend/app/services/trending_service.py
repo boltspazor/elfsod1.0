@@ -129,22 +129,12 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # PART 1 — Minimum reach threshold: require strong reach or high engagement
-                    likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
-                    comments = self._safe_int(item.get("comments") or item.get("comment_count"))
-                    shares = self._safe_int(item.get("shares") or item.get("share_count"))
-                    views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    impressions = self._safe_int(item.get("impressions"))
-                    engagement = likes + comments + shares
-
-                    allow = False
-                    if views >= 100000:
-                        allow = True
-                    elif impressions >= 100000:
-                        allow = True
-                    elif engagement >= 5000:
-                        allow = True
-                    if not allow:
+                    # STEP 2: Minimum engagement filtering — discard very weak content
+                    likes_raw = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
+                    comments_raw = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
+                    shares_raw = self._safe_int(item.get("shares") or item.get("share_count") or 0)
+                    engagement = likes_raw + comments_raw + shares_raw
+                    if engagement < 30:
                         continue
 
                     # Ensure item has title field (required by schema)
@@ -171,14 +161,10 @@ class TrendingSearchService:
                     # Clean up spend field if it's a string
                     if "spend" in item and isinstance(item["spend"], str):
                         item["spend"] = self._parse_float(item["spend"])
-
-                    # PART 3 — Remove non-ad content (documentaries, educational, etc.)
-                    if not self._is_commercial_content(item):
-                        continue
-
-                    # Ensure item has score field (pass keyword for relevance scoring)
+                    
+                    # Ensure item has score field
                     if "score" not in item:
-                        item["score"] = self._calculate_item_score(item, keyword)
+                        item["score"] = self._calculate_item_score(item)
 
                     # Ensure platform field
                     if "platform" not in item:
@@ -425,56 +411,7 @@ class TrendingSearchService:
         except (ValueError, TypeError):
             return 0.0
 
-    def _calculate_keyword_relevance(self, item: Dict[str, Any], keyword: str) -> float:
-        """Calculate keyword relevance score so ads matching the search query rank higher."""
-        if not keyword:
-            return 0.0
-        keyword = keyword.lower()
-        title = self._safe_str(item.get("title", "")).lower()
-        description = self._safe_str(item.get("description", "")).lower()
-        score = 0.0
-        if keyword in title:
-            score += 10
-        if keyword in description:
-            score += 5
-        # Partial match: token-level
-        keyword_tokens = keyword.split()
-        for token in keyword_tokens:
-            if token in title:
-                score += 3
-            elif token in description:
-                score += 1
-        return min(score, 15.0)
-
-    def _is_commercial_content(self, item: Dict[str, Any]) -> bool:
-        """Detect if content likely has commercial / advertising intent."""
-        title = self._safe_str(item.get("title", "")).lower()
-        description = self._safe_str(item.get("description", "")).lower()
-        text = title + " " + description
-
-        commercial_signals = [
-            "shop", "buy", "order", "deal", "sale", "offer", "limited",
-            "launch", "new product", "available now", "get yours", "discount",
-            "promotion", "promo", "store", "collection", "link in bio",
-            "use code", "save", "free shipping", "subscribe",
-        ]
-        product_keywords = [
-            "shoe", "sneaker", "phone", "laptop", "tablet", "watch", "camera",
-            "gadget", "headphones", "charger", "gaming", "pc", "monitor",
-            "keyboard", "mouse",
-        ]
-        score = 0
-        for signal in commercial_signals:
-            if signal in text:
-                score += 2
-        for keyword in product_keywords:
-            if keyword in text:
-                score += 1
-        if "http://" in text or "https://" in text:
-            score += 1
-        return score >= 2
-
-    def _calculate_item_score(self, item: Dict[str, Any], keyword: str = "") -> float:
+    def _calculate_item_score(self, item: Dict[str, Any]) -> float:
         """Calculate trending score based on available metrics (ignoring unreliable impressions)."""
         # Extract engagement metrics (raw counts for filtering/velocity)
         likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
@@ -490,35 +427,26 @@ class TrendingSearchService:
         total_engagement = likes + (comments * 5) + (shares * 3)
         engagement_score = min(70, (total_engagement ** 0.4) * 3)
 
-        # View bonus (general)
+        # View bonus
         views = self._safe_int(item.get("views") or item.get("video_view_count") or 0)
         view_bonus = 0.0
         if views > 100:
             view_bonus = min(15, (views ** 0.3))
-        # PART 4 — Boost large campaigns
-        if views >= 1000000:
-            view_bonus += 15
-        elif views >= 500000:
-            view_bonus += 10
-        elif views >= 100000:
-            view_bonus += 5
 
         # Recency bonus
         recency_bonus = self._calculate_recency_bonus(item)
 
-        # STEP 3 & 4: Engagement velocity (engagement per hour) — relaxed thresholds
+        # STEP 3 & 4: Engagement velocity (engagement per hour)
         engagement_per_hour = self._calculate_engagement_velocity(item)
         velocity_bonus = 0.0
-        if engagement_per_hour > 500:
+        if engagement_per_hour > 1000:
             velocity_bonus = 20
-        elif engagement_per_hour > 150:
+        elif engagement_per_hour > 300:
             velocity_bonus = 15
-        elif engagement_per_hour > 50:
+        elif engagement_per_hour > 100:
             velocity_bonus = 10
-        elif engagement_per_hour > 10:
+        elif engagement_per_hour > 30:
             velocity_bonus = 5
-        else:
-            velocity_bonus = 0
 
         # STEP 5: Engagement rate bonus (engagement / views)
         engagement_rate_bonus = 0.0
@@ -536,10 +464,7 @@ class TrendingSearchService:
         platform_bonus = self._get_platform_bonus(platform, item)
         quality_bonus = self._calculate_quality_bonus(item)
 
-        # Keyword relevance bonus (ads matching search intent rank higher)
-        keyword_bonus = self._calculate_keyword_relevance(item, keyword)
-
-        # STEP 6: Final score formula (with keyword_bonus), cap at 100
+        # STEP 6: Final score formula, cap at 100
         score = (
             engagement_score
             + view_bonus
@@ -548,7 +473,6 @@ class TrendingSearchService:
             + engagement_rate_bonus
             + platform_bonus
             + quality_bonus
-            + keyword_bonus
         )
         return min(100.0, max(0.0, score))
     
