@@ -11,13 +11,15 @@ logger = logging.getLogger(__name__)
 try:
     engine = create_engine(
         settings.DATABASE_URL,
-        pool_size=5,  # Reduced from 20 for Supabase pooler
-        max_overflow=10,  # Reduced from 30
+        pool_size=5,
+        max_overflow=10,
         pool_pre_ping=True,
-        pool_recycle=3600,  # Recycle connections every hour
-        echo=False
+        pool_recycle=3600,
+        echo=False,
+        # Don't attempt to connect immediately — wait until first query
+        connect_args={"connect_timeout": 10},
     )
-    logger.info(f"Database engine created successfully")
+    logger.info("Database engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}")
     raise
