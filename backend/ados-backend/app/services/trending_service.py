@@ -128,7 +128,15 @@ class TrendingSearchService:
                 for item in result:
                     if not isinstance(item, dict):
                         continue
-                    
+
+                    # STEP 2: Minimum engagement filtering — discard very weak content
+                    likes_raw = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
+                    comments_raw = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
+                    shares_raw = self._safe_int(item.get("shares") or item.get("share_count") or 0)
+                    engagement = likes_raw + comments_raw + shares_raw
+                    if engagement < 30:
+                        continue
+
                     # Ensure item has title field (required by schema)
                     if "title" not in item:
                         # Try to get title from other fields - SAFELY handle None
@@ -157,11 +165,15 @@ class TrendingSearchService:
                     # Ensure item has score field
                     if "score" not in item:
                         item["score"] = self._calculate_item_score(item)
-                    
+
                     # Ensure platform field
                     if "platform" not in item:
                         item["platform"] = platform_name
-                    
+
+                    # STEP 7: Mark viral content (velocity >= 500 or score >= 90)
+                    engagement_per_hour = self._calculate_engagement_velocity(item)
+                    item["viral"] = engagement_per_hour >= 500 or item.get("score", 0) >= 90
+
                     processed_items.append(item)
                 
                 platform_results[platform_name] = processed_items
@@ -368,47 +380,101 @@ class TrendingSearchService:
             return str(value)[:length]
         except:
             return ""
-    
-    def _calculate_item_score(self, item: Dict[str, Any]) -> float:
-        """Calculate trending score based on available metrics (ignoring unreliable impressions)"""
-        # Extract all possible engagement metrics
+
+    def _calculate_engagement_velocity(self, item: Dict[str, Any]) -> float:
+        """
+        Engagement velocity = engagement per hour since post.
+        Critical for detecting trending content. Returns 0 if time missing.
+        """
         likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
         comments = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
         shares = self._safe_int(item.get("shares") or item.get("share_count") or 0)
-        
-        # Get views but don't rely heavily on them (they might be unreliable)
-        views = self._safe_int(item.get("views") or item.get("video_view_count") or 0)
-        
-        # Calculate engagement score (primary metric)
-        # Comments are worth 5x likes, shares are worth 3x likes
+        engagement = likes + comments + shares
+
+        created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
+        if not created_at:
+            return 0.0
+        try:
+            if isinstance(created_at, str):
+                if "Z" in created_at:
+                    created_at = created_at.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(created_at)
+            else:
+                dt = created_at
+            if getattr(dt, "tzinfo", None) is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            hours = (now - dt).total_seconds() / 3600
+            if hours < 1:
+                hours = 1
+            return engagement / hours
+        except (ValueError, TypeError):
+            return 0.0
+
+    def _calculate_item_score(self, item: Dict[str, Any]) -> float:
+        """Calculate trending score based on available metrics (ignoring unreliable impressions)."""
+        # Extract engagement metrics (raw counts for filtering/velocity)
+        likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
+        comments = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
+        shares = self._safe_int(item.get("shares") or item.get("share_count") or 0)
+        total_engagement_raw = likes + comments + shares
+
+        # STEP 1: No artificial floor — zero engagement => score 0
+        if total_engagement_raw == 0:
+            return 0.0
+
+        # Weighted engagement for score (comments 5x, shares 3x)
         total_engagement = likes + (comments * 5) + (shares * 3)
-        
-        # Base score from engagement (logarithmic scale)
-        if total_engagement > 0:
-            engagement_score = min(70, (total_engagement ** 0.4) * 3)
-        else:
-            engagement_score = 10  # Minimum base score
-        
-        # Add view bonus if views seem reasonable (not < 100)
+        engagement_score = min(70, (total_engagement ** 0.4) * 3)
+
+        # View bonus
+        views = self._safe_int(item.get("views") or item.get("video_view_count") or 0)
+        view_bonus = 0.0
         if views > 100:
             view_bonus = min(15, (views ** 0.3))
-            engagement_score += view_bonus
-        
-        # Add recency bonus
+
+        # Recency bonus
         recency_bonus = self._calculate_recency_bonus(item)
-        engagement_score += recency_bonus
-        
-        # Add platform-specific bonus
+
+        # STEP 3 & 4: Engagement velocity (engagement per hour)
+        engagement_per_hour = self._calculate_engagement_velocity(item)
+        velocity_bonus = 0.0
+        if engagement_per_hour > 1000:
+            velocity_bonus = 20
+        elif engagement_per_hour > 300:
+            velocity_bonus = 15
+        elif engagement_per_hour > 100:
+            velocity_bonus = 10
+        elif engagement_per_hour > 30:
+            velocity_bonus = 5
+
+        # STEP 5: Engagement rate bonus (engagement / views)
+        engagement_rate_bonus = 0.0
+        if views > 0:
+            engagement_rate = total_engagement_raw / views
+            if engagement_rate > 0.05:
+                engagement_rate_bonus = 10
+            elif engagement_rate > 0.02:
+                engagement_rate_bonus = 6
+            elif engagement_rate > 0.01:
+                engagement_rate_bonus = 3
+
+        # Platform and quality bonuses
         platform = self._safe_str(item.get("platform", "")).lower()
         platform_bonus = self._get_platform_bonus(platform, item)
-        engagement_score += platform_bonus
-        
-        # Add content quality bonus
         quality_bonus = self._calculate_quality_bonus(item)
-        engagement_score += quality_bonus
-        
-        # Ensure score is between 0-100
-        return min(100.0, max(0, engagement_score))
+
+        # STEP 6: Final score formula, cap at 100
+        score = (
+            engagement_score
+            + view_bonus
+            + recency_bonus
+            + velocity_bonus
+            + engagement_rate_bonus
+            + platform_bonus
+            + quality_bonus
+        )
+        return min(100.0, max(0.0, score))
     
     def _calculate_recency_bonus(self, item: Dict[str, Any]) -> float:
         """Calculate bonus based on content recency"""
