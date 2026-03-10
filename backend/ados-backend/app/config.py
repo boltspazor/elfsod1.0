@@ -4,9 +4,11 @@ from typing import List
 
 class Settings:
     # Database
+    # Port 6543 = Supabase transaction pooler (works for local dev / IPv4)
+    # Port 5432 = session pooler (requires IPv4 direct — often fails DNS locally)
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+psycopg2://postgres.hkgcyrheviatmdflbxqu:c205abode123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require",
+        "postgresql+psycopg2://postgres.hkgcyrheviatmdflbxqu:c205abode123@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require",
     )
 
     # JWT

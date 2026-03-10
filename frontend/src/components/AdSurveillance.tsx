@@ -2716,10 +2716,17 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-[#666] italic">Impressions</p>
-                            <p className="text-base font-bold text-white">
-                              {formatNumber(calculateAdImpressions(ad))}
-                            </p>
+                            {ad.impressions && String(ad.impressions).trim() !== '' && String(ad.impressions).trim() !== '0' ? (
+                              <>
+                                <p className="text-xs text-[#666] italic">Impressions</p>
+                                <p className="text-base font-bold text-white">{String(ad.impressions)}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-[#666] italic">Est. Impressions</p>
+                                <p className="text-base font-bold text-white">{formatNumber(calculateAdImpressions(ad))}</p>
+                              </>
+                            )}
                           </div>
                           <div>
                             <p className="text-xs text-[#666] italic">CTR</p>
@@ -2909,8 +2916,19 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
               <p className="text-white font-bold text-lg">{formatCurrency(calculateAdSpend(analyzeAd))}</p>
             </div>
             <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
-              <p className="text-[#666] text-xs mb-1">Est. Impressions</p>
-              <p className="text-white font-bold text-lg">{formatNumber(calculateAdImpressions(analyzeAd))}</p>
+              {/* Show the raw scraped impressions string if available (matches platform Ad Library)
+                  Only fall back to estimate when the platform didn't provide a value */}
+              {analyzeAd.impressions && String(analyzeAd.impressions).trim() !== '' && String(analyzeAd.impressions).trim() !== '0' ? (
+                <>
+                  <p className="text-[#666] text-xs mb-1">Impressions</p>
+                  <p className="text-white font-bold text-lg">{String(analyzeAd.impressions)}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[#666] text-xs mb-1">Est. Impressions</p>
+                  <p className="text-white font-bold text-lg">{formatNumber(calculateAdImpressions(analyzeAd))}</p>
+                </>
+              )}
             </div>
             <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-4">
               <p className="text-[#666] text-xs mb-1">Ad Lifespan</p>
