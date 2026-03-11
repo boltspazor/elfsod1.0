@@ -238,30 +238,33 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # PART 1: Filter out ads older than 30 days
+                    # 30-day filter: exclude old ads; exclude ads with no date (can't verify recency)
                     created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
-                    if created_at:
-                        try:
-                            if isinstance(created_at, str):
-                                if "Z" in created_at:
-                                    created_at = created_at.replace("Z", "+00:00")
-                                dt = datetime.fromisoformat(created_at)
-                            else:
-                                dt = created_at
-                            now = datetime.now(timezone.utc)
-                            days_old = (now - dt).days
-                            if days_old > 30:
-                                continue
-                        except Exception:
-                            pass
+                    if not created_at:
+                        continue
+                    try:
+                        if isinstance(created_at, str):
+                            if "Z" in created_at:
+                                created_at = created_at.replace("Z", "+00:00")
+                            dt = datetime.fromisoformat(created_at)
+                        else:
+                            dt = created_at
+                        if getattr(dt, "tzinfo", None) is None:
+                            dt = dt.replace(tzinfo=timezone.utc)
+                        now = datetime.now(timezone.utc)
+                        days_old = (now - dt).total_seconds() / 86400
+                        if days_old > 30:
+                            continue
+                    except Exception:
+                        continue
 
-                    # PART 2: Remove weak ads (keep strong reach even with lower engagement)
+                    # Remove weak ads: require minimum engagement AND minimum reach
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
                     engagement = likes + comments + shares
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if engagement < 100 and views < 50000:
+                    if engagement < 150 or views < 75000:
                         continue
 
                     # Ensure item has title field (required by schema)
