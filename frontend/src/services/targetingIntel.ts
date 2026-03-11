@@ -200,11 +200,12 @@ const mockTargetingIntelData: TargetingIntelData = {
   
   // Geography
   geography: {
-    'United States': { percentage: 45, spend: 18200 },
-    'United Kingdom': { percentage: 22, spend: 8900 },
-    'Canada': { percentage: 15, spend: 6100 },
-    'Australia': { percentage: 10, spend: 4000 },
-    'Germany': { percentage: 8, spend: 3200 }
+    'United States': { percentage: 38, spend: 18200 },
+    'India': { percentage: 25, spend: 10500 },
+    'United Kingdom': { percentage: 14, spend: 8900 },
+    'Canada': { percentage: 12, spend: 6100 },
+    'Australia': { percentage: 7, spend: 4000 },
+    'Germany': { percentage: 4, spend: 3200 }
   },
   primary_location: 'United States',
   
