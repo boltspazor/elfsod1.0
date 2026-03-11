@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import Navigation from '../components/Navigation';
-import { Search, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AUTOCREATE_API_URL } from '../config';
+import { svgPlaceholder } from '../utils/imageFallback';
 
 interface PinImage {
   width?: number;
@@ -29,12 +30,39 @@ interface PinterestResponse {
 }
 
 const AdInspiration: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [pins, setPins] = useState<Pin[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery]       = useState('');
+  const [pins, setPins]         = useState<Pin[]>([]);
+  const [cursor, setCursor]     = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  // Lightbox state
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
+  const openLightbox = (idx: number) => {
+    setLightboxIdx(idx);
+    document.body.style.overflow = 'hidden';
+  };
+  const closeLightbox = () => {
+    setLightboxIdx(null);
+    document.body.style.overflow = '';
+  };
+  const prevPin = () => setLightboxIdx((i) => (i !== null && i > 0 ? i - 1 : i));
+  const nextPin = () => setLightboxIdx((i) => (i !== null && i < pins.length - 1 ? i + 1 : i));
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    if (lightboxIdx === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevPin();
+      if (e.key === 'ArrowRight') nextPin();
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightboxIdx]);
 
   const doSearch = useCallback(async (searchQuery: string, nextCursor?: string | null) => {
     const q = searchQuery.trim();
@@ -79,15 +107,23 @@ const AdInspiration: React.FC = () => {
 
   const getPinImageUrl = (pin: Pin): string => {
     const orig = pin.images?.orig?.url;
-    if (orig) return orig;
-    const firstKey = pin.images && Object.keys(pin.images)[0];
-    const first = firstKey ? (pin.images as Record<string, { url?: string }>)[firstKey]?.url : undefined;
-    return first || '';
+    const raw = orig ?? (() => {
+      const firstKey = pin.images && Object.keys(pin.images)[0];
+      return firstKey
+        ? (pin.images as Record<string, { url?: string }>)[firstKey]?.url
+        : undefined;
+    })();
+    if (!raw) return '';
+    // Proxy through our backend so the browser never hits Pinterest CDN directly.
+    // Direct requests to i.pinimg.com get 302-redirected to pinterest.com by Pinterest's servers.
+    return `${AUTOCREATE_API_URL}/api/pinterest/image-proxy?url=${encodeURIComponent(raw)}`;
   };
 
   const getPinTitle = (pin: Pin): string => {
     return pin.grid_title || pin.title || pin.description || 'Pin';
   };
+
+  const activeLightboxPin = lightboxIdx !== null && lightboxIdx >= 0 ? pins[lightboxIdx] : null;
 
   return (
     <div className="min-h-screen bg-[#0d0d0d]">
@@ -117,11 +153,7 @@ const AdInspiration: React.FC = () => {
             disabled={loading}
             className="px-6 py-3 rounded-xl bg-[#ff5b8d] hover:bg-[#ff7a9e] text-white font-semibold flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            {loading && !cursor ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Search className="w-5 h-5" />
-            )}
+            {loading && !cursor ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
             Search
           </button>
         </form>
@@ -139,16 +171,15 @@ const AdInspiration: React.FC = () => {
         {pins.length > 0 && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {pins.map((pin) => {
+              {pins.map((pin, idx) => {
                 const imgUrl = getPinImageUrl(pin);
                 const title = getPinTitle(pin);
                 return (
-                  <a
+                  <button
                     key={pin.id}
-                    href={pin.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block rounded-xl overflow-hidden bg-[#1a1a1a] border border-gray-800 hover:border-gray-600 transition-colors"
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openLightbox(idx); }}
+                    className="group text-left block rounded-xl overflow-hidden bg-[#1a1a1a] border border-gray-800 hover:border-[#ff5b8d] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff5b8d]"
                   >
                     <div className="aspect-square bg-gray-800 relative overflow-hidden">
                       {imgUrl ? (
@@ -156,24 +187,20 @@ const AdInspiration: React.FC = () => {
                           src={imgUrl}
                           alt={title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { (e.target as HTMLImageElement).src = svgPlaceholder(title.slice(0, 12), 400, 400); }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
-                          No image
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">No image</div>
                       )}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-black/70 text-white text-xs">
-                          <ExternalLink className="w-3 h-3" /> Open
-                        </span>
+                      {/* hover overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold tracking-wide">View Full</span>
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className="text-gray-300 text-sm line-clamp-2" title={title}>
-                        {title}
-                      </p>
+                      <p className="text-gray-300 text-sm line-clamp-2" title={title}>{title}</p>
                     </div>
-                  </a>
+                  </button>
                 );
               })}
             </div>
@@ -193,6 +220,104 @@ const AdInspiration: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* ── Fullscreen Lightbox ─────────────────────────────────── */}
+      {activeLightboxPin && (
+        /* Backdrop — clicking the dark area closes the lightbox */
+        <button
+          type="button"
+          aria-label="Close lightbox"
+          className="fixed inset-0 z-[9999] flex items-center justify-center w-full border-0 p-0 cursor-default"
+          style={{ background: 'rgba(0,0,0,0.92)' }}
+          onClick={closeLightbox}
+        >
+          {/* Modal panel — e.stopPropagation prevents the backdrop button from firing */}
+          <div
+            className="relative flex flex-col md:flex-row max-w-5xl w-full mx-4 bg-[#111] rounded-2xl overflow-hidden shadow-2xl cursor-auto"
+            style={{ maxHeight: '92vh' }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="none"
+          >
+            {/* Close */}
+            <button
+              type="button"
+              onClick={closeLightbox}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Prev */}
+            {lightboxIdx !== null && lightboxIdx > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); prevPin(); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Next */}
+            {lightboxIdx !== null && lightboxIdx < pins.length - 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); nextPin(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Image */}
+            <div className="flex-1 bg-black flex items-center justify-center min-h-[300px] overflow-hidden" style={{ maxHeight: '92vh' }}>
+              {getPinImageUrl(activeLightboxPin) ? (
+                <img
+                  src={getPinImageUrl(activeLightboxPin)}
+                  alt={getPinTitle(activeLightboxPin)}
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: '92vh' }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = svgPlaceholder('No Image', 600, 600); }}
+                />
+              ) : (
+                <div className="w-72 h-72 flex items-center justify-center text-gray-500">No image</div>
+              )}
+            </div>
+
+            {/* Info panel */}
+            <div className="w-full md:w-72 shrink-0 flex flex-col p-6 gap-4 overflow-y-auto">
+              <h2 className="text-white font-bold text-lg leading-snug">
+                {getPinTitle(activeLightboxPin)}
+              </h2>
+              {activeLightboxPin.description &&
+                activeLightboxPin.description !== getPinTitle(activeLightboxPin) && (
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    {activeLightboxPin.description}
+                  </p>
+                )}
+
+              {/* counter */}
+              <p className="text-gray-600 text-xs mt-auto">
+                {(lightboxIdx ?? -1) + 1} / {pins.length}
+              </p>
+
+              {/* Open on Pinterest — explicit button to avoid accidental navigation */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  globalThis.open(activeLightboxPin.url, '_blank', 'noopener,noreferrer');
+                }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#1a1a1a] hover:bg-[#222] border border-gray-700 hover:border-[#ff5b8d] text-white text-sm font-medium transition-colors"
+              >
+                <ExternalLink className="w-4 h-4 text-[#ff5b8d]" />
+                Open on Pinterest
+              </button>
+            </div>
+          </div>
+        </button>
+      )}
     </div>
   );
 };

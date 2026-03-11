@@ -802,6 +802,47 @@ def pinterest_search():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@creative_assets_bp.route('/api/pinterest/image-proxy', methods=['GET', 'OPTIONS'])
+def pinterest_image_proxy():
+    """Proxy Pinterest CDN images to avoid browser redirect to pinterest.com."""
+    if request.method == 'OPTIONS':
+        return '', 200
+    url = request.args.get('url', '').strip()
+    if not url:
+        return jsonify({"error": "Missing url parameter"}), 400
+    # Only allow Pinterest CDN domains
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    allowed_hosts = ('i.pinimg.com', 'pinimg.com', 's.pinimg.com')
+    if not any(parsed.hostname and parsed.hostname.endswith(h) for h in allowed_hosts):
+        return jsonify({"error": "URL not allowed"}), 403
+    try:
+        resp = requests.get(
+            url,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; AdOSBot/1.0)',
+                'Referer': 'https://www.pinterest.com/',
+            },
+            timeout=15,
+            stream=True,
+        )
+        resp.raise_for_status()
+        content_type = resp.headers.get('Content-Type', 'image/jpeg')
+        from flask import Response
+        return Response(
+            resp.content,
+            status=200,
+            headers={
+                'Content-Type': content_type,
+                'Cache-Control': 'public, max-age=86400',
+                'Access-Control-Allow-Origin': '*',
+            },
+        )
+    except Exception as e:
+        logger.error(f"Pinterest image proxy error: {e}")
+        return jsonify({"error": str(e)}), 502
+
+
 @creative_assets_bp.route('/api/generate-assets', methods=['POST', 'OPTIONS'])
 def generate_assets():
     """Generate multiple AI assets (images or videos)"""
