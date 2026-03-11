@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import Navigation from '../components/Navigation';
-import { Search, ExternalLink, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AUTOCREATE_API_URL } from '../config';
 import { svgPlaceholder } from '../utils/imageFallback';
 
@@ -301,19 +301,6 @@ const AdInspiration: React.FC = () => {
               <p className="text-gray-600 text-xs mt-auto">
                 {(lightboxIdx ?? -1) + 1} / {pins.length}
               </p>
-
-              {/* Open on Pinterest — explicit button to avoid accidental navigation */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  globalThis.open(activeLightboxPin.url, '_blank', 'noopener,noreferrer');
-                }}
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#1a1a1a] hover:bg-[#222] border border-gray-700 hover:border-[#ff5b8d] text-white text-sm font-medium transition-colors"
-              >
-                <ExternalLink className="w-4 h-4 text-[#ff5b8d]" />
-                Open on Pinterest
-              </button>
             </div>
           </div>
         </button>
