@@ -290,14 +290,14 @@ class TrendingSearchService:
                     except Exception:
                         continue
 
-                    # High bar: keep only 500k+ views OR 300k+ likes (top reach / engagement)
+                    # High bar: keep only 100k+ views OR 50k+ likes (top reach / engagement)
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
                     if likes < 0:
                         likes = 0
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if views < 500000 and likes < 300000:
+                    if views < 100000 and likes < 50000:
                         continue
                     engagement = likes + comments + shares
 
