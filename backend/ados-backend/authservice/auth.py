@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 # --------------------
 # Setup
 # --------------------
-load_dotenv()
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(_env_path)
 
 app = Flask(__name__)
 CORS(app, origins=["*"])  # Dev only
