@@ -6,6 +6,87 @@ import re
 from datetime import datetime, timezone
 
 
+CATEGORY_DISCOVERY_QUERIES = {
+    "fashion": [
+        "zara",
+        "h&m",
+        "uniqlo",
+        "fashion campaign",
+        "new collection",
+        "fashion drop",
+        "designer collaboration",
+    ],
+    "shoes": [
+        "nike",
+        "adidas",
+        "puma",
+        "new balance",
+        "hoka",
+        "asics",
+        "foot locker",
+        "sneaker drop",
+        "running shoes",
+        "sneaker launch",
+    ],
+    "tech": [
+        "apple",
+        "samsung",
+        "dell",
+        "lenovo",
+        "tech launch",
+        "new gadget",
+        "ai device",
+        "smartphone launch",
+    ],
+    "cars": [
+        "tesla",
+        "bmw",
+        "mercedes",
+        "audi",
+        "toyota",
+        "car launch",
+        "electric vehicle",
+        "new suv",
+    ],
+    "home_decor": [
+        "ikea",
+        "home decor",
+        "interior design",
+        "furniture collection",
+        "modern home",
+    ],
+    "fitness": [
+        "gymshark",
+        "fitness gear",
+        "workout brand",
+        "protein supplement",
+        "fitness apparel",
+    ],
+    "beauty": [
+        "sephora",
+        "loreal",
+        "fenty beauty",
+        "makeup launch",
+        "skincare routine",
+    ],
+    "travel": [
+        "expedia",
+        "booking.com",
+        "trip advisor",
+        "travel deals",
+        "hotel deals",
+        "vacation campaign",
+    ],
+    "ecommerce": [
+        "shopify",
+        "amazon deals",
+        "black friday deal",
+        "limited offer",
+        "online store launch",
+    ],
+}
+
+
 class TrendingSearchService:
     def __init__(self):
         # Try to get API key from config or environment
@@ -68,67 +149,92 @@ class TrendingSearchService:
                 "error": "API key not configured."
             }
 
-        # PART 6: Fetch more candidates per platform to improve ranking quality
-        limit_per_platform = max(limit_per_platform, 20)
-        
-        tasks = []
-        
-        if "meta" in platforms and self.meta_service:
-            tasks.append(self._search_meta(keyword, limit_per_platform))
-        else:
-            tasks.append(self._return_empty_list())
-        
-        if "reddit" in platforms and self.reddit_service:
-            tasks.append(self._search_reddit(keyword, limit_per_platform))
-        else:
-            tasks.append(self._return_empty_list())
-        
-        if "linkedin" in platforms and self.linkedin_service:
-            tasks.append(self._search_linkedin(keyword, limit_per_platform))
-        else:
-            tasks.append(self._return_empty_list())
-        
-        if "youtube" in platforms and self.youtube_service:
-            tasks.append(self._search_youtube(keyword, limit_per_platform))
-        else:
-            tasks.append(self._return_empty_list())
-        
-        if "instagram" in platforms and self.instagram_service:
-            tasks.append(self._search_instagram(keyword, limit_per_platform))
-        else:
-            tasks.append(self._return_empty_list())
-        
-        # Execute all searches concurrently
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Process results
-        platform_results = {}
-        result_list = [
-            ("meta", results[0]),
-            ("reddit", results[1]),
-            ("linkedin", results[2]),
-            ("youtube", results[3]),
-            ("instagram", results[4])
-        ]
-        
-        for platform_name, result in result_list:
-            if isinstance(result, Exception):
-                print(f"Error searching {platform_name}: {result}")
-                platform_results[platform_name] = []
-            elif result is None:
-                # Handle None result
-                print(f"Warning: {platform_name} returned None")
-                platform_results[platform_name] = []
-            else:
-                # Ensure result is a list
+        # PART 2 + 4: Category expansion + fetch more candidates per platform
+        queries = [keyword]
+        keyword_key = (keyword or "").strip().lower()
+        if keyword_key in CATEGORY_DISCOVERY_QUERIES:
+            queries = CATEGORY_DISCOVERY_QUERIES[keyword_key]
+
+        limit_per_platform = max(limit_per_platform, 50)
+
+        # PART 3: Fetch ads for each discovery query, then merge results
+        merged_by_platform: Dict[str, List[Dict[str, Any]]] = {
+            "meta": [],
+            "reddit": [],
+            "linkedin": [],
+            "youtube": [],
+            "instagram": [],
+        }
+
+        for query in queries:
+            tasks: List[Any] = []
+            task_platforms: List[str] = []
+
+            if "meta" in platforms and self.meta_service:
+                tasks.append(self._search_meta(query, limit_per_platform))
+                task_platforms.append("meta")
+            if "reddit" in platforms and self.reddit_service:
+                tasks.append(self._search_reddit(query, limit_per_platform))
+                task_platforms.append("reddit")
+            if "linkedin" in platforms and self.linkedin_service:
+                tasks.append(self._search_linkedin(query, limit_per_platform))
+                task_platforms.append("linkedin")
+            if "youtube" in platforms and self.youtube_service:
+                tasks.append(self._search_youtube(query, limit_per_platform))
+                task_platforms.append("youtube")
+            if "instagram" in platforms and self.instagram_service:
+                tasks.append(self._search_instagram(query, limit_per_platform))
+                task_platforms.append("instagram")
+
+            if not tasks:
+                continue
+
+            query_results = await asyncio.gather(*tasks, return_exceptions=True)
+            for platform_name, result in zip(task_platforms, query_results):
+                if isinstance(result, Exception):
+                    print(f"Error searching {platform_name} for query '{query}': {result}")
+                    continue
+                if result is None:
+                    continue
                 if not isinstance(result, list):
                     print(f"Warning: {platform_name} returned non-list result: {type(result)}")
-                    platform_results[platform_name] = []
                     continue
-                
-                # Ensure all items have required fields
-                processed_items = []
-                for item in result:
+                for ad in result:
+                    if not isinstance(ad, dict):
+                        continue
+                    if "platform" not in ad:
+                        ad["platform"] = platform_name
+                    merged_by_platform[platform_name].append(ad)
+
+        all_results: List[Dict[str, Any]] = []
+        for items in merged_by_platform.values():
+            all_results.extend(items)
+
+        # PART 5: Deduplicate ads by URL across all queries/platforms
+        unique_ads: Dict[str, Dict[str, Any]] = {}
+        for ad in all_results:
+            url = ad.get("url")
+            if url and url not in unique_ads:
+                unique_ads[url] = ad
+        all_results = list(unique_ads.values())
+
+        # Re-bucket by platform after global dedupe
+        platform_results: Dict[str, List[Dict[str, Any]]] = {
+            "meta": [],
+            "reddit": [],
+            "linkedin": [],
+            "youtube": [],
+            "instagram": [],
+        }
+        for ad in all_results:
+            p = self._safe_str(ad.get("platform", "")).lower()
+            if p in platform_results:
+                platform_results[p].append(ad)
+
+        # Apply filters + scoring per platform (keeps response structure unchanged)
+        for platform_name, result in platform_results.items():
+            processed_items: List[Dict[str, Any]] = []
+            for item in result:
                     if not isinstance(item, dict):
                         continue
 
@@ -202,8 +308,7 @@ class TrendingSearchService:
                     item["viral"] = item.get("score", 0) >= 90
 
                     processed_items.append(item)
-                
-                platform_results[platform_name] = processed_items
+            platform_results[platform_name] = processed_items
         
         # Calculate cross-platform rankings
         all_items = []
