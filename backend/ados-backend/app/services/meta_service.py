@@ -89,7 +89,8 @@ class MetaAdsService:
                 "id": ad.get("ad_archive_id"),
                 "headline": snapshot.get("title"),
                 "description": ad_text,
-                "destination_url": snapshot.get("link_url"),
+                # Prefer ad library permalink (actual ad) over landing-page URL.
+                "destination_url": ad.get("url") or snapshot.get("link_url"),
                 "image_url": image_url,
                 "impressions": ad.get("impressions_with_index", {}).get("impressions_text"),
                 "spend": ad.get("spend"),

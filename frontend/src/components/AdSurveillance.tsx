@@ -521,6 +521,29 @@ const AdSurveillance = () => {
     return platformMinImpressions[platform] || 10000;
   };
 
+  const ACTIVE_AD_MAX_AGE_DAYS = 14;
+  const MIN_LIVE_AD_IMPRESSIONS = 10000;
+
+  // Derive active status when API value is missing by using recency.
+  const resolveAdActiveStatus = (ad: {
+    is_active?: boolean;
+    last_seen?: string;
+    created_at?: string;
+    first_seen?: string;
+  }): boolean => {
+    if (typeof ad.is_active === "boolean") return ad.is_active;
+
+    const lastSeenValue = ad.last_seen || ad.created_at || ad.first_seen;
+    if (!lastSeenValue) return false;
+
+    const lastSeenDate = new Date(lastSeenValue);
+    if (Number.isNaN(lastSeenDate.getTime())) return false;
+
+    const ageDays =
+      (Date.now() - lastSeenDate.getTime()) / (1000 * 60 * 60 * 24);
+    return ageDays <= ACTIVE_AD_MAX_AGE_DAYS;
+  };
+
   // ============================================
   // CALCULATION FUNCTIONS
   // ============================================
@@ -789,7 +812,12 @@ const AdSurveillance = () => {
               competitor_name: ad.competitor_name || "",
               impressions: parsedImpressions,
               spend: parsedSpend,
-              is_active: ad.is_active !== undefined ? ad.is_active : true,
+              is_active: resolveAdActiveStatus({
+                is_active: ad.is_active,
+                last_seen: ad.last_seen,
+                created_at: ad.created_at,
+                first_seen: ad.first_seen,
+              }),
             };
           });
         }
@@ -858,7 +886,12 @@ const AdSurveillance = () => {
               competitor_name: ad.competitor_name || "",
               impressions: parsedImpressions,
               spend: parsedSpend,
-              is_active: ad.is_active !== undefined ? ad.is_active : true,
+              is_active: resolveAdActiveStatus({
+                is_active: ad.is_active,
+                last_seen: ad.last_seen,
+                created_at: ad.created_at,
+                first_seen: ad.first_seen,
+              }),
             };
           });
         }
@@ -879,7 +912,12 @@ const AdSurveillance = () => {
                 competitor_name: ad.competitor_name || "",
                 impressions: parsedImpressions,
                 spend: parsedSpend,
-                is_active: ad.is_active !== undefined ? ad.is_active : true,
+                is_active: resolveAdActiveStatus({
+                  is_active: ad.is_active,
+                  last_seen: ad.last_seen,
+                  created_at: ad.created_at,
+                  first_seen: ad.first_seen,
+                }),
               };
             });
           }
@@ -908,7 +946,12 @@ const AdSurveillance = () => {
                     competitor_name: comp.name,
                     impressions: parsedImpressions,
                     spend: parsedSpend,
-                    is_active: ad.is_active !== undefined ? ad.is_active : true,
+                    is_active: resolveAdActiveStatus({
+                      is_active: ad.is_active,
+                      last_seen: ad.last_seen,
+                      created_at: ad.created_at,
+                      first_seen: ad.first_seen,
+                    }),
                   };
                 });
               }
@@ -1217,6 +1260,17 @@ const AdSurveillance = () => {
   useEffect(() => {
     let filtered = [...ads];
 
+    // Always show only active, high-visibility ads in Live Ad Feed.
+    filtered = filtered.filter((ad) => resolveAdActiveStatus(ad));
+    filtered = filtered.filter((ad) => {
+      const impressions = parseImpressionValue(ad.impressions);
+      if (impressions > 0) return impressions >= MIN_LIVE_AD_IMPRESSIONS;
+
+      // If impressions are missing, use spend as fallback proxy for visibility.
+      const spend = parseSpendValue(ad.spend);
+      return spend >= 300;
+    });
+
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
@@ -1328,6 +1382,30 @@ const AdSurveillance = () => {
   const handleCloneStrategy = (ad: AdData) => {
     setCloneAd(ad);
     setCloneCopied(false);
+  };
+
+  const getAdLink = (ad: AdData): string | null => {
+    const raw = (ad.destination_url || "").trim();
+    if (raw) {
+      // If already a Meta ad library permalink, use it as-is.
+      if (/facebook\.com\/ads\/library/i.test(raw)) return raw;
+
+      // If this is a Meta/Facebook ad and we have platform ID, prefer ad-library URL over landing page.
+      const platform = (ad.platform || "").toLowerCase();
+      if ((platform === "meta" || platform === "facebook") && ad.platform_ad_id) {
+        return `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.platform_ad_id)}`;
+      }
+
+      return raw;
+    }
+
+    // Fallback for older rows where destination_url stored landing page only / or is missing.
+    const platform = (ad.platform || "").toLowerCase();
+    if ((platform === "meta" || platform === "facebook") && ad.platform_ad_id) {
+      return `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.platform_ad_id)}`;
+    }
+
+    return null;
   };
 
   // Build the clone strategy text
@@ -3025,13 +3103,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
               <span>Last seen: <span className="text-[#aaa]">{formatDate(analyzeAd.last_seen)}</span></span>
             </div>
 
-            {analyzeAd.destination_url && (
+            {getAdLink(analyzeAd) && (
               <a
-                href={analyzeAd.destination_url}
+                href={getAdLink(analyzeAd) || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-[#0ea5e9] hover:underline">
-                View destination URL →
+                View ad link →
               </a>
             )}
           </div>
