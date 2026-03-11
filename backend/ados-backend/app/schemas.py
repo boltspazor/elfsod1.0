@@ -154,6 +154,7 @@ class AdResponse(BaseModel):
     impressions: Optional[str] = None
     spend: Optional[str] = None
     is_active: Optional[bool] = True
+    is_official: Optional[bool] = None  # True = from company ad library (Meta/Google company endpoint)
     first_seen: Optional[datetime] = None
     last_seen: Optional[datetime] = None
     created_at: Optional[datetime] = None

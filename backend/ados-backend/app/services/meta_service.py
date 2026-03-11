@@ -93,6 +93,8 @@ class MetaAdsService:
 
         raw_ads = await loop.run_in_executor(None, fetch_ads)
         formatted_ads = [self._format_raw_ad(ad) for ad in raw_ads[:max_results]]
+        for ad in formatted_ads:
+            ad["is_official"] = False  # keyword search = not from company page
         return formatted_ads
 
     async def fetch_company_ads(
@@ -133,4 +135,6 @@ class MetaAdsService:
             if not next_cursor or not results:
                 break
 
+        for ad in all_formatted:
+            ad["is_official"] = True  # company/ads endpoint = run by this company
         return all_formatted

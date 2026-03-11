@@ -56,7 +56,8 @@ class GoogleAdsService:
                 "image_url": ad.get("imageUrl"),
                 "format": ad.get("format"),
                 "advertiser": ad.get("advertiserName"),
-                "platform": "google"
+                "platform": "google",
+                "is_official": True,  # company/ads = run by this company
             }
             formatted_ads.append(formatted_ad)
         

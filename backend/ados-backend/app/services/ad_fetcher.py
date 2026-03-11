@@ -228,6 +228,9 @@ class AdFetcher:
                         if destination_url and destination_url != existing_ad.destination_url:
                             existing_ad.destination_url = destination_url
                         
+                        if "is_official" in ad_data:
+                            existing_ad.is_official = bool(ad_data["is_official"])
+                        
                         updated_ads_count += 1
                         
                     else:
@@ -247,6 +250,7 @@ class AdFetcher:
                             spend=ad_data.get("spend"),
                             raw_data=json.dumps(ad_data, default=str),
                             is_active=True,
+                            is_official=bool(ad_data.get("is_official", False)),
                             first_seen=datetime.utcnow(),
                             last_seen=datetime.utcnow()
                         )

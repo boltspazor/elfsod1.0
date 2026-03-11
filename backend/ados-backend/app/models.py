@@ -187,6 +187,7 @@ class Ad(Base):
     impressions = Column(String, nullable=True)
     spend = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    is_official = Column(Boolean, default=False, nullable=False)  # True = from company ad library (Meta/Google company endpoint)
     first_seen = Column(DateTime(timezone=True), default=datetime.utcnow)
     last_seen = Column(DateTime(timezone=True), default=datetime.utcnow)
     raw_data = Column(Text, nullable=True)  # JSON as text
