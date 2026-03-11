@@ -132,13 +132,30 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # PART 2: Stronger weak-content filter (drop low-engagement, low-reach items)
+                    # PART 1: Filter out ads older than 30 days
+                    created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
+                    if created_at:
+                        try:
+                            if isinstance(created_at, str):
+                                if "Z" in created_at:
+                                    created_at = created_at.replace("Z", "+00:00")
+                                dt = datetime.fromisoformat(created_at)
+                            else:
+                                dt = created_at
+                            now = datetime.now(timezone.utc)
+                            days_old = (now - dt).days
+                            if days_old > 30:
+                                continue
+                        except Exception:
+                            pass
+
+                    # PART 2: Remove weak ads (keep strong reach even with lower engagement)
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
                     engagement = likes + comments + shares
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if engagement < 50 and views < 50000:
+                    if engagement < 100 and views < 50000:
                         continue
 
                     # Ensure item has title field (required by schema)
@@ -174,9 +191,15 @@ class TrendingSearchService:
                     if "platform" not in item:
                         item["platform"] = platform_name
 
-                    # STEP 7: Mark viral content (velocity >= 500 or score >= 90)
-                    engagement_per_hour = self._calculate_engagement_velocity(item)
-                    item["viral"] = engagement_per_hour >= 500 or item.get("score", 0) >= 90
+                    # PART 5: Tag high performing ads
+                    engagement_rate = 0.0
+                    if views > 0:
+                        engagement_rate = engagement / views
+                    if engagement_rate > 0.03 and views > 100000:
+                        item["high_performing"] = True
+
+                    # Keep existing "viral" field, but base it on high score (velocity is no longer used)
+                    item["viral"] = item.get("score", 0) >= 90
 
                     processed_items.append(item)
                 
@@ -438,56 +461,22 @@ class TrendingSearchService:
         return min(score, 15.0)
 
     def _calculate_item_score(self, item: Dict[str, Any], keyword: str = "") -> float:
-        """Calculate trending score based on available metrics (ignoring unreliable impressions)."""
-        # Extract engagement metrics (raw counts for filtering/velocity)
+        """Calculate score for recent high-performing ads (past 30 days)."""
+        # Extract engagement metrics (raw counts)
         likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
         comments = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
         shares = self._safe_int(item.get("shares") or item.get("share_count") or 0)
-        total_engagement_raw = likes + comments + shares
+        engagement = likes + comments + shares
 
-        # STEP 1: No artificial floor — zero engagement => score 0
-        if total_engagement_raw == 0:
+        # No artificial floor — zero engagement => score 0
+        if engagement == 0:
             return 0.0
 
-        # PART 3: Improve engagement weighting (shares are stronger virality signal)
-        total_engagement = likes + (comments * 3) + (shares * 6)
-        engagement_score = min(70, (total_engagement ** 0.4) * 3)
-
-        # View bonus
+        # Views and engagement rate
         views = self._safe_int(item.get("views") or item.get("video_view_count") or 0)
-        view_bonus = 0.0
-        if views > 100:
-            view_bonus = min(15, (views ** 0.3))
-        # PART 5: Boost large campaigns
-        if views >= 1000000:
-            view_bonus += 10
-        elif views >= 500000:
-            view_bonus += 5
-
-        # PART 4: Velocity bonus (relaxed thresholds so more ads get a boost)
-        engagement_per_hour = self._calculate_engagement_velocity(item)
-        velocity_bonus = 0.0
-        if engagement_per_hour > 500:
-            velocity_bonus = 20
-        elif engagement_per_hour > 150:
-            velocity_bonus = 15
-        elif engagement_per_hour > 50:
-            velocity_bonus = 10
-        elif engagement_per_hour > 10:
-            velocity_bonus = 5
-        else:
-            velocity_bonus = 0
-
-        # STEP 5: Engagement rate bonus (engagement / views)
-        engagement_rate_bonus = 0.0
+        engagement_rate = 0.0
         if views > 0:
-            engagement_rate = total_engagement_raw / views
-            if engagement_rate > 0.05:
-                engagement_rate_bonus = 10
-            elif engagement_rate > 0.02:
-                engagement_rate_bonus = 6
-            elif engagement_rate > 0.01:
-                engagement_rate_bonus = 3
+            engagement_rate = engagement / views
 
         # Platform and quality bonuses
         platform = self._safe_str(item.get("platform", "")).lower()
@@ -495,18 +484,25 @@ class TrendingSearchService:
         quality_bonus = self._calculate_quality_bonus(item)
         keyword_bonus = self._calculate_keyword_relevance(item, keyword)
 
-        # PART 1: Recency decay multiplier (older posts lose ranking power)
-        score = (
-            engagement_score
-            + view_bonus
-            + velocity_bonus
-            + engagement_rate_bonus
-            + platform_bonus
-            + quality_bonus
-            + keyword_bonus
-        )
-        recency_decay = self._calculate_recency_decay(item)
-        score *= recency_decay
+        # PART 4: Performance score (engagement strength + engagement rate + reach)
+        performance_score = 0.0
+        performance_score += min(50.0, (engagement ** 0.4) * 4)
+
+        if engagement_rate > 0.05:
+            performance_score += 30
+        elif engagement_rate > 0.03:
+            performance_score += 20
+        elif engagement_rate > 0.01:
+            performance_score += 10
+
+        if views > 1000000:
+            performance_score += 15
+        elif views > 500000:
+            performance_score += 10
+        elif views > 100000:
+            performance_score += 5
+
+        score = performance_score + platform_bonus + quality_bonus + keyword_bonus
         return min(100.0, max(0.0, score))
 
     def _calculate_recency_decay(self, item: Dict[str, Any]) -> float:
