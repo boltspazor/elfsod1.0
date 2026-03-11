@@ -67,6 +67,9 @@ class TrendingSearchService:
                 "platform_performance": {},
                 "error": "API key not configured."
             }
+
+        # PART 6: Fetch more candidates per platform to improve ranking quality
+        limit_per_platform = max(limit_per_platform, 20)
         
         tasks = []
         
@@ -129,13 +132,13 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # Relaxed filter: remove only weak content with low engagement AND low views
+                    # PART 2: Stronger weak-content filter (drop low-engagement, low-reach items)
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
                     engagement = likes + comments + shares
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if engagement < 10 and views < 100000:
+                    if engagement < 50 and views < 50000:
                         continue
 
                     # Ensure item has title field (required by schema)
@@ -446,8 +449,8 @@ class TrendingSearchService:
         if total_engagement_raw == 0:
             return 0.0
 
-        # Weighted engagement for score (comments 5x, shares 3x)
-        total_engagement = likes + (comments * 5) + (shares * 3)
+        # PART 3: Improve engagement weighting (shares are stronger virality signal)
+        total_engagement = likes + (comments * 3) + (shares * 6)
         engagement_score = min(70, (total_engagement ** 0.4) * 3)
 
         # View bonus
@@ -455,11 +458,13 @@ class TrendingSearchService:
         view_bonus = 0.0
         if views > 100:
             view_bonus = min(15, (views ** 0.3))
+        # PART 5: Boost large campaigns
+        if views >= 1000000:
+            view_bonus += 10
+        elif views >= 500000:
+            view_bonus += 5
 
-        # Recency bonus
-        recency_bonus = self._calculate_recency_bonus(item)
-
-        # Velocity bonus (relaxed thresholds so more ads get a boost)
+        # PART 4: Velocity bonus (relaxed thresholds so more ads get a boost)
         engagement_per_hour = self._calculate_engagement_velocity(item)
         velocity_bonus = 0.0
         if engagement_per_hour > 500:
@@ -490,18 +495,51 @@ class TrendingSearchService:
         quality_bonus = self._calculate_quality_bonus(item)
         keyword_bonus = self._calculate_keyword_relevance(item, keyword)
 
-        # Final score: engagement + view + recency + velocity + engagement_rate + platform + quality + keyword, cap 0–100
+        # PART 1: Recency decay multiplier (older posts lose ranking power)
         score = (
             engagement_score
             + view_bonus
-            + recency_bonus
             + velocity_bonus
             + engagement_rate_bonus
             + platform_bonus
             + quality_bonus
             + keyword_bonus
         )
+        recency_decay = self._calculate_recency_decay(item)
+        score *= recency_decay
         return min(100.0, max(0.0, score))
+
+    def _calculate_recency_decay(self, item: Dict[str, Any]) -> float:
+        """Apply a decay multiplier so older posts lose ranking power."""
+        created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
+
+        if not created_at:
+            return 0.7
+
+        try:
+            if isinstance(created_at, str):
+                if "Z" in created_at:
+                    created_at = created_at.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(created_at)
+            else:
+                dt = created_at
+
+            now = datetime.now(timezone.utc)
+            hours = (now - dt).total_seconds() / 3600
+
+            if hours < 24:
+                return 1.0
+            elif hours < 72:
+                return 0.85
+            elif hours < 168:
+                return 0.7
+            elif hours < 720:
+                return 0.5
+            else:
+                return 0.3
+
+        except Exception:
+            return 0.7
     
     def _calculate_recency_bonus(self, item: Dict[str, Any]) -> float:
         """Calculate bonus based on content recency"""
