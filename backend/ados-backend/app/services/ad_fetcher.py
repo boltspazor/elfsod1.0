@@ -47,6 +47,21 @@ class AdFetcher:
                 return str(fallback).strip()
 
         return None
+
+    @staticmethod
+    def _advertiser_matches_competitor(advertiser: Any, competitor_name: str) -> bool:
+        """True if ad's advertiser/page name matches or contains competitor name (for promoting search ads to official)."""
+        if not competitor_name or not advertiser:
+            return False
+        a = str(advertiser).strip().lower()
+        c = str(competitor_name).strip().lower()
+        if not a or not c:
+            return False
+        if a == c:
+            return True
+        if c in a or a in c:
+            return True
+        return False
     
     async def fetch_competitor_ads(self, competitor_id: str, user_id: str, 
                                   platforms: List[str] = None) -> Dict[str, Any]:
@@ -109,6 +124,12 @@ class AdFetcher:
                             keyword=competitor.name,
                             max_results=settings.MAX_ADS_PER_COMPETITOR,
                         )
+                    # Promote to official when advertiser/page name matches competitor (e.g. Zepto vs Zepto India)
+                    for ad in meta_ads:
+                        if not ad.get("is_official") and self._advertiser_matches_competitor(
+                            ad.get("advertiser"), competitor.name
+                        ):
+                            ad["is_official"] = True
                     results["meta"] = meta_ads
                     logger.info(f"Fetched {len(meta_ads)} Meta ads for {competitor.name}")
                 except Exception as e:
