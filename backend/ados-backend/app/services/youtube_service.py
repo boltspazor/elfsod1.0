@@ -1,9 +1,11 @@
 # app/services/youtube_service.py
 import requests
+import re
 from typing import List, Dict, Any, Optional
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import asyncio
+from datetime import datetime, timezone, timedelta
 
 class YouTubeService:
     def __init__(self, api_key: str):
@@ -86,7 +88,7 @@ class YouTubeService:
                 "views": view_count,
                 "likes": like_count,
                 "comments": comment_count,
-                "published_at": video.get("publishedTime"),
+                "published_at": self._normalize_published_time(video.get("publishedTime"), video.get("publishedTimeText")),
                 "duration_seconds": video.get("lengthSeconds"),
                 "type": "short" if is_short else "video",
                 "platform": "youtube",
@@ -96,6 +98,56 @@ class YouTubeService:
             formatted_videos.append(formatted_video)
         
         return formatted_videos
+
+    def _normalize_published_time(self, published_time: Any, published_time_text: Any = None) -> Optional[str]:
+        """Convert API date to ISO string. Handles ISO timestamps and relative strings like '4 months ago'."""
+        raw = published_time or published_time_text
+        if not raw or not isinstance(raw, str):
+            return None
+        raw = raw.strip()
+        if not raw:
+            return None
+        # Try ISO format first
+        try:
+            if "Z" in raw or ("-" in raw and "T" in raw):
+                s = raw.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(s)
+                if getattr(dt, "tzinfo", None) is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.isoformat()
+        except (ValueError, TypeError):
+            pass
+        # Parse relative: "X second(s) ago", "X minute(s) ago", "X hour(s) ago", "X day(s) ago", "X week(s) ago", "X month(s) ago", "X year(s) ago"
+        low = raw.lower()
+        now = datetime.now(timezone.utc)
+        m = re.match(r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*ago", low)
+        if not m:
+            m = re.match(r"(\d+)\s*(second|minute|hour|day|week|month|year)\s*ago", low)
+        if m:
+            try:
+                n = int(m.group(1))
+                unit = m.group(2)
+                if unit == "second":
+                    delta = timedelta(seconds=n)
+                elif unit == "minute":
+                    delta = timedelta(minutes=n)
+                elif unit == "hour":
+                    delta = timedelta(hours=n)
+                elif unit == "day":
+                    delta = timedelta(days=n)
+                elif unit == "week":
+                    delta = timedelta(weeks=n)
+                elif unit == "month":
+                    delta = timedelta(days=n * 30)
+                elif unit == "year":
+                    delta = timedelta(days=n * 365)
+                else:
+                    return None
+                dt = now - delta
+                return dt.isoformat()
+            except (ValueError, TypeError):
+                pass
+        return None
     
     def _calculate_trending_score(self, views: int, likes: int, comments: int, is_short: bool = False) -> float:
         """Calculate a trending score (0-100) based on engagement metrics"""

@@ -87,6 +87,34 @@ CATEGORY_DISCOVERY_QUERIES = {
 }
 
 
+def _normalize_keyword_to_category_key(keyword: str) -> Optional[str]:
+    """Map frontend category keywords to existing CATEGORY_DISCOVERY_QUERIES keys."""
+    if not keyword or not isinstance(keyword, str):
+        return None
+    k = keyword.strip().lower()
+    if not k:
+        return None
+    if k in ("shoes", "shoes ads", "shoe ads"):
+        return "shoes"
+    if k in ("fashion", "fashion ads") or "fashion" in k:
+        return "fashion"
+    if k in ("tech", "technology") or "tech" in k:
+        return "tech"
+    if k in ("cars", "car ads") or "car " in k or k.startswith("car "):
+        return "cars"
+    if "home" in k or "decor" in k or "furniture" in k:
+        return "home_decor"
+    if k in ("fitness", "fitness ads") or "fitness" in k:
+        return "fitness"
+    if k in ("beauty", "beauty ads") or "beauty" in k:
+        return "beauty"
+    if k in ("travel", "travel ads") or "travel" in k:
+        return "travel"
+    if "ecommerce" in k or "shopify" in k or "amazon" in k:
+        return "ecommerce"
+    return None
+
+
 class TrendingSearchService:
     def __init__(self):
         # Try to get API key from config or environment
@@ -149,11 +177,15 @@ class TrendingSearchService:
                 "error": "API key not configured."
             }
 
-        # PART 2 + 4: Category expansion + fetch more candidates per platform
-        queries = [keyword]
+        # PART 2 + 4: Category expansion (only existing keys) + fetch more candidates per platform
+        queries: List[str] = [keyword]
         keyword_key = (keyword or "").strip().lower()
-        if keyword_key in CATEGORY_DISCOVERY_QUERIES:
+        category_key = _normalize_keyword_to_category_key(keyword_key)
+        if category_key and category_key in CATEGORY_DISCOVERY_QUERIES:
+            queries = CATEGORY_DISCOVERY_QUERIES[category_key]
+        elif keyword_key in CATEGORY_DISCOVERY_QUERIES:
             queries = CATEGORY_DISCOVERY_QUERIES[keyword_key]
+        brand_terms_for_score: Optional[List[str]] = queries if len(queries) > 1 else None
 
         limit_per_platform = max(limit_per_platform, 50)
 
@@ -238,7 +270,7 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # 30-day filter: skip only when we have a date and it's older than 30 days
+                    # 90-day filter: skip only when we have a date and it's older than 90 days
                     created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
                     if created_at:
                         try:
@@ -252,19 +284,21 @@ class TrendingSearchService:
                                 dt = dt.replace(tzinfo=timezone.utc)
                             now = datetime.now(timezone.utc)
                             days_old = (now - dt).total_seconds() / 86400
-                            if days_old > 30:
+                            if days_old > 90:
                                 continue
                         except Exception:
                             pass
 
-                    # Remove weak ads: skip only when BOTH engagement and reach are low
+                    # High bar: keep only 500k+ views OR 300k+ likes (top reach / engagement)
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
+                    if likes < 0:
+                        likes = 0
                     comments = self._safe_int(item.get("comments") or item.get("comment_count"))
                     shares = self._safe_int(item.get("shares") or item.get("share_count"))
-                    engagement = likes + comments + shares
                     views = self._safe_int(item.get("views") or item.get("video_view_count"))
-                    if engagement < 100 and views < 50000:
+                    if views < 500000 and likes < 300000:
                         continue
+                    engagement = likes + comments + shares
 
                     # Ensure item has title field (required by schema)
                     if "title" not in item:
@@ -278,6 +312,10 @@ class TrendingSearchService:
                             item["title"] = str(description)[:100]
                         else:
                             item["title"] = f"{platform_name} content"
+                    
+                    # Exclude listicle / "top brands" style content (not real ads)
+                    if self._is_listicle_or_top_brands(item):
+                        continue
                     
                     # Clean up impressions field - handle string values like "<100"
                     if "impressions" in item and isinstance(item["impressions"], str):
@@ -293,7 +331,7 @@ class TrendingSearchService:
                     
                     # Ensure item has score field
                     if "score" not in item:
-                        item["score"] = self._calculate_item_score(item, keyword)
+                        item["score"] = self._calculate_item_score(item, keyword, brand_terms_for_score)
 
                     # Ensure platform field
                     if "platform" not in item:
@@ -515,6 +553,19 @@ class TrendingSearchService:
         except:
             return ""
 
+    def _is_listicle_or_top_brands(self, item: Dict[str, Any]) -> bool:
+        """True if title/description look like listicle or 'top brands' content (not real ads)."""
+        title = self._safe_str(item.get("title", "")).lower()
+        desc = self._safe_str(item.get("description", "")).lower()
+        text = f"{title} {desc}"
+        listicle_phrases = (
+            "top 10", "top 5", "top 20", "top 15", "top 50",
+            "best brands", "top brands", "biggest brands", "most popular brands",
+            "list of", "listicle", "brands that", "best 10", "worst 10",
+            "ranking of", "brand ranking", "top companies", "best companies",
+        )
+        return any(phrase in text for phrase in listicle_phrases)
+
     def _calculate_engagement_velocity(self, item: Dict[str, Any]) -> float:
         """
         Engagement velocity = engagement per hour since post.
@@ -567,10 +618,12 @@ class TrendingSearchService:
                 score += 1
         return min(score, 15.0)
 
-    def _calculate_item_score(self, item: Dict[str, Any], keyword: str = "") -> float:
-        """Calculate score for recent high-performing ads (past 30 days)."""
-        # Extract engagement metrics (raw counts)
+    def _calculate_item_score(self, item: Dict[str, Any], keyword: str = "", brand_terms: Optional[List[str]] = None) -> float:
+        """Calculate score for recent high-performing ads (past 90 days)."""
+        # Extract engagement metrics (raw counts); treat negative (e.g. Instagram hidden likes) as 0
         likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count") or 0)
+        if likes < 0:
+            likes = 0
         comments = self._safe_int(item.get("comments") or item.get("comment_count") or 0)
         shares = self._safe_int(item.get("shares") or item.get("share_count") or 0)
         engagement = likes + comments + shares
@@ -591,6 +644,21 @@ class TrendingSearchService:
         quality_bonus = self._calculate_quality_bonus(item)
         keyword_bonus = self._calculate_keyword_relevance(item, keyword)
 
+        # Brand-match bonus when we expanded from a category (top brands rank higher)
+        brand_bonus = 0.0
+        if brand_terms:
+            title = self._safe_str(item.get("title", "")).lower()
+            desc = self._safe_str(item.get("description", "")).lower()
+            owner = item.get("owner") or item.get("channel") or {}
+            owner_name = self._safe_str(owner.get("username") or owner.get("name") if isinstance(owner, dict) else "").lower()
+            text = f"{title} {desc} {owner_name}"
+            for term in brand_terms[:20]:  # cap to avoid cost
+                t = self._safe_str(term).strip().lower()
+                if t and t in text:
+                    brand_bonus += 5
+                    break  # one bonus per item for any matching brand
+            brand_bonus = min(brand_bonus, 10.0)
+
         # PART 4: Performance score (engagement strength + engagement rate + reach)
         performance_score = 0.0
         performance_score += min(50.0, (engagement ** 0.4) * 4)
@@ -609,7 +677,7 @@ class TrendingSearchService:
         elif views > 100000:
             performance_score += 5
 
-        score = performance_score + platform_bonus + quality_bonus + keyword_bonus
+        score = performance_score + platform_bonus + quality_bonus + keyword_bonus + brand_bonus
         return min(100.0, max(0.0, score))
 
     def _calculate_recency_decay(self, item: Dict[str, Any]) -> float:

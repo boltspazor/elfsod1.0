@@ -49,9 +49,11 @@ class InstagramService:
         # Format reels for trending analysis
         formatted_reels = []
         for reel in raw_reels[:max_results]:
-            # Get engagement metrics
+            # Get engagement metrics (API uses -1 for hidden likes; treat as 0)
             view_count = reel.get("video_view_count", reel.get("video_play_count", 0))
             like_count = reel.get("like_count", 0)
+            if like_count is None or (isinstance(like_count, int) and like_count < 0):
+                like_count = 0
             comment_count = reel.get("comment_count", 0)
             
             # Calculate trending score
