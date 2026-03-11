@@ -27,6 +27,25 @@ class AdFetcher:
         self.linkedin_service = LinkedInAdsService(api_key)
         self.youtube_service = YouTubeService(api_key)
         self.instagram_service = InstagramService(api_key)
+
+    @staticmethod
+    def _resolve_ad_url(ad_data: Dict[str, Any]) -> str | None:
+        """Return the best available ad URL, preferring ad permalink over landing page."""
+        permalink_candidates = [
+            ad_data.get("ad_url"),
+            ad_data.get("ad_link"),
+            ad_data.get("permalink"),
+            ad_data.get("url"),
+        ]
+        for candidate in permalink_candidates:
+            if candidate and str(candidate).strip():
+                return str(candidate).strip()
+
+        for fallback in [ad_data.get("destination_url"), ad_data.get("link_url")]:
+            if fallback and str(fallback).strip():
+                return str(fallback).strip()
+
+        return None
     
     async def fetch_competitor_ads(self, competitor_id: str, user_id: str, 
                                   platforms: List[str] = None) -> Dict[str, Any]:
@@ -199,7 +218,7 @@ class AdFetcher:
                         if description and description != existing_ad.description:
                             existing_ad.description = description
                         
-                        destination_url = ad_data.get("destination_url") or ad_data.get("url")
+                        destination_url = self._resolve_ad_url(ad_data)
                         if destination_url and destination_url != existing_ad.destination_url:
                             existing_ad.destination_url = destination_url
                         
@@ -214,7 +233,7 @@ class AdFetcher:
                             headline=ad_data.get("headline") or ad_data.get("title"),
                             description=ad_data.get("description"),
                             full_text=ad_data.get("full_text") or ad_data.get("description"),
-                            destination_url=ad_data.get("destination_url") or ad_data.get("url"),
+                            destination_url=self._resolve_ad_url(ad_data),
                             image_url=ad_data.get("image_url") or ad_data.get("thumbnail"),
                             video_url=ad_data.get("video_url"),
                             format=ad_data.get("format") or ad_data.get("type"),

@@ -33,7 +33,11 @@ async def lifespan(app: FastAPI):
     # NOTE:
     # In production, DO NOT auto-create tables.
     # Use Alembic migrations instead.
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"⚠️ Could not connect to database on startup: {e}")
+        logger.warning("App will start without DB — requests needing DB will fail until it's reachable")
 
     yield
 

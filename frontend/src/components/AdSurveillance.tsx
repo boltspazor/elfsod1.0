@@ -371,6 +371,7 @@ const AdSurveillance = () => {
   const [showTrendingSearch, setShowTrendingSearch] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [liveAdTypeFilter, setLiveAdTypeFilter] = useState<"all" | "official" | "unofficial">("all");
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -518,6 +519,29 @@ const AdSurveillance = () => {
     
     const platform = ad.platform?.toLowerCase() || 'meta';
     return platformMinImpressions[platform] || 10000;
+  };
+
+  const ACTIVE_AD_MAX_AGE_DAYS = 14;
+  const MIN_LIVE_AD_IMPRESSIONS = 10000;
+
+  // Derive active status when API value is missing by using recency.
+  const resolveAdActiveStatus = (ad: {
+    is_active?: boolean;
+    last_seen?: string;
+    created_at?: string;
+    first_seen?: string;
+  }): boolean => {
+    if (typeof ad.is_active === "boolean") return ad.is_active;
+
+    const lastSeenValue = ad.last_seen || ad.created_at || ad.first_seen;
+    if (!lastSeenValue) return false;
+
+    const lastSeenDate = new Date(lastSeenValue);
+    if (Number.isNaN(lastSeenDate.getTime())) return false;
+
+    const ageDays =
+      (Date.now() - lastSeenDate.getTime()) / (1000 * 60 * 60 * 24);
+    return ageDays <= ACTIVE_AD_MAX_AGE_DAYS;
   };
 
   // ============================================
@@ -788,7 +812,12 @@ const AdSurveillance = () => {
               competitor_name: ad.competitor_name || "",
               impressions: parsedImpressions,
               spend: parsedSpend,
-              is_active: ad.is_active !== undefined ? ad.is_active : true,
+              is_active: resolveAdActiveStatus({
+                is_active: ad.is_active,
+                last_seen: ad.last_seen,
+                created_at: ad.created_at,
+                first_seen: ad.first_seen,
+              }),
             };
           });
         }
@@ -857,7 +886,12 @@ const AdSurveillance = () => {
               competitor_name: ad.competitor_name || "",
               impressions: parsedImpressions,
               spend: parsedSpend,
-              is_active: ad.is_active !== undefined ? ad.is_active : true,
+              is_active: resolveAdActiveStatus({
+                is_active: ad.is_active,
+                last_seen: ad.last_seen,
+                created_at: ad.created_at,
+                first_seen: ad.first_seen,
+              }),
             };
           });
         }
@@ -878,7 +912,12 @@ const AdSurveillance = () => {
                 competitor_name: ad.competitor_name || "",
                 impressions: parsedImpressions,
                 spend: parsedSpend,
-                is_active: ad.is_active !== undefined ? ad.is_active : true,
+                is_active: resolveAdActiveStatus({
+                  is_active: ad.is_active,
+                  last_seen: ad.last_seen,
+                  created_at: ad.created_at,
+                  first_seen: ad.first_seen,
+                }),
               };
             });
           }
@@ -907,7 +946,12 @@ const AdSurveillance = () => {
                     competitor_name: comp.name,
                     impressions: parsedImpressions,
                     spend: parsedSpend,
-                    is_active: ad.is_active !== undefined ? ad.is_active : true,
+                    is_active: resolveAdActiveStatus({
+                      is_active: ad.is_active,
+                      last_seen: ad.last_seen,
+                      created_at: ad.created_at,
+                      first_seen: ad.first_seen,
+                    }),
                   };
                 });
               }
@@ -1156,6 +1200,9 @@ const AdSurveillance = () => {
     return Math.min(Math.round(score), 100); // Cap at 100
   };
 
+  // All trending ads (no type filter in this section)
+  const filteredTrendingAds = trendingAds;
+
   // Handle search suggestion click
   const handleSuggestionClick = (keyword: string) => {
     setTrendingSearchKeyword(keyword);
@@ -1213,6 +1260,17 @@ const AdSurveillance = () => {
   useEffect(() => {
     let filtered = [...ads];
 
+    // Always show only active, high-visibility ads in Live Ad Feed.
+    filtered = filtered.filter((ad) => resolveAdActiveStatus(ad));
+    filtered = filtered.filter((ad) => {
+      const impressions = parseImpressionValue(ad.impressions);
+      if (impressions > 0) return impressions >= MIN_LIVE_AD_IMPRESSIONS;
+
+      // If impressions are missing, use spend as fallback proxy for visibility.
+      const spend = parseSpendValue(ad.spend);
+      return spend >= 300;
+    });
+
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
@@ -1238,9 +1296,26 @@ const AdSurveillance = () => {
       filtered = filtered.filter((ad) => ad?.competitor_id === selectedCompany);
     }
 
+    // Filter by official/unofficial
+    if (liveAdTypeFilter !== "all") {
+      filtered = filtered.filter((ad) => {
+        // Official = ad library platform (meta/facebook/google) OR has measurable spend
+        const platform = (ad?.platform || "").toLowerCase();
+        const hasSpend = typeof ad?.spend === "number"
+          ? ad.spend > 0
+          : parseSpendValue(ad?.spend) > 0;
+        const isOfficial =
+          platform === "meta" ||
+          platform === "facebook" ||
+          platform === "google" ||
+          hasSpend;
+        return liveAdTypeFilter === "official" ? isOfficial : !isOfficial;
+      });
+    }
+
     setFilteredAds(filtered);
     setCurrentPage(1);
-  }, [ads, searchQuery, selectedPlatform, selectedCompany]);
+  }, [ads, searchQuery, selectedPlatform, selectedCompany, liveAdTypeFilter]);
 
   // Add competitor handler – then auto-refresh ads for the new competitor
   const handleAddCompetitor = async () => {
@@ -1307,6 +1382,30 @@ const AdSurveillance = () => {
   const handleCloneStrategy = (ad: AdData) => {
     setCloneAd(ad);
     setCloneCopied(false);
+  };
+
+  const getAdLink = (ad: AdData): string | null => {
+    const raw = (ad.destination_url || "").trim();
+    if (raw) {
+      // If already a Meta ad library permalink, use it as-is.
+      if (/facebook\.com\/ads\/library/i.test(raw)) return raw;
+
+      // If this is a Meta/Facebook ad and we have platform ID, prefer ad-library URL over landing page.
+      const platform = (ad.platform || "").toLowerCase();
+      if ((platform === "meta" || platform === "facebook") && ad.platform_ad_id) {
+        return `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.platform_ad_id)}`;
+      }
+
+      return raw;
+    }
+
+    // Fallback for older rows where destination_url stored landing page only / or is missing.
+    const platform = (ad.platform || "").toLowerCase();
+    if ((platform === "meta" || platform === "facebook") && ad.platform_ad_id) {
+      return `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.platform_ad_id)}`;
+    }
+
+    return null;
   };
 
   // Build the clone strategy text
@@ -2334,10 +2433,11 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                               Trending ads for "{trendingSearchResult?.keyword || trendingSearchKeyword}"
                             </h4>
                             <p className="text-sm text-[#888]">
-                              {trendingAds.length} results found &bull; Sorted by engagement score
+                              {filteredTrendingAds.length} of {trendingAds.length} results &bull; Sorted by engagement score
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
                             <span className="text-sm text-[#888]">Platforms:</span>
                             <div className="flex gap-2">
                               {["meta", "instagram", "youtube", "tiktok"].map(
@@ -2362,12 +2462,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                               )}
                             </div>
                           </div>
+                          </div>
                         </div>
                       </div>
 
                       {/* Trending Ads Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {trendingAds.map((ad, index) => (
+                        {filteredTrendingAds.map((ad, index) => (
                           <div
                             key={ad.id || `${ad.platform}-${index}`}
                             className="bg-[#111] rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-[#2a2a2a] hover:border-[#444]"
@@ -2645,10 +2746,30 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                   <option key={comp.id} value={comp.id}>{comp.name}</option>
                 ))}
               </select>
-              <button className="flex items-center gap-1.5 text-sm text-[#888] hover:text-white transition-colors">
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[#888]" />
+                <div className="flex gap-1">
+                  {(["all", "official", "unofficial"] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setLiveAdTypeFilter(type)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1 ${
+                        liveAdTypeFilter === type
+                          ? type === "official"
+                            ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                            : type === "unofficial"
+                              ? "border-amber-500 bg-amber-500/20 text-amber-400"
+                              : "border-purple-700 bg-purple-700/20 text-purple-400"
+                          : "border-[#333] text-[#888] hover:border-[#555]"
+                      }`}
+                    >
+                      {type === "official" && <Sparkles className="w-3 h-3" />}
+                      {type === "unofficial" && <Globe className="w-3 h-3" />}
+                      <span className="capitalize">{type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button className="flex items-center gap-1.5 text-sm text-[#888] hover:text-white transition-colors">
                 <Lightbulb className="w-4 h-4" />
                 Insights
@@ -2706,7 +2827,23 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                       {/* Right: Details */}
                       <div className="flex-1 p-5">
                         <h4 className="text-lg font-semibold text-white mb-1">{ad.headline || "No Title"}</h4>
-                        <p className="text-xs text-[#888] mb-4">{formatDate(ad.last_seen || ad.created_at || ad.first_seen)}</p>
+                        <p className="text-xs text-[#888] mb-1">{formatDate(ad.last_seen || ad.created_at || ad.first_seen)}</p>
+                        {/* Official / Unofficial badge */}
+                        {(() => {
+                          const platform = (ad.platform || "").toLowerCase();
+                          const hasSpend = typeof ad.spend === "number" ? ad.spend > 0 : parseSpendValue(ad.spend) > 0;
+                          const official = platform === "meta" || platform === "facebook" || platform === "google" || hasSpend;
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold mb-3 ${
+                              official
+                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                            }`}>
+                              {official ? <Sparkles className="w-2.5 h-2.5" /> : <Globe className="w-2.5 h-2.5" />}
+                              {official ? "Official" : "Unofficial"}
+                            </span>
+                          );
+                        })()}
 
                         <div className="space-y-3">
                           <div>
@@ -2821,7 +2958,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 </div>
                 <h4 className="text-lg font-medium text-white mb-2">No Ads Found</h4>
                 <p className="text-[#888] mb-6 max-w-md mx-auto">
-                  {searchQuery || selectedPlatform !== "all" || selectedCompany !== "all"
+                  {searchQuery || selectedPlatform !== "all" || selectedCompany !== "all" || liveAdTypeFilter !== "all"
                     ? "Try adjusting your search or filter criteria"
                     : "Start tracking competitors to see their ads"}
                 </p>
@@ -2835,7 +2972,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                     Refresh ads
                   </button>
                   <button
-                    onClick={() => { setSearchQuery(""); setSelectedPlatform("all"); setSelectedCompany("all"); setSelectedCompetitor(null); loadRecentAds(); }}
+                    onClick={() => { setSearchQuery(""); setSelectedPlatform("all"); setSelectedCompany("all"); setSelectedCompetitor(null); setLiveAdTypeFilter("all"); loadRecentAds(); }}
                     className="px-4 py-2.5 bg-[#222] hover:bg-[#333] border border-[#333] text-[#ccc] rounded-lg transition-colors"
                   >
                     Clear Filters
@@ -2966,13 +3103,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
               <span>Last seen: <span className="text-[#aaa]">{formatDate(analyzeAd.last_seen)}</span></span>
             </div>
 
-            {analyzeAd.destination_url && (
+            {getAdLink(analyzeAd) && (
               <a
-                href={analyzeAd.destination_url}
+                href={getAdLink(analyzeAd) || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-[#0ea5e9] hover:underline">
-                View destination URL →
+                View ad link →
               </a>
             )}
           </div>
