@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import asyncio
+from datetime import datetime, timezone
 
 class MetaAdsService:
     def __init__(self, api_key: str):
@@ -69,6 +70,21 @@ class MetaAdsService:
             if images:
                 image_url = images[0].get("resized_image_url") or images[0].get("original_image_url")
             
+            # ScrapeCreators returns start_date/end_date as Unix timestamps
+            published_at = None
+            if ad.get("start_date"):
+                try:
+                    dt = datetime.fromtimestamp(ad["start_date"], tz=timezone.utc)
+                    published_at = dt.isoformat()
+                except (TypeError, ValueError, OSError):
+                    pass
+            if not published_at and ad.get("end_date"):
+                try:
+                    dt = datetime.fromtimestamp(ad["end_date"], tz=timezone.utc)
+                    published_at = dt.isoformat()
+                except (TypeError, ValueError, OSError):
+                    pass
+
             formatted_ad = {
                 "id": ad.get("ad_archive_id"),
                 "headline": snapshot.get("title"),
@@ -80,6 +96,8 @@ class MetaAdsService:
                 "advertiser": snapshot.get("page_name"),
                 "platform": "meta"
             }
+            if published_at:
+                formatted_ad["published_at"] = published_at
             formatted_ads.append(formatted_ad)
         
         return formatted_ads
