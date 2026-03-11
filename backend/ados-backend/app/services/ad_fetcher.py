@@ -10,6 +10,7 @@ from app.services.linkedin_service import LinkedInAdsService
 from app.services.youtube_service import YouTubeService
 from app.services.instagram_service import InstagramService
 from app.utils.logger import get_logger
+from app.config import settings
 from datetime import datetime
 import json
 import hashlib
@@ -96,13 +97,18 @@ class AdFetcher:
                 except Exception as e:
                     logger.error(f"Google ads fetch error: {e}")
             
-            # Fetch from Meta
+            # Fetch from Meta (company ads first, then keyword search fallback)
             if "meta" in platforms:
                 try:
-                    meta_ads = await self.meta_service.search_ads(
-                        keyword=competitor.name,
-                        max_results=20
+                    meta_ads = await self.meta_service.fetch_company_ads(
+                        company_name=competitor.name,
+                        max_results=settings.MAX_ADS_PER_COMPETITOR,
                     )
+                    if not meta_ads:
+                        meta_ads = await self.meta_service.search_ads(
+                            keyword=competitor.name,
+                            max_results=settings.MAX_ADS_PER_COMPETITOR,
+                        )
                     results["meta"] = meta_ads
                     logger.info(f"Fetched {len(meta_ads)} Meta ads for {competitor.name}")
                 except Exception as e:
