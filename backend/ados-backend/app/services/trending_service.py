@@ -270,24 +270,25 @@ class TrendingSearchService:
                     if not isinstance(item, dict):
                         continue
 
-                    # 90-day filter: skip only when we have a date and it's older than 90 days
+                    # 90-day filter: only keep ads we can confirm are within the last 90 days
                     created_at = item.get("created_at") or item.get("published_at") or item.get("taken_at")
-                    if created_at:
-                        try:
-                            if isinstance(created_at, str):
-                                if "Z" in created_at:
-                                    created_at = created_at.replace("Z", "+00:00")
-                                dt = datetime.fromisoformat(created_at)
-                            else:
-                                dt = created_at
-                            if getattr(dt, "tzinfo", None) is None:
-                                dt = dt.replace(tzinfo=timezone.utc)
-                            now = datetime.now(timezone.utc)
-                            days_old = (now - dt).total_seconds() / 86400
-                            if days_old > 90:
-                                continue
-                        except Exception:
-                            pass
+                    if not created_at:
+                        continue
+                    try:
+                        if isinstance(created_at, str):
+                            if "Z" in created_at:
+                                created_at = created_at.replace("Z", "+00:00")
+                            dt = datetime.fromisoformat(created_at)
+                        else:
+                            dt = created_at
+                        if getattr(dt, "tzinfo", None) is None:
+                            dt = dt.replace(tzinfo=timezone.utc)
+                        now = datetime.now(timezone.utc)
+                        days_old = (now - dt).total_seconds() / 86400
+                        if days_old > 90:
+                            continue
+                    except Exception:
+                        continue
 
                     # High bar: keep only 500k+ views OR 300k+ likes (top reach / engagement)
                     likes = self._safe_int(item.get("likes") or item.get("upvotes") or item.get("like_count"))
