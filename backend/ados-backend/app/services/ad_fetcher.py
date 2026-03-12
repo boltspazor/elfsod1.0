@@ -348,15 +348,21 @@ class AdFetcher:
                 if ads:
                     platform_summary[platform] = len(ads)
             
+            # Structured response: ensure results is a dict and compute total_ads for router
+            results = results or {}
+            total_ads = sum(len(v) for v in results.values())
+            
             return {
                 "success": True,
                 "competitor_id": competitor_id,
                 "competitor_name": competitor.name,
                 "total_ads_fetched": total_ads_processed,
+                "total_ads": total_ads,
                 "new_ads": new_ads_count,
                 "updated_ads": updated_ads_count,
                 "total_active_ads": actual_ads_count,
                 "platforms": platform_summary,
+                "results": results,
                 "fetch_id": str(ad_fetch.id)
             }
             
