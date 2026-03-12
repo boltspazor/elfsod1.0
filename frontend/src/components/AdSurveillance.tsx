@@ -1261,16 +1261,19 @@ const AdSurveillance = () => {
   useEffect(() => {
     let filtered = [...ads];
 
-    // Always show only active, high-visibility ads in Live Ad Feed.
+    // Always show only active ads in Live Ad Feed.
     filtered = filtered.filter((ad) => resolveAdActiveStatus(ad));
-    filtered = filtered.filter((ad) => {
-      const impressions = parseImpressionValue(ad.impressions);
-      if (impressions > 0) return impressions >= MIN_LIVE_AD_IMPRESSIONS;
 
-      // If impressions are missing, use spend as fallback proxy for visibility.
-      const spend = parseSpendValue(ad.spend);
-      return spend >= 300;
-    });
+    // Visibility filter: require minimum impressions or spend so the feed isn't cluttered with tiny ads.
+    // When user has selected "Official" or "Unofficial", skip this so they see all ads that match the flag (e.g. 50 official Meta ads that may have no spend/impressions yet).
+    if (liveAdTypeFilter === "all") {
+      filtered = filtered.filter((ad) => {
+        const impressions = parseImpressionValue(ad.impressions);
+        if (impressions > 0) return impressions >= MIN_LIVE_AD_IMPRESSIONS;
+        const spend = parseSpendValue(ad.spend);
+        return spend >= 300;
+      });
+    }
 
     // Filter by search query
     if (searchQuery) {
