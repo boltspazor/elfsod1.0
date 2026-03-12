@@ -40,6 +40,18 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️ Could not connect to database on startup: {e}")
         logger.warning("App will start without DB — requests needing DB will fail until it's reachable")
 
+    # Run pending column migrations (safe to re-run — uses IF NOT EXISTS)
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE ads ADD COLUMN IF NOT EXISTS is_official "
+                "BOOLEAN NOT NULL DEFAULT false"
+            ))
+        logger.info("✅ Startup migration: ads.is_official column verified")
+    except Exception as e:
+        logger.warning(f"⚠️ Startup migration (ads.is_official) skipped: {e}")
+
     yield
 
     # Shutdown

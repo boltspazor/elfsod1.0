@@ -2,6 +2,7 @@ import os
 from typing import List
 
 
+
 class Settings:
     # Database
     # Port 6543 = Supabase transaction pooler (works for local dev / IPv4)

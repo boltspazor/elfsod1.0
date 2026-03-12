@@ -144,19 +144,18 @@ def _infer_geography_with_groq(company_name: str, domain: str = "") -> Dict[str,
     try:
         import requests as _requests
         prompt = (
-            f"You are a market research analyst. "
+            f"You are an expert digital marketing analyst. "
             f"For the company '{company_name}'"
             + (f" (domain: {domain})" if domain else "")
-            + ", list the countries where it primarily operates or runs ads. "
-            "Return ONLY valid JSON with this exact structure (no markdown, no extra text):\n"
-            '{"countries": [{"name": "India", "percentage": 85}, '
-            '{"name": "United States", "percentage": 10}, '
-            '{"name": "United Arab Emirates", "percentage": 5}]}\n'
-            "Rules:\n"
-            "- Include at most 5 countries.\n"
-            "- Percentages must sum to 100.\n"
-            "- Use full country names (e.g. 'India', not 'IN').\n"
-            "- Be specific: a hyperlocal startup (e.g. Zepto, Blinkit) should list only India."
+            + ", provide a realistic estimate of the percentage of their digital advertising spend in each country. "
+            "CRITICAL RULES:\n"
+            "1. ONLY include countries where the company ACTUALLY operates or runs digital ads. Do NOT hallucinate countries for local businesses.\n"
+            "2. If it is a hyperlocal startup (e.g., Zepto, Blinkit), it should list ONLY their home country with 100% spend.\n"
+            "3. Include at most 5 countries (their top markets).\n"
+            "4. Percentages MUST sum to precisely 100.\n"
+            "5. Use full country names (e.g., 'India', not 'IN').\n"
+            "Return ONLY valid JSON with exactly this structure (no markdown, no extra text):\n"
+            '{"countries": [{"name": "India", "percentage": 85}, {"name": "United States", "percentage": 15}]}\n'
         )
         payload = {
             "model": "llama-3.3-70b-versatile",
