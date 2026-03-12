@@ -701,7 +701,30 @@ class TargIntelCalculator:
                                      competitor: Competitor) -> Dict[str, Any]:
         """Calculate geographic targeting"""
         try:
-            # Use geo_penetration from metrics if available
+            # 1. Use the knowledge-base + Groq inference for company-specific geography
+            inferred = _infer_geography(
+                competitor.name,
+                competitor.domain or ""
+            )
+            if inferred and inferred.get("countries"):
+                primary = inferred["countries"][0]["name"]
+                return {
+                    "locations": inferred,
+                    "primary_location": primary,
+                    "confidence": 0.75
+                }
+            
+            # 2. Try to extract from competitor domain TLD
+            if competitor.domain:
+                locations = self._extract_locations_from_domain(competitor.domain)
+                if locations and locations.get("countries"):
+                    return {
+                        "locations": locations,
+                        "primary_location": locations["countries"][0],
+                        "confidence": 0.5
+                    }
+
+            # 3. Fallback: Use geo_penetration from metrics if it exists (which is heavily mocked to US/UK)
             if metrics and metrics.geo_penetration:
                 geo_data = metrics.geo_penetration
                 if isinstance(geo_data, dict):
