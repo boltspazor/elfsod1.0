@@ -122,11 +122,16 @@ class AdFetcher:
                             max_results=settings.MAX_ADS_PER_COMPETITOR,
                         )
                     # Promote to official when advertiser/page name matches competitor (fuzzy)
+                    already_official = 0
+                    promoted_count = 0
                     for ad in meta_ads:
                         adv = ad.get("advertiser")
                         comp_name = competitor.name
                         logger.debug(
-                            "Meta advertiser promotion check",
+                            "Meta advertiser promotion check competitor=%s advertiser=%s is_official_before=%s",
+                            comp_name,
+                            adv,
+                            ad.get("is_official"),
                             extra={
                                 "competitor": comp_name,
                                 "advertiser": adv,
@@ -142,13 +147,17 @@ class AdFetcher:
                             else 0
                         )
                         promoted = False
-                        if not ad.get("is_official") and self._advertiser_matches_competitor(
-                            adv or "", comp_name or ""
-                        ):
+                        if ad.get("is_official"):
+                            already_official += 1
+                        elif self._advertiser_matches_competitor(adv or "", comp_name or ""):
                             ad["is_official"] = True
                             promoted = True
+                            promoted_count += 1
                             logger.debug(
-                                "Meta ad promoted to official",
+                                "Meta ad promoted to official competitor=%s advertiser=%s ad_id=%s",
+                                comp_name,
+                                adv,
+                                ad.get("id"),
                                 extra={
                                     "competitor": comp_name,
                                     "advertiser": adv,
@@ -156,7 +165,11 @@ class AdFetcher:
                                 },
                             )
                         logger.debug(
-                            "Advertiser match check",
+                            "Advertiser match check competitor=%s advertiser=%s score=%s promoted=%s",
+                            comp_name,
+                            adv,
+                            score,
+                            promoted,
                             extra={
                                 "competitor": comp_name,
                                 "advertiser": adv,
@@ -164,6 +177,13 @@ class AdFetcher:
                                 "promoted_to_official": promoted,
                             },
                         )
+                    logger.info(
+                        "Meta promotion summary for %s: %d ads, %d already official, %d promoted to official",
+                        competitor.name,
+                        len(meta_ads),
+                        already_official,
+                        promoted_count,
+                    )
                     results["meta"] = meta_ads
                     logger.info(f"Fetched {len(meta_ads)} Meta ads for {competitor.name}")
                 except Exception as e:
