@@ -3,6 +3,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import json
+import os
 from uuid import UUID
 from collections import Counter
 
@@ -10,6 +11,189 @@ from app.models import Competitor, SurvMetrics, TargIntel, Ad
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Company geography knowledge base + optional Groq enrichment
+# ---------------------------------------------------------------------------
+_GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Known companies → operating geography with ad-spend percentages.
+# Keys are lowercase. Add more entries as needed.
+_COMPANY_GEO_KB: Dict[str, List[Dict]] = {
+    # India-only / hyperlocal India
+    "zepto":        [{"name": "India", "percentage": 100}],
+    "blinkit":      [{"name": "India", "percentage": 100}],
+    "swiggy":       [{"name": "India", "percentage": 95}, {"name": "United Arab Emirates", "percentage": 5}],
+    "zomato":       [{"name": "India", "percentage": 90}, {"name": "United Arab Emirates", "percentage": 10}],
+    "meesho":       [{"name": "India", "percentage": 100}],
+    "nykaa":        [{"name": "India", "percentage": 100}],
+    "mamaearth":    [{"name": "India", "percentage": 100}],
+    "boat":         [{"name": "India", "percentage": 100}],
+    "lenskart":     [{"name": "India", "percentage": 75}, {"name": "United Arab Emirates", "percentage": 15}, {"name": "Singapore", "percentage": 10}],
+    "myntra":       [{"name": "India", "percentage": 100}],
+    "flipkart":     [{"name": "India", "percentage": 100}],
+    "ola":          [{"name": "India", "percentage": 90}, {"name": "United Kingdom", "percentage": 10}],
+    "oyo":          [{"name": "India", "percentage": 60}, {"name": "United States", "percentage": 20}, {"name": "United Kingdom", "percentage": 10}, {"name": "Indonesia", "percentage": 10}],
+    "cred":         [{"name": "India", "percentage": 100}],
+    "razorpay":     [{"name": "India", "percentage": 100}],
+    "paytm":        [{"name": "India", "percentage": 100}],
+    "phonepe":      [{"name": "India", "percentage": 100}],
+    "groww":        [{"name": "India", "percentage": 100}],
+    "byju":         [{"name": "India", "percentage": 75}, {"name": "United States", "percentage": 15}, {"name": "United Kingdom", "percentage": 10}],
+    "byjus":        [{"name": "India", "percentage": 75}, {"name": "United States", "percentage": 15}, {"name": "United Kingdom", "percentage": 10}],
+    "unacademy":    [{"name": "India", "percentage": 100}],
+    "urban company":[{"name": "India", "percentage": 70}, {"name": "United Arab Emirates", "percentage": 20}, {"name": "Singapore", "percentage": 10}],
+    "dunzo":        [{"name": "India", "percentage": 100}],
+    "bigbasket":    [{"name": "India", "percentage": 100}],
+    "jiomart":      [{"name": "India", "percentage": 100}],
+    "reliance":     [{"name": "India", "percentage": 100}],
+    "tata":         [{"name": "India", "percentage": 70}, {"name": "United Kingdom", "percentage": 15}, {"name": "United States", "percentage": 15}],
+    "infosys":      [{"name": "India", "percentage": 40}, {"name": "United States", "percentage": 40}, {"name": "Europe", "percentage": 20}],
+    "wipro":        [{"name": "India", "percentage": 40}, {"name": "United States", "percentage": 40}, {"name": "Europe", "percentage": 20}],
+    "hdfc":         [{"name": "India", "percentage": 100}],
+    "icici":        [{"name": "India", "percentage": 100}],
+    "manyavar":     [{"name": "India", "percentage": 100}],
+    "tanishq":      [{"name": "India", "percentage": 100}],
+    "haldirams":    [{"name": "India", "percentage": 100}],
+    "amul":         [{"name": "India", "percentage": 100}],
+
+    # Global / US-first
+    "nike":         [{"name": "United States", "percentage": 40}, {"name": "Europe", "percentage": 30}, {"name": "China", "percentage": 15}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 5}],
+    "adidas":       [{"name": "Europe", "percentage": 35}, {"name": "United States", "percentage": 30}, {"name": "China", "percentage": 20}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 5}],
+    "apple":        [{"name": "United States", "percentage": 40}, {"name": "China", "percentage": 25}, {"name": "Europe", "percentage": 20}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 5}],
+    "amazon":       [{"name": "United States", "percentage": 45}, {"name": "United Kingdom", "percentage": 10}, {"name": "Germany", "percentage": 10}, {"name": "India", "percentage": 20}, {"name": "Rest of World", "percentage": 15}],
+    "google":       [{"name": "United States", "percentage": 45}, {"name": "Europe", "percentage": 25}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "meta":         [{"name": "United States", "percentage": 45}, {"name": "Europe", "percentage": 25}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "facebook":     [{"name": "United States", "percentage": 45}, {"name": "Europe", "percentage": 25}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "instagram":    [{"name": "United States", "percentage": 35}, {"name": "India", "percentage": 20}, {"name": "Brazil", "percentage": 15}, {"name": "Europe", "percentage": 20}, {"name": "Rest of World", "percentage": 10}],
+    "samsung":      [{"name": "South Korea", "percentage": 20}, {"name": "India", "percentage": 25}, {"name": "United States", "percentage": 25}, {"name": "Europe", "percentage": 20}, {"name": "Rest of World", "percentage": 10}],
+    "coca-cola":    [{"name": "United States", "percentage": 30}, {"name": "Europe", "percentage": 25}, {"name": "India", "percentage": 15}, {"name": "China", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "pepsi":        [{"name": "United States", "percentage": 35}, {"name": "Europe", "percentage": 25}, {"name": "India", "percentage": 15}, {"name": "China", "percentage": 10}, {"name": "Rest of World", "percentage": 15}],
+    "mcdonalds":    [{"name": "United States", "percentage": 40}, {"name": "Europe", "percentage": 30}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 20}],
+    "uber":         [{"name": "United States", "percentage": 40}, {"name": "India", "percentage": 15}, {"name": "Brazil", "percentage": 10}, {"name": "Europe", "percentage": 20}, {"name": "Rest of World", "percentage": 15}],
+    "airbnb":       [{"name": "United States", "percentage": 40}, {"name": "Europe", "percentage": 35}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 15}],
+    "spotify":      [{"name": "Europe", "percentage": 35}, {"name": "United States", "percentage": 35}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "netflix":      [{"name": "United States", "percentage": 35}, {"name": "Europe", "percentage": 30}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 20}],
+    "h&m":          [{"name": "Europe", "percentage": 50}, {"name": "United States", "percentage": 20}, {"name": "India", "percentage": 15}, {"name": "Rest of World", "percentage": 15}],
+    "zara":         [{"name": "Europe", "percentage": 55}, {"name": "United States", "percentage": 20}, {"name": "India", "percentage": 10}, {"name": "Rest of World", "percentage": 15}],
+}
+
+# Domain TLD → primary country
+_TLD_COUNTRY_MAP = {
+    ".in": [{"name": "India", "percentage": 100}],
+    ".co.in": [{"name": "India", "percentage": 100}],
+    ".uk": [{"name": "United Kingdom", "percentage": 100}],
+    ".co.uk": [{"name": "United Kingdom", "percentage": 100}],
+    ".de": [{"name": "Germany", "percentage": 100}],
+    ".fr": [{"name": "France", "percentage": 100}],
+    ".au": [{"name": "Australia", "percentage": 100}],
+    ".com.au": [{"name": "Australia", "percentage": 100}],
+    ".ca": [{"name": "Canada", "percentage": 100}],
+    ".jp": [{"name": "Japan", "percentage": 100}],
+    ".cn": [{"name": "China", "percentage": 100}],
+    ".br": [{"name": "Brazil", "percentage": 100}],
+    ".mx": [{"name": "Mexico", "percentage": 100}],
+    ".sg": [{"name": "Singapore", "percentage": 100}],
+    ".ae": [{"name": "United Arab Emirates", "percentage": 100}],
+    ".za": [{"name": "South Africa", "percentage": 100}],
+    ".id": [{"name": "Indonesia", "percentage": 100}],
+    ".my": [{"name": "Malaysia", "percentage": 100}],
+    ".ph": [{"name": "Philippines", "percentage": 100}],
+}
+
+
+def _infer_geography(company_name: str, domain: str = "") -> Dict[str, Any]:
+    """
+    Infer company operating geography with three layers:
+    1. Hardcoded knowledge base (fastest, most accurate for known brands)
+    2. Domain TLD lookup
+    3. Groq LLM (optional, only if key is valid)
+    """
+    name_lower = company_name.lower().strip()
+
+    # Layer 1 — knowledge base exact match
+    if name_lower in _COMPANY_GEO_KB:
+        return {"countries": _COMPANY_GEO_KB[name_lower]}
+
+    # Layer 1b — partial match (e.g. "Zepto India" → "zepto")
+    for key, geo in _COMPANY_GEO_KB.items():
+        if key in name_lower or name_lower in key:
+            return {"countries": geo}
+
+    # Layer 2 — domain TLD
+    if domain:
+        domain_lower = domain.lower()
+        for tld, geo in _TLD_COUNTRY_MAP.items():
+            if domain_lower.endswith(tld):
+                return {"countries": geo}
+
+    # Layer 3 — Groq (optional)
+    if _GROQ_API_KEY:
+        groq_result = _infer_geography_with_groq(company_name, domain)
+        if groq_result:
+            return groq_result
+
+    return {}
+
+
+def _infer_geography_with_groq(company_name: str, domain: str = "") -> Dict[str, Any]:
+    """
+    Use Groq LLM to infer operating geography.
+    Falls back gracefully if the API key is missing or the call fails.
+    """
+    try:
+        import requests as _requests
+        prompt = (
+            f"You are a market research analyst. "
+            f"For the company '{company_name}'"
+            + (f" (domain: {domain})" if domain else "")
+            + ", list the countries where it primarily operates or runs ads. "
+            "Return ONLY valid JSON with this exact structure (no markdown, no extra text):\n"
+            '{"countries": [{"name": "India", "percentage": 85}, '
+            '{"name": "United States", "percentage": 10}, '
+            '{"name": "United Arab Emirates", "percentage": 5}]}\n'
+            "Rules:\n"
+            "- Include at most 5 countries.\n"
+            "- Percentages must sum to 100.\n"
+            "- Use full country names (e.g. 'India', not 'IN').\n"
+            "- Be specific: a hyperlocal startup (e.g. Zepto, Blinkit) should list only India."
+        )
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 256,
+        }
+        resp = _requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {_GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw)
+        countries = data.get("countries", [])
+        if not countries:
+            return {}
+        total = sum(c.get("percentage", 0) for c in countries)
+        if total <= 0:
+            return {}
+        normalised = [
+            {"name": c["name"], "percentage": round(c["percentage"] / total * 100, 1)}
+            for c in countries if c.get("name")
+        ]
+        return {"countries": normalised}
+    except Exception as e:
+        logger.warning(f"Groq geography inference failed for '{company_name}': {e}")
+        return {}
 
 class TargIntelCalculator:
     """Calculate targeting intelligence from competitor metrics"""
@@ -524,31 +708,43 @@ class TargIntelCalculator:
                 geo_data = metrics.geo_penetration
                 if isinstance(geo_data, dict):
                     locations = self._extract_locations_from_geo(geo_data)
-                    if locations:
+                    if locations and locations.get("countries"):
                         primary_location = self._get_primary_location(locations)
                         confidence = min(len(locations.get("countries", [])) / 3, 1.0)
-                        
                         return {
                             "locations": locations,
                             "primary_location": primary_location,
                             "confidence": confidence
                         }
-            
-            # Try to extract from competitor domain
+
+            # Use the knowledge-base + Groq inference for company-specific geography
+            inferred = _infer_geography(
+                competitor.name,
+                competitor.domain or ""
+            )
+            if inferred and inferred.get("countries"):
+                primary = inferred["countries"][0]["name"]
+                return {
+                    "locations": inferred,
+                    "primary_location": primary,
+                    "confidence": 0.75
+                }
+
+            # Try to extract from competitor domain TLD
             if competitor.domain:
                 locations = self._extract_locations_from_domain(competitor.domain)
-                if locations:
+                if locations and locations.get("countries"):
                     return {
                         "locations": locations,
                         "primary_location": locations["countries"][0],
                         "confidence": 0.5
                     }
             
-            # Default fallback
+            # Last-resort default (US only)
             return {
                 "locations": self.DEFAULT_VALUES["geography"],
                 "primary_location": self.DEFAULT_VALUES["primary_location"],
-                "confidence": 0.3
+                "confidence": 0.2
             }
             
         except Exception as e:
@@ -1554,14 +1750,23 @@ class TargIntelCalculator:
     def _create_basic_intel(self, competitor: Competitor, user_id: UUID) -> TargIntel:
         """Create basic targeting intel with defaults when no data is available"""
         try:
+            # Try to get real geography for this company via knowledge base / Groq
+            inferred_geo = _infer_geography(competitor.name, competitor.domain or "")
+            geography = inferred_geo if inferred_geo and inferred_geo.get("countries") else self.DEFAULT_VALUES["geography"]
+            primary_location = (
+                inferred_geo["countries"][0]["name"]
+                if inferred_geo and inferred_geo.get("countries")
+                else self.DEFAULT_VALUES["primary_location"]
+            )
+
             targ_intel = TargIntel(
                 competitor_id=competitor.id,
                 user_id=user_id,
                 age_range=self.DEFAULT_VALUES["age_range"],
                 gender_ratio=self.DEFAULT_VALUES["gender_ratio"],
                 primary_gender=self.DEFAULT_VALUES["primary_gender"],
-                geography=self.DEFAULT_VALUES["geography"],
-                primary_location=self.DEFAULT_VALUES["primary_location"],
+                geography=geography,
+                primary_location=primary_location,
                 interest_clusters=["general", "business"],
                 primary_interests=["general", "business"],
                 income_level=self.DEFAULT_VALUES["income_level"],

@@ -302,8 +302,8 @@ function normalizeTargetingData(dbData: any): TargetingIntelData {
     gender_ratio: safeParse(dbData.gender_ratio, mockTargetingIntelData.gender_ratio),
     primary_gender: dbData.primary_gender || mockTargetingIntelData.primary_gender,
     
-    // Geography
-    geography: safeParse(dbData.geography, mockTargetingIntelData.geography),
+    // Geography — use null fallback so the chart shows "no data" rather than mock countries
+    geography: safeParse(dbData.geography, null),
     primary_location: dbData.primary_location || mockTargetingIntelData.primary_location,
     
     // Interests
