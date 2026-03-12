@@ -324,7 +324,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({ category, onCardClick, ads: ads
         id: 12,
         title: 'Tech Ads',
         type: null,
-        image: svgPlaceholder('Tech', 400, 300),
+        image: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&h=500&fit=crop',
         rating: '4.6',
         votes: '178K',
         tags: ['Technology', 'Electronics'],
