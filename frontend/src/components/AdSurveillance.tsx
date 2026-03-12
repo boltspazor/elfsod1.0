@@ -1297,23 +1297,13 @@ const AdSurveillance = () => {
       filtered = filtered.filter((ad) => ad?.competitor_id === selectedCompany);
     }
 
-    // Filter by official/unofficial
+    // Filter by official/unofficial (use backend is_official only; no platform/spend fallback)
     if (liveAdTypeFilter !== "all") {
       filtered = filtered.filter((ad) => {
-        // Prefer backend is_official flag (from company ad library: Meta/Google company endpoint)
-        const fromBackend = ad?.is_official;
-        const platform = (ad?.platform || "").toLowerCase();
-        const hasSpend = typeof ad?.spend === "number"
-          ? ad.spend > 0
-          : parseSpendValue(ad?.spend) > 0;
-        const isOfficial =
-          fromBackend === true ||
-          (fromBackend !== false &&
-            (platform === "meta" ||
-              platform === "facebook" ||
-              platform === "google" ||
-              hasSpend));
-        return liveAdTypeFilter === "official" ? isOfficial : !isOfficial;
+        const isOfficial = ad?.is_official === true;
+        if (liveAdTypeFilter === "official") return isOfficial;
+        if (liveAdTypeFilter === "unofficial") return !isOfficial; // false or undefined = unofficial
+        return true;
       });
     }
 
@@ -2850,15 +2840,9 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                       <div className="flex-1 p-5">
                         <h4 className="text-lg font-semibold text-white mb-1">{ad.headline || "No Title"}</h4>
                         <p className="text-xs text-[#888] mb-1">{formatDate(ad.last_seen || ad.created_at || ad.first_seen)}</p>
-                        {/* Official / Unofficial badge */}
+                        {/* Official / Unofficial badge (backend is_official only) */}
                         {(() => {
-                          const fromBackend = ad.is_official;
-                          const platform = (ad.platform || "").toLowerCase();
-                          const hasSpend = typeof ad.spend === "number" ? ad.spend > 0 : parseSpendValue(ad.spend) > 0;
-                          const official =
-                            fromBackend === true ||
-                            (fromBackend !== false &&
-                              (platform === "meta" || platform === "facebook" || platform === "google" || hasSpend));
+                          const official = ad.is_official === true;
                           return (
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold mb-3 ${
                               official
