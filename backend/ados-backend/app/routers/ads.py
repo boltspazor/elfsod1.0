@@ -1,5 +1,5 @@
 # app/routers/ads.py
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from uuid import UUID
@@ -17,11 +17,10 @@ router = APIRouter()
 async def refresh_competitor_ads(
     competitor_id: UUID,
     platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
-    background_tasks: BackgroundTasks = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Refresh ads for a specific competitor"""
+    """Refresh ads for a specific competitor. Runs synchronously so response returns when refetch is done."""
     # Check if competitor exists and belongs to user
     competitor = db.query(Competitor).filter(
         Competitor.id == competitor_id,
@@ -44,57 +43,35 @@ async def refresh_competitor_ads(
                 detail=f"Invalid platform: {platform}. Valid platforms: {valid_platforms}"
             )
     
-    # Initialize ad fetcher
+    # Initialize ad fetcher and run synchronously (so frontend gets 200 only after refetch completes)
     fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
+    result = await fetcher.fetch_competitor_ads(
+        str(competitor_id),
+        str(current_user.user_id),
+        platforms
+    )
     
-    if background_tasks:
-        # Run in background
-        async def fetch_and_save():
-            await fetcher.fetch_competitor_ads(
-                str(competitor_id), 
-                str(current_user.user_id),
-                platforms
-            )
-        
-        background_tasks.add_task(fetch_and_save)
-        
+    if result["success"]:
         return {
-            "message": "Ad refresh started in background",
+            "message": f"Ads refreshed successfully for {competitor.name}",
             "competitor_id": str(competitor_id),
             "competitor_name": competitor.name,
-            "platforms": platforms
+            "total_ads_fetched": result["total_ads"],
+            "platforms": list(result["platforms"].keys()),
+            "fetch_id": result["fetch_id"]
         }
-    else:
-        # Run synchronously
-        result = await fetcher.fetch_competitor_ads(
-            str(competitor_id), 
-            str(current_user.user_id),
-            platforms
-        )
-        
-        if result["success"]:
-            return {
-                "message": f"Ads refreshed successfully for {competitor.name}",
-                "competitor_id": str(competitor_id),
-                "competitor_name": competitor.name,
-                "total_ads_fetched": result["total_ads"],
-                "platforms": list(result["platforms"].keys()),
-                "fetch_id": result["fetch_id"]
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to refresh ads: {result.get('error', 'Unknown error')}"
-            )
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"Failed to refresh ads: {result.get('error', 'Unknown error')}"
+    )
 
 @router.post("/refresh-all")
 async def refresh_all_competitors_ads(
     platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
-    background_tasks: BackgroundTasks = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Refresh ads for all competitors of current user"""
+    """Refresh ads for all competitors of current user. Runs synchronously so response returns when refetch is done."""
     # Validate platforms
     valid_platforms = ["google", "meta", "reddit", "linkedin", "youtube", "instagram"]
     for platform in platforms:
@@ -105,34 +82,19 @@ async def refresh_all_competitors_ads(
             )
     
     fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
+    results = await fetcher.fetch_all_user_competitors(str(current_user.user_id), platforms)
     
-    if background_tasks:
-        # Run in background
-        async def fetch_all():
-            await fetcher.fetch_all_user_competitors(str(current_user.user_id), platforms)
-        
-        background_tasks.add_task(fetch_all)
-        
-        return {
-            "message": "Refreshing ads for all competitors in background",
-            "user_id": str(current_user.user_id),
-            "platforms": platforms
-        }
-    else:
-        # Run synchronously
-        results = await fetcher.fetch_all_user_competitors(str(current_user.user_id), platforms)
-        
-        successful = sum(1 for r in results if r.get("success", False))
-        total_ads = sum(r.get("total_ads", 0) for r in results if r.get("success", False))
-        
-        return {
-            "message": f"Refreshed ads for {successful} competitors",
-            "user_id": str(current_user.user_id),
-            "total_competitors_processed": len(results),
-            "successful": successful,
-            "total_ads_fetched": total_ads,
-            "platforms": platforms
-        }
+    successful = sum(1 for r in results if r.get("success", False))
+    total_ads = sum(r.get("total_ads", 0) for r in results if r.get("success", False))
+    
+    return {
+        "message": f"Refreshed ads for {successful} competitors",
+        "user_id": str(current_user.user_id),
+        "total_competitors_processed": len(results),
+        "successful": successful,
+        "total_ads_fetched": total_ads,
+        "platforms": platforms
+    }
 
 @router.get("/competitor/{competitor_id}", response_model=List[AdResponse])
 def get_competitor_ads(
