@@ -17,6 +17,7 @@ from app.routers import (
     video_analysis,
     brand_identity,
     campaign_ads,
+    proxy,
 )
 from app.utils.logger import get_logger
 
@@ -79,6 +80,7 @@ app.include_router(sum_metrics.router, prefix="/api/sum-metrics", tags=["Summary
 app.include_router(video_analysis.router, prefix="/api/video-analysis", tags=["Video Analysis"])
 app.include_router(brand_identity.router, prefix="/api/brand-identity", tags=["Brand Identity"])
 app.include_router(campaign_ads.router, prefix="/api/campaign-ads", tags=["Campaign Ads"])
+app.include_router(proxy.router, tags=["Proxy"])
 app.mount("/auth", WSGIMiddleware(flask_auth_app))
 
 

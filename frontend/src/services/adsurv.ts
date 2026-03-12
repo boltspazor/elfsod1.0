@@ -172,6 +172,7 @@ export interface AdData {
   impressions: string | number;
   spend: string | number;
   is_active: boolean;
+  is_official?: boolean;
   first_seen: string;
   last_seen: string;
   platform_ad_id?: string;

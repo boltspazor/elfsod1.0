@@ -33,10 +33,19 @@ class MetaAdsService:
                 ad_text = snapshot["body"].get("text")
             else:
                 ad_text = snapshot["body"]
+        # Prefer image from snapshot.cards, then fall back to snapshot.images
         image_url = None
-        images = snapshot.get("images", [])
-        if images:
-            image_url = images[0].get("resized_image_url") or images[0].get("original_image_url")
+        cards = snapshot.get("cards", [])
+        if cards:
+            image_url = (
+                cards[0].get("resized_image_url")
+                or cards[0].get("original_image_url")
+            )
+        if not image_url:
+            images = snapshot.get("images", [])
+            if images:
+                image_url = images[0].get("resized_image_url") or images[0].get("original_image_url")
+        advertiser = snapshot.get("page_name") or ad.get("page_name")
         published_at = None
         if ad.get("start_date"):
             try:
@@ -58,7 +67,7 @@ class MetaAdsService:
             "image_url": image_url,
             "impressions": ad.get("impressions_with_index", {}).get("impressions_text"),
             "spend": ad.get("spend"),
-            "advertiser": snapshot.get("page_name") or ad.get("page_name"),
+            "advertiser": advertiser,
             "platform": "meta"
         }
         if published_at:
@@ -74,10 +83,11 @@ class MetaAdsService:
             "query": keyword,
             "search_type": "keyword_unordered",
             "ad_type": "all",
-            "country": "US",
-            "status": "ALL",
+            "country": "ALL",
+            "status": "ACTIVE",
+            "sort_by": "relevancy_monthly_grouped",
             "media_type": "ALL",
-            "trim": "false"
+            "trim": "false",
         }
         
         def fetch_ads():
@@ -109,8 +119,9 @@ class MetaAdsService:
         def fetch_page(c: Optional[str]):
             params = {
                 "companyName": company_name,
-                "country": "US",
-                "status": "ALL",
+                "country": "ALL",
+                "status": "ACTIVE",
+                "sort_by": "relevancy_monthly_grouped",
             }
             if c:
                 params["cursor"] = c

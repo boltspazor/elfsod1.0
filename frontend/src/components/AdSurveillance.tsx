@@ -108,6 +108,7 @@ interface AdData {
   impressions: string | number;
   spend: number;
   is_active: boolean;
+  is_official?: boolean;
   first_seen: string;
   last_seen: string;
   platform_ad_id?: string;
@@ -1299,16 +1300,19 @@ const AdSurveillance = () => {
     // Filter by official/unofficial
     if (liveAdTypeFilter !== "all") {
       filtered = filtered.filter((ad) => {
-        // Official = ad library platform (meta/facebook/google) OR has measurable spend
+        // Prefer backend is_official flag (from company ad library: Meta/Google company endpoint)
+        const fromBackend = ad?.is_official;
         const platform = (ad?.platform || "").toLowerCase();
         const hasSpend = typeof ad?.spend === "number"
           ? ad.spend > 0
           : parseSpendValue(ad?.spend) > 0;
         const isOfficial =
-          platform === "meta" ||
-          platform === "facebook" ||
-          platform === "google" ||
-          hasSpend;
+          fromBackend === true ||
+          (fromBackend !== false &&
+            (platform === "meta" ||
+              platform === "facebook" ||
+              platform === "google" ||
+              hasSpend));
         return liveAdTypeFilter === "official" ? isOfficial : !isOfficial;
       });
     }
@@ -1626,10 +1630,18 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     }
   };
 
+  const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "") || "http://localhost:8000";
+  const PROXY_ALLOWED_DOMAINS = ["cdninstagram.com", "fbcdn.net", "instagram.com"];
   const proxyImageUrl = (url: string | undefined): string => {
-    if (!url) return svgPlaceholder('No Image', 300, 200);
-    if (url.startsWith('data:')) return url;
-    // Return direct URL — no third-party proxy
+    if (!url) return svgPlaceholder("No Image", 300, 200);
+    if (url.startsWith("data:")) return url;
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (PROXY_ALLOWED_DOMAINS.some((d) => host.includes(d)))
+        return `${API_BASE}/proxy-image?url=${encodeURIComponent(url)}`;
+    } catch {
+      /* invalid URL */
+    }
     return url;
   };
 
@@ -2798,7 +2810,11 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                             src={proxyImageUrl(ad.image_url)}
                             alt={ad.headline}
                             className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            onError={(e) => {
+                              const el = e.target as HTMLImageElement;
+                              el.onerror = null;
+                              el.src = svgPlaceholder("Ad", 280, 280);
+                            }}
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -2830,9 +2846,13 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                         <p className="text-xs text-[#888] mb-1">{formatDate(ad.last_seen || ad.created_at || ad.first_seen)}</p>
                         {/* Official / Unofficial badge */}
                         {(() => {
+                          const fromBackend = ad.is_official;
                           const platform = (ad.platform || "").toLowerCase();
                           const hasSpend = typeof ad.spend === "number" ? ad.spend > 0 : parseSpendValue(ad.spend) > 0;
-                          const official = platform === "meta" || platform === "facebook" || platform === "google" || hasSpend;
+                          const official =
+                            fromBackend === true ||
+                            (fromBackend !== false &&
+                              (platform === "meta" || platform === "facebook" || platform === "google" || hasSpend));
                           return (
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold mb-3 ${
                               official

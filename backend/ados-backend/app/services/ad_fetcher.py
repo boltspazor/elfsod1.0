@@ -2,6 +2,7 @@
 import asyncio
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
+from rapidfuzz import fuzz
 from app.models import Competitor, Ad, AdFetch
 from app.services.google_service import GoogleAdsService
 from app.services.meta_service import MetaAdsService
@@ -49,19 +50,16 @@ class AdFetcher:
         return None
 
     @staticmethod
-    def _advertiser_matches_competitor(advertiser: Any, competitor_name: str) -> bool:
-        """True if ad's advertiser/page name matches or contains competitor name (for promoting search ads to official)."""
-        if not competitor_name or not advertiser:
+    def _advertiser_matches_competitor(advertiser: str, competitor: str) -> bool:
+        """True if ad's advertiser/page name matches competitor (fuzzy; e.g. Zepto vs Zepto Technologies Pvt Ltd)."""
+        if not advertiser or not competitor:
             return False
         a = str(advertiser).strip().lower()
-        c = str(competitor_name).strip().lower()
+        c = str(competitor).strip().lower()
         if not a or not c:
             return False
-        if a == c:
-            return True
-        if c in a or a in c:
-            return True
-        return False
+        score = fuzz.partial_ratio(a, c)
+        return score >= 70
     
     async def fetch_competitor_ads(self, competitor_id: str, user_id: str, 
                                   platforms: List[str] = None) -> Dict[str, Any]:
@@ -124,12 +122,33 @@ class AdFetcher:
                             keyword=competitor.name,
                             max_results=settings.MAX_ADS_PER_COMPETITOR,
                         )
-                    # Promote to official when advertiser/page name matches competitor (e.g. Zepto vs Zepto India)
+                    # Promote to official when advertiser/page name matches competitor (fuzzy)
                     for ad in meta_ads:
+                        adv = ad.get("advertiser")
+                        comp_name = competitor.name
+                        score = (
+                            fuzz.partial_ratio(
+                                (adv or "").strip().lower(),
+                                (comp_name or "").strip().lower(),
+                            )
+                            if adv and comp_name
+                            else 0
+                        )
+                        promoted = False
                         if not ad.get("is_official") and self._advertiser_matches_competitor(
-                            ad.get("advertiser"), competitor.name
+                            adv or "", comp_name or ""
                         ):
                             ad["is_official"] = True
+                            promoted = True
+                        logger.debug(
+                            "Advertiser match check",
+                            extra={
+                                "competitor": comp_name,
+                                "advertiser": adv,
+                                "fuzzy_match_score": score,
+                                "promoted_to_official": promoted,
+                            },
+                        )
                     results["meta"] = meta_ads
                     logger.info(f"Fetched {len(meta_ads)} Meta ads for {competitor.name}")
                 except Exception as e:
@@ -250,7 +269,11 @@ class AdFetcher:
                             existing_ad.destination_url = destination_url
                         
                         if "is_official" in ad_data:
-                            existing_ad.is_official = bool(ad_data["is_official"])
+                            # Allow False→True upgrade; never downgrade official to unofficial
+                            existing_ad.is_official = (
+                                existing_ad.is_official
+                                or bool(ad_data["is_official"])
+                            )
                         
                         updated_ads_count += 1
                         
