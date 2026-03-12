@@ -365,7 +365,21 @@ const GeographicDistributionChart = ({
 }: {
   dist: { label: string; value: number; color: string }[];
 }) => {
-  if (!dist.length) return null;
+  if (!dist.length) {
+    return (
+      <div style={{ background: '#1a1a1a', borderRadius: '12px', padding: '24px', marginTop: '16px', border: '1px solid #333' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <Globe style={{ color: '#3b82f6', width: 22, height: 22 }} />
+          <span style={{ fontSize: '18px', color: '#fff', fontWeight: 600 }}>Geographic Distribution</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '160px', gap: '8px', color: '#6b7280' }}>
+          <Globe style={{ width: 36, height: 36, opacity: 0.4 }} />
+          <p style={{ fontSize: '14px', margin: 0 }}>No geographic data available yet</p>
+          <p style={{ fontSize: '12px', margin: 0, color: '#4b5563' }}>Click <strong style={{ color: '#3b82f6' }}>Calculate Targeting</strong> to analyse this company</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ background: '#1a1a1a', borderRadius: '12px', padding: '24px', marginTop: '16px', border: '1px solid #333' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
@@ -628,65 +642,72 @@ function buildGeographicDistData(
   competitorName: string = '',
 ): { label: string; value: number; color: string }[] {
   console.log("Geographic data received:", geo, "for competitor:", competitorName);
-  const fallback = [
-    { label: 'United States', value: 38.0, color: '#3b82f6' },
-    { label: 'India', value: 25.0, color: '#f59e0b' },
-    { label: 'United Kingdom', value: 14.0, color: '#10b981' },
-    { label: 'Canada', value: 12.0, color: '#8b5cf6' },
-    { label: 'Australia', value: 7.0, color: '#ef4444' },
-    { label: 'Germany', value: 8.0, color: '#ef44b6ff' },
-  ];
 
+  // No data at all → return empty so the chart shows a "no data" state
   if (!geo || Object.keys(geo).length === 0) {
-    return applyFallbackOffset(fallback, competitorName);
+    return [];
   }
 
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ef4444', '#8b5cf6', '#ec4899'];
-  let dataPoints: any[] = [];
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   try {
+    let dataPoints: { country: string; percentage: number }[] = [];
+
     if (geo.countries && Array.isArray(geo.countries) && geo.countries.length > 0) {
-      dataPoints = geo.countries.map((c: any) => ({
-        country: c.name || c.country || c.label || 'Unknown',
-        percentage: c.percentage ?? c.value ?? 0
-      }));
-    } else if (geo.countries && typeof geo.countries === 'object' && Object.keys(geo.countries).length > 0) {
+      const first = geo.countries[0];
+
+      if (typeof first === 'object' && first !== null && ('name' in first || 'country' in first || 'label' in first)) {
+        // Format: [{name: "India", percentage: 85}, ...]  ← Groq output
+        dataPoints = geo.countries.map((c: any) => ({
+          country: c.name || c.country || c.label || 'Unknown',
+          percentage: c.percentage ?? c.value ?? 0,
+        }));
+      } else if (typeof first === 'string') {
+        // Format: ["India", "United States"]  ← legacy string array
+        const equalShare = +(100 / geo.countries.length).toFixed(1);
+        dataPoints = geo.countries.map((c: string) => ({
+          country: c,
+          percentage: equalShare,
+        }));
+      }
+    } else if (geo.countries && typeof geo.countries === 'object' && !Array.isArray(geo.countries)) {
+      // Format: {countries: {"India": {...}, "US": {...}}}
       dataPoints = Object.entries(geo.countries).map(([country, data]: [string, any]) => ({
         country,
-        percentage: typeof data === 'object' ? (data.percentage ?? data.value ?? 0) : data
+        percentage: typeof data === 'object' ? (data.percentage ?? data.value ?? 0) : Number(data),
       }));
     } else {
-      // Direct map format
-      dataPoints = Object.entries(geo).map(([country, data]: [string, any]) => {
-        // exclude states and cities if they mixed them
-        if (country === 'states' || country === 'cities' || country === 'countries') return null;
-        return {
+      // Direct map format: {"India": {percentage: 85}, "US": {percentage: 15}}
+      dataPoints = Object.entries(geo)
+        .filter(([key]) => key !== 'states' && key !== 'cities' && key !== 'countries')
+        .map(([country, data]: [string, any]) => ({
           country,
-          percentage: typeof data === 'object' && data !== null ? (data.percentage ?? data.value ?? 0) : data
-        };
-      }).filter(Boolean);
+          percentage: typeof data === 'object' && data !== null
+            ? (data.percentage ?? data.value ?? 0)
+            : Number(data),
+        }));
     }
 
     const result = dataPoints
-      .sort((a, b) => (parseFloat(b.percentage) || 0) - (parseFloat(a.percentage) || 0))
-      .slice(0, 5)
-      .map((item, i) => {
-        let val = parseFloat(item.percentage) || 0;
-        return {
-          label: item.country,
-          value: +(val).toFixed(1),
-          color: colors[i % colors.length]
-        };
-      });
+      .filter(p => p.country && p.country !== 'Unknown')
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 6)
+      .map((item, i) => ({
+        label: item.country,
+        value: +item.percentage.toFixed(1),
+        color: colors[i % colors.length],
+      }));
 
-    if (result.length === 0 || result.every(r => r.value === 0)) {
-       return applyFallbackOffset(fallback, competitorName);
+    // If all values are zero, still show the countries (equal split)
+    if (result.length > 0 && result.every(r => r.value === 0)) {
+      const equal = +(100 / result.length).toFixed(1);
+      return result.map(r => ({ ...r, value: equal }));
     }
 
     return result;
   } catch (e) {
     console.error("Error parsing geographic data", e);
-    return applyFallbackOffset(fallback, competitorName);
+    return [];
   }
 }
 
@@ -964,6 +985,36 @@ const TargetingIntel: React.FC = () => {
               >
                 <RefreshCw style={{ width: 14, height: 14 }} className={refreshing ? 'animate-spin' : ''} />
                 Refresh
+              </button>
+              {/* Calculate Targeting — purple filled button */}
+              <button
+                onClick={() => selectedCompetitorId
+                  ? handleCalculateForCompetitor(selectedCompetitorId)
+                  : handleCalculateAll()
+                }
+                disabled={calculating}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  border: 'none', borderRadius: '8px',
+                  background: calculating ? '#7c3aed99' : '#7c3aed',
+                  color: '#fff',
+                  fontSize: '13px', fontWeight: 600,
+                  padding: '7px 14px',
+                  cursor: calculating ? 'wait' : 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                {calculating ? (
+                  <>
+                    <RefreshCw style={{ width: 14, height: 14 }} className="animate-spin" />
+                    Calculating…
+                  </>
+                ) : (
+                  <>
+                    <Cpu style={{ width: 14, height: 14 }} />
+                    Calculate Targeting
+                  </>
+                )}
               </button>
               {/* Export — teal/cyan filled button */}
               <button
