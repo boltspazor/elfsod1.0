@@ -311,19 +311,21 @@ export const AdsAPI = {
   refreshCompetitor: (
     competitor_id: string,
     platforms?: string[]
-  ) =>
-    fetchWithAuth(
-      `/api/ads/refresh/${competitor_id}` +
-        (platforms ? `?platforms=${platforms.join(',')}` : ''),
-      { method: 'POST' }
-    ),
+  ) => {
+    const path = `/api/ads/refresh/${competitor_id}` +
+      (platforms ? `?platforms=${platforms.join(',')}` : '');
+    const url = `${BASE_URL}${path}`;
+    console.log('[AdsAPI] POST', url);
+    return fetchWithAuth(path, { method: 'POST' });
+  },
 
-  refreshAll: (platforms?: string[]) =>
-    fetchWithAuth(
-      `/api/ads/refresh-all` +
-        (platforms ? `?platforms=${platforms.join(',')}` : ''),
-      { method: 'POST' }
-    ),
+  refreshAll: (platforms?: string[]) => {
+    const path = `/api/ads/refresh-all` +
+      (platforms ? `?platforms=${platforms.join(',')}` : '');
+    const url = `${BASE_URL}${path}`;
+    console.log('[AdsAPI] POST', url);
+    return fetchWithAuth(path, { method: 'POST' });
+  },
 
   getCompetitorAds: (
     competitor_id: string,

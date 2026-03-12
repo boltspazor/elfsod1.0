@@ -1478,16 +1478,21 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     }
   };
 
-  // Refresh ads handler - UPDATED to recalculate metrics
+  // Refresh ads handler - calls backend to refetch from platforms (Meta, Google, etc.)
   const handleRefreshAds = async () => {
+    const action = selectedCompetitor ? `refresh competitor ${selectedCompetitor}` : "refresh-all";
+    console.log("[Refresh ads] Starting", { action, competitorsCount: competitors.length });
     setIsRefreshing(true);
     setError(null);
     try {
       if (selectedCompetitor) {
+        console.log("[Refresh ads] Calling POST /api/ads/refresh/" + selectedCompetitor);
         await AdsAPI.refreshCompetitor(selectedCompetitor);
       } else {
+        console.log("[Refresh ads] Calling POST /api/ads/refresh-all");
         await AdsAPI.refreshAll();
       }
+      console.log("[Refresh ads] Refetch completed, reloading list...");
 
       // Wait a moment for backend to process
       await new Promise((resolve) => setTimeout(resolve, 2000));
