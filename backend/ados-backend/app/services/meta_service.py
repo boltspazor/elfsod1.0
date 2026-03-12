@@ -26,6 +26,11 @@ class MetaAdsService:
 
     def _format_raw_ad(self, ad: Dict[str, Any]) -> Dict[str, Any]:
         """Format one raw Meta Ad Library item (search or company ads) to our schema."""
+        ad_id = ad.get("ad_archive_id")
+        if not ad_id:
+            raise ValueError("Meta ad missing ad_archive_id")
+        formatted_id = str(ad_id)
+
         snapshot = ad.get("snapshot", {})
         ad_text = None
         if "body" in snapshot and snapshot["body"]:
@@ -60,7 +65,7 @@ class MetaAdsService:
             except (TypeError, ValueError, OSError):
                 pass
         formatted = {
-            "id": ad.get("ad_archive_id"),
+            "id": formatted_id,
             "headline": snapshot.get("title"),
             "description": ad_text,
             "destination_url": ad.get("url") or snapshot.get("link_url"),

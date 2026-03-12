@@ -14,7 +14,6 @@ from app.utils.logger import get_logger
 from app.config import settings
 from datetime import datetime
 import json
-import hashlib
 
 # Create logger instance
 logger = get_logger(__name__)
@@ -126,6 +125,14 @@ class AdFetcher:
                     for ad in meta_ads:
                         adv = ad.get("advertiser")
                         comp_name = competitor.name
+                        logger.debug(
+                            "Meta advertiser promotion check",
+                            extra={
+                                "competitor": comp_name,
+                                "advertiser": adv,
+                                "is_official_before": ad.get("is_official"),
+                            },
+                        )
                         score = (
                             fuzz.partial_ratio(
                                 (adv or "").strip().lower(),
@@ -140,6 +147,14 @@ class AdFetcher:
                         ):
                             ad["is_official"] = True
                             promoted = True
+                            logger.debug(
+                                "Meta ad promoted to official",
+                                extra={
+                                    "competitor": comp_name,
+                                    "advertiser": adv,
+                                    "ad_id": ad.get("id"),
+                                },
+                            )
                         logger.debug(
                             "Advertiser match check",
                             extra={
@@ -229,12 +244,15 @@ class AdFetcher:
                     continue
                     
                 for ad_data in ads:
-                    # Generate stable platform_ad_id
-                    platform_ad_id = ad_data.get("id")
-                    if not platform_ad_id:
-                        # Create a stable hash for the ad data
-                        ad_str = json.dumps(ad_data, sort_keys=True, default=str)
-                        platform_ad_id = hashlib.md5(ad_str.encode()).hexdigest()
+                    # Stable platform_ad_id required; normalize to string (no hash fallback)
+                    raw_id = ad_data.get("id")
+                    if not raw_id:
+                        logger.warning(
+                            "Ad missing stable ID, skipping",
+                            extra={"platform": platform, "ad_data": ad_data},
+                        )
+                        continue
+                    platform_ad_id = str(raw_id)
                     
                     # Check if ad already exists for this competitor + platform + platform_ad_id
                     existing_ad = self.db.query(Ad).filter(

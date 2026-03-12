@@ -29,13 +29,21 @@ interface PinterestResponse {
   cursor?: string;
 }
 
+const INITIAL_SEARCH = 'cgi ads';
+
 const AdInspiration: React.FC = () => {
-  const [query, setQuery]       = useState('');
+  const [query, setQuery]       = useState(INITIAL_SEARCH);
   const [pins, setPins]         = useState<Pin[]>([]);
   const [cursor, setCursor]     = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  // On load, run first search with hardcoded "cgi ads"
+  React.useEffect(() => {
+    doSearch(INITIAL_SEARCH);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Lightbox state
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -134,7 +142,7 @@ const AdInspiration: React.FC = () => {
           Ad Inspiration
         </h1>
         <p className="text-gray-400 text-sm mb-8">
-          Search Pinterest for design inspiration for your ads.
+          Search your product domain for design inspiration for your ads.
         </p>
 
         <form onSubmit={handleSubmit} className="flex gap-3 mb-10">

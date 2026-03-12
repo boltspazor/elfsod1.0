@@ -2485,7 +2485,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                             key={ad.id || `${ad.platform}-${index}`}
                             className="bg-[#111] rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-[#2a2a2a] hover:border-[#444]"
                           >
-                            {/* Static thumbnail only (no video); category placeholder when missing/broken */}
+                            {/* Static thumbnail only (no video); Instagram CDN via proxy, same as Live Ad Feed & analyze modal */}
                             <div className="aspect-video bg-[#222] relative overflow-hidden">
                               <img
                                 src={
@@ -2497,6 +2497,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                                 }
                                 alt={ad.title}
                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                referrerPolicy="no-referrer"
                                 onError={(e) => {
                                   const el = e.target as HTMLImageElement;
                                   el.onerror = null;

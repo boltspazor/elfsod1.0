@@ -96,6 +96,22 @@ const Home: React.FC = () => {
   };
 
   const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || /^data:video\//i.test(url);
+
+  const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '') || 'http://localhost:8000';
+  const PROXY_ALLOWED_DOMAINS = ['cdninstagram.com', 'fbcdn.net', 'instagram.com'];
+  const proxyImageUrl = (url: string | undefined): string => {
+    if (!url) return svgPlaceholder('Ad', 400, 300);
+    if (url.startsWith('data:')) return url;
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (PROXY_ALLOWED_DOMAINS.some((d) => host.includes(d)))
+        return `${API_BASE}/proxy-image?url=${encodeURIComponent(url)}`;
+    } catch {
+      /* invalid URL */
+    }
+    return url;
+  };
+
   /** Only include ads that have at least one vote (views/likes) so 0-vote ads are not shown and redirects don't fail. */
   const mapTrendingToAdFormat = (items: TrendingAdType[], genre: string) => {
     const categoryPlaceholder = svgPlaceholder(genre || 'Ad', 400, 300);
@@ -107,8 +123,8 @@ const Home: React.FC = () => {
         const rawThumb = (item.thumbnail || item.image_url || '').trim();
         const validImage = rawImage && !isVideoUrl(rawImage) ? rawImage : '';
         const validThumb = rawThumb && !isVideoUrl(rawThumb) ? rawThumb : '';
-        const imageUrl = validImage || validThumb || categoryPlaceholder;
-        const thumbUrl = validThumb || validImage || categoryPlaceholder;
+        const imageUrl = (validImage || validThumb) ? proxyImageUrl(validImage || validThumb) : categoryPlaceholder;
+        const thumbUrl = (validThumb || validImage) ? proxyImageUrl(validThumb || validImage) : categoryPlaceholder;
         return {
           id: item.id || `trending-${index}`,
           title: item.title || item.headline || 'Trending Ad',
