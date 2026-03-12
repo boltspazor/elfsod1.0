@@ -306,11 +306,11 @@ class AdFetcher:
                         if destination_url and destination_url != existing_ad.destination_url:
                             existing_ad.destination_url = destination_url
                         
-                        if "is_official" in ad_data:
-                            # Allow False→True upgrade; never downgrade official to unofficial
+                        # Always apply is_official from payload: allow False→True upgrade, never downgrade
+                        incoming_official = ad_data.get("is_official")
+                        if incoming_official is not None:
                             existing_ad.is_official = (
-                                existing_ad.is_official
-                                or bool(ad_data["is_official"])
+                                existing_ad.is_official or bool(incoming_official)
                             )
                         
                         updated_ads_count += 1
@@ -358,6 +358,7 @@ class AdFetcher:
             ad_fetch.total_ads_fetched = total_ads_processed
             ad_fetch.platforms_queried = json.dumps([p for p in platforms if results.get(p)])
             
+            self.db.flush()  # ensure is_official and other updates are written
             self.db.commit()
             
             logger.info(f"Ads saved for {competitor.name}: {new_ads_count} new, {updated_ads_count} updated, {actual_ads_count} total active ads")
