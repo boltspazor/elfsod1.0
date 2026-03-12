@@ -861,18 +861,26 @@ const AdSurveillance = () => {
     }
   };
 
-  // Load recent ads - UPDATED to use getAllAds
-  const loadRecentAds = async (competitorId?: string) => {
+  // Load recent ads - UPDATED to use getAllAds. When a competitor is selected, pass isOfficial so the API returns official/unofficial-only when that filter is on (avoids limit pushing those ads out).
+  const loadRecentAds = async (competitorId?: string, isOfficial?: boolean) => {
     try {
-      console.log("Loading recent ads...");
+      console.log("Loading recent ads...", competitorId ? { competitorId, isOfficial } : "all");
       let adsData: AdData[] = [];
 
       if (competitorId) {
-        // Get ads for specific competitor
+        const effectiveOfficial =
+          isOfficial !== undefined
+            ? isOfficial
+            : liveAdTypeFilter === "official"
+              ? true
+              : liveAdTypeFilter === "unofficial"
+                ? false
+                : undefined;
         const data = await AdsAPI.getCompetitorAds(
           competitorId,
           undefined,
-          100,
+          500,
+          effectiveOfficial,
         );
         console.log("Competitor ads API response:", data);
 
@@ -1256,6 +1264,18 @@ const AdSurveillance = () => {
       setIsCalculatingMetrics(false);
     }
   };
+
+  // When competitor or Official/Unofficial filter changes, refetch so the API returns the right set (e.g. is_official=true returns only official ads and they are not pushed out by the limit).
+  useEffect(() => {
+    if (!selectedCompetitor) return;
+    const isOfficial =
+      liveAdTypeFilter === "official"
+        ? true
+        : liveAdTypeFilter === "unofficial"
+          ? false
+          : undefined;
+    loadRecentAds(selectedCompetitor, isOfficial);
+  }, [liveAdTypeFilter, selectedCompetitor]);
 
   // Filter ads based on search, platform, and company
   useEffect(() => {
@@ -2748,7 +2768,7 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
                 value={selectedCompany}
                 onChange={(e) => {
                   setSelectedCompany(e.target.value);
-                  if (e.target.value !== "all") { setSelectedCompetitor(e.target.value); loadRecentAds(e.target.value); }
+                  if (e.target.value !== "all") setSelectedCompetitor(e.target.value);
                   else { setSelectedCompetitor(null); loadRecentAds(); }
                 }}
               >

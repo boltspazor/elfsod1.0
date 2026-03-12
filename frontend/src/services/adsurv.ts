@@ -330,11 +330,14 @@ export const AdsAPI = {
   getCompetitorAds: (
     competitor_id: string,
     platform?: string,
-    limit: number = 100
+    limit: number = 500,
+    isOfficial?: boolean
   ): Promise<AdData[]> => {
     const params = new URLSearchParams();
     if (platform) params.append('platform', platform);
     params.append('limit', String(limit));
+    if (isOfficial === true) params.append('is_official', 'true');
+    else if (isOfficial === false) params.append('is_official', 'false');
     
     return fetchWithAuth(`/api/ads/competitor/${competitor_id}?${params}`);
   },

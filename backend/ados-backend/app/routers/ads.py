@@ -1,6 +1,7 @@
 # app/routers/ads.py
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 from app.database import get_db
@@ -100,11 +101,12 @@ async def refresh_all_competitors_ads(
 def get_competitor_ads(
     competitor_id: UUID,
     platform: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=200),
+    is_official: Optional[bool] = Query(None, description="Filter by official (company) ads: true=official only, false=unofficial only"),
+    limit: int = Query(100, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get ads for a specific competitor"""
+    """Get ads for a specific competitor. Use is_official=true/false to fetch only official or unofficial ads so they are not pushed out by the limit."""
     # Verify competitor belongs to user
     competitor = db.query(Competitor).filter(
         Competitor.id == competitor_id,
@@ -121,6 +123,10 @@ def get_competitor_ads(
     
     if platform:
         query = query.filter(Ad.platform == platform)
+    if is_official is True:
+        query = query.filter(Ad.is_official == True)
+    elif is_official is False:
+        query = query.filter(or_(Ad.is_official == False, Ad.is_official.is_(None)))
     
     ads = query.order_by(Ad.last_seen.desc()).limit(limit).all()
     
