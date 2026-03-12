@@ -19,7 +19,10 @@ from app.routers import (
     campaign_ads,
     proxy,
 )
-from app.utils.logger import get_logger
+from app.utils.logger import setup_logging, get_logger
+
+# Apply LOG_LEVEL from env (e.g. DEBUG for promotion logs); must run before get_logger
+setup_logging(log_to_file=(settings.ENVIRONMENT != "production"))
 
 logger = get_logger(__name__)
 logger.info(f"🌍 CORS allowed origins: {settings.ALLOWED_ORIGINS}")
