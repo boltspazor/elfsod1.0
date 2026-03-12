@@ -102,7 +102,7 @@ def get_competitor_ads(
     competitor_id: UUID,
     platform: Optional[str] = None,
     is_official: Optional[bool] = Query(None, description="Filter by official (company) ads: true=official only, false=unofficial only"),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

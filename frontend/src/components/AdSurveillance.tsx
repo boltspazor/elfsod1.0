@@ -882,7 +882,7 @@ const AdSurveillance = () => {
           500,
           effectiveOfficial,
         );
-        console.log("Competitor ads API response:", data);
+        console.log("Competitor ads API response:", data?.length ?? 0, "ads (requested limit=500)");
 
         if (Array.isArray(data)) {
           adsData = data.map((ad) => {
