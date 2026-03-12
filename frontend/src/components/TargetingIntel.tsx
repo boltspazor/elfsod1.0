@@ -654,16 +654,14 @@ function buildGeographicDistData(
     let dataPoints: { country: string; percentage: number }[] = [];
 
     if (geo.countries && Array.isArray(geo.countries) && geo.countries.length > 0) {
-      const first = geo.countries[0];
-
-      if (typeof first === 'object' && first !== null && ('name' in first || 'country' in first || 'label' in first)) {
-        // Format: [{name: "India", percentage: 85}, ...]  ← Groq output
+      if (typeof geo.countries[0] === 'object' && geo.countries[0] !== null) {
+        // Format: [{name: "India", percentage: 85}, ...]
         dataPoints = geo.countries.map((c: any) => ({
           country: c.name || c.country || c.label || 'Unknown',
           percentage: c.percentage ?? c.value ?? 0,
         }));
-      } else if (typeof first === 'string') {
-        // Format: ["India", "United States"]  ← legacy string array
+      } else if (typeof geo.countries[0] === 'string') {
+        // Format: ["India", "United States"]
         const equalShare = +(100 / geo.countries.length).toFixed(1);
         dataPoints = geo.countries.map((c: string) => ({
           country: c,

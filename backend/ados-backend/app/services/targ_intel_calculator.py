@@ -15,8 +15,6 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Company geography knowledge base + optional Groq enrichment
 # ---------------------------------------------------------------------------
-_GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
 # Known companies → operating geography with ad-spend percentages.
 # Keys are lowercase. Add more entries as needed.
 _COMPANY_GEO_KB: Dict[str, List[Dict]] = {
@@ -128,15 +126,16 @@ def _infer_geography(company_name: str, domain: str = "") -> Dict[str, Any]:
                 return {"countries": geo}
 
     # Layer 3 — Groq (optional)
-    if _GROQ_API_KEY:
-        groq_result = _infer_geography_with_groq(company_name, domain)
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if groq_api_key:
+        groq_result = _infer_geography_with_groq(company_name, domain, groq_api_key)
         if groq_result:
             return groq_result
 
     return {}
 
 
-def _infer_geography_with_groq(company_name: str, domain: str = "") -> Dict[str, Any]:
+def _infer_geography_with_groq(company_name: str, domain: str = "", groq_api_key: str = "") -> Dict[str, Any]:
     """
     Use Groq LLM to infer operating geography.
     Falls back gracefully if the API key is missing or the call fails.
