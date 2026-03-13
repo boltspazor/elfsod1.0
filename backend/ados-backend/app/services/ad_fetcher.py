@@ -1,6 +1,7 @@
 # app/services/ad_fetcher.py
 import asyncio
-from typing import List, Dict, Any
+import time
+from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from rapidfuzz import fuzz
 from app.models import Competitor, Ad, AdFetch
@@ -12,6 +13,7 @@ from app.services.youtube_service import YouTubeService
 from app.services.instagram_service import InstagramService
 from app.utils.logger import get_logger
 from app.config import settings
+from app.database import SessionLocal
 from datetime import datetime
 import json
 
@@ -60,10 +62,11 @@ class AdFetcher:
         score = fuzz.partial_ratio(a, c)
         return score >= 70
     
-    async def fetch_competitor_ads(self, competitor_id: str, user_id: str, 
+    async def fetch_competitor_ads(self, competitor_id: str, user_id: str,
                                   platforms: List[str] = None) -> Dict[str, Any]:
         """Fetch ads for a specific competitor across specified platforms"""
-        logger.info(f"Fetching ads for competitor: {competitor_id}")
+        request_start = time.perf_counter()
+        logger.info("Fetching ads for competitor: %s", competitor_id)
         
         # Create ad fetch record
         ad_fetch = AdFetch(
@@ -99,18 +102,19 @@ class AdFetcher:
                 "youtube": [],
                 "instagram": []
             }
-            
-            # Fetch from Google (if domain exists and Google is selected)
-            if "google" in platforms and competitor.domain:
+
+            async def _fetch_google() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
-                    google_ads = await self.google_service.fetch_company_ads(competitor.domain)
-                    results["google"] = google_ads
-                    logger.info(f"Fetched {len(google_ads)} Google ads for {competitor.name}")
+                    ads = await self.google_service.fetch_company_ads(competitor.domain)
+                    logger.info("Google fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("google", ads)
                 except Exception as e:
-                    logger.error(f"Google ads fetch error: {e}")
-            
-            # Fetch from Meta (company ads first, then keyword search fallback)
-            if "meta" in platforms:
+                    logger.error("Google ads fetch error: %s", e)
+                    return ("google", e)
+
+            async def _fetch_meta() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
                     meta_ads = await self.meta_service.fetch_company_ads(
                         company_name=competitor.name,
@@ -121,150 +125,133 @@ class AdFetcher:
                             keyword=competitor.name,
                             max_results=settings.MAX_ADS_PER_COMPETITOR,
                         )
-                    # Promote to official when advertiser/page name matches competitor (fuzzy)
                     already_official = 0
                     promoted_count = 0
                     for ad in meta_ads:
                         adv = ad.get("advertiser")
                         comp_name = competitor.name
-                        logger.debug(
-                            "Meta advertiser promotion check competitor=%s advertiser=%s is_official_before=%s",
-                            comp_name,
-                            adv,
-                            ad.get("is_official"),
-                            extra={
-                                "competitor": comp_name,
-                                "advertiser": adv,
-                                "is_official_before": ad.get("is_official"),
-                            },
-                        )
-                        score = (
-                            fuzz.partial_ratio(
-                                (adv or "").strip().lower(),
-                                (comp_name or "").strip().lower(),
-                            )
-                            if adv and comp_name
-                            else 0
-                        )
-                        promoted = False
                         if ad.get("is_official"):
                             already_official += 1
                         elif self._advertiser_matches_competitor(adv or "", comp_name or ""):
                             ad["is_official"] = True
-                            promoted = True
                             promoted_count += 1
-                            logger.debug(
-                                "Meta ad promoted to official competitor=%s advertiser=%s ad_id=%s",
-                                comp_name,
-                                adv,
-                                ad.get("id"),
-                                extra={
-                                    "competitor": comp_name,
-                                    "advertiser": adv,
-                                    "ad_id": ad.get("id"),
-                                },
-                            )
-                        logger.debug(
-                            "Advertiser match check competitor=%s advertiser=%s score=%s promoted=%s",
-                            comp_name,
-                            adv,
-                            score,
-                            promoted,
-                            extra={
-                                "competitor": comp_name,
-                                "advertiser": adv,
-                                "fuzzy_match_score": score,
-                                "promoted_to_official": promoted,
-                            },
-                        )
                     logger.info(
-                        "Meta promotion summary for %s: %d ads, %d already official, %d promoted to official",
-                        competitor.name,
-                        len(meta_ads),
-                        already_official,
-                        promoted_count,
+                        "Meta promotion summary for %s: %d ads, %d already official, %d promoted",
+                        competitor.name, len(meta_ads), already_official, promoted_count,
                     )
-                    results["meta"] = meta_ads
-                    logger.info(f"Fetched {len(meta_ads)} Meta ads for {competitor.name}")
+                    logger.info("Meta fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("meta", meta_ads)
                 except Exception as e:
-                    logger.error(f"Meta ads fetch error: {e}")
-            
-            # Fetch from Reddit
-            if "reddit" in platforms:
+                    logger.error("Meta ads fetch error: %s", e)
+                    return ("meta", e)
+
+            async def _fetch_reddit() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
-                    reddit_ads = await self.reddit_service.search_ads(competitor.name)
-                    results["reddit"] = reddit_ads
-                    logger.info(f"Fetched {len(reddit_ads)} Reddit ads for {competitor.name}")
+                    ads = await self.reddit_service.search_ads(competitor.name)
+                    logger.info("Reddit fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("reddit", ads)
                 except Exception as e:
-                    logger.error(f"Reddit ads fetch error: {e}")
-            
-            # Fetch from LinkedIn
-            if "linkedin" in platforms:
+                    logger.error("Reddit ads fetch error: %s", e)
+                    return ("reddit", e)
+
+            async def _fetch_linkedin() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
-                    linkedin_ads = await self.linkedin_service.search_ads(competitor.name)
-                    results["linkedin"] = linkedin_ads
-                    logger.info(f"Fetched {len(linkedin_ads)} LinkedIn ads for {competitor.name}")
+                    ads = await self.linkedin_service.search_ads(competitor.name)
+                    logger.info("LinkedIn fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("linkedin", ads)
                 except Exception as e:
-                    logger.error(f"LinkedIn ads fetch error: {e}")
-            
-            # Fetch from YouTube
-            if "youtube" in platforms:
+                    logger.error("LinkedIn ads fetch error: %s", e)
+                    return ("linkedin", e)
+
+            async def _fetch_youtube() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
-                    youtube_ads = await self.youtube_service.search_videos(
-                        query=competitor.name,
-                        max_results=15,
-                        include_extras=True
+                    ads = await self.youtube_service.search_videos(
+                        query=competitor.name, max_results=15, include_extras=True
                     )
-                    # Format YouTube ads to match our schema
-                    for ad in youtube_ads:
+                    for ad in ads:
                         ad["platform"] = "youtube"
                         ad["headline"] = ad.get("title")
                         ad["description"] = ad.get("description") or ad.get("title")
                         ad["destination_url"] = ad.get("url")
                         ad["image_url"] = ad.get("thumbnail")
                         ad["views"] = ad.get("views", 0)
-                        ad["impressions"] = ad.get("views", 0)  # Use views as impressions
-                    
-                    results["youtube"] = youtube_ads
-                    logger.info(f"Fetched {len(youtube_ads)} YouTube videos for {competitor.name}")
+                        ad["impressions"] = ad.get("views", 0)
+                    logger.info("YouTube fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("youtube", ads)
                 except Exception as e:
-                    logger.error(f"YouTube ads fetch error: {e}")
-            
-            # Fetch from Instagram
-            if "instagram" in platforms:
+                    logger.error("YouTube ads fetch error: %s", e)
+                    return ("youtube", e)
+
+            async def _fetch_instagram() -> Tuple[str, Any]:
+                t0 = time.perf_counter()
                 try:
-                    instagram_ads = await self.instagram_service.search_reels(
-                        query=competitor.name,
-                        max_results=15,
-                        page=1
+                    ads = await self.instagram_service.search_reels(
+                        query=competitor.name, max_results=15, page=1
                     )
-                    # Format Instagram ads to match our schema
-                    for ad in instagram_ads:
+                    for ad in ads:
                         ad["platform"] = "instagram"
                         ad["headline"] = ad.get("title")
                         ad["description"] = ad.get("description") or ad.get("title")
                         ad["destination_url"] = ad.get("url")
                         ad["image_url"] = ad.get("thumbnail")
                         ad["views"] = ad.get("views", 0)
-                        ad["impressions"] = ad.get("views", 0)  # Use views as impressions
+                        ad["impressions"] = ad.get("views", 0)
                         ad["likes"] = ad.get("likes", 0)
-                    
-                    results["instagram"] = instagram_ads
-                    logger.info(f"Fetched {len(instagram_ads)} Instagram reels for {competitor.name}")
+                    logger.info("Instagram fetch took %.2fs for %s", time.perf_counter() - t0, competitor.name)
+                    return ("instagram", ads)
                 except Exception as e:
-                    logger.error(f"Instagram ads fetch error: {e}")
-            
-            # Save ads to database with deduplication
+                    logger.error("Instagram ads fetch error: %s", e)
+                    return ("instagram", e)
+
+            platform_fetch_start = time.perf_counter()
+            tasks: List[Any] = []
+            if "google" in platforms and competitor.domain:
+                tasks.append(_fetch_google())
+            if "meta" in platforms:
+                tasks.append(_fetch_meta())
+            if "reddit" in platforms:
+                tasks.append(_fetch_reddit())
+            if "linkedin" in platforms:
+                tasks.append(_fetch_linkedin())
+            if "youtube" in platforms:
+                tasks.append(_fetch_youtube())
+            if "instagram" in platforms:
+                tasks.append(_fetch_instagram())
+
+            gathered = await asyncio.gather(*tasks, return_exceptions=True)
+            for out in gathered:
+                if isinstance(out, Exception):
+                    continue
+                platform_key, value = out
+                if isinstance(value, Exception):
+                    logger.error("%s fetch failed: %s", platform_key, value)
+                else:
+                    results[platform_key] = value
+            logger.info(
+                "Platform fetch total %.2fs for %s",
+                time.perf_counter() - platform_fetch_start,
+                competitor.name,
+            )
+
+            # Load existing ads once for this competitor to avoid per-ad DB round-trips
+            db_start = time.perf_counter()
+            existing_ads = self.db.query(Ad).filter(
+                Ad.competitor_id == competitor.id
+            ).all()
+            existing_map = {(ad.platform, ad.platform_ad_id): ad for ad in existing_ads}
+
             total_ads_processed = 0
             new_ads_count = 0
             updated_ads_count = 0
-            
+
             for platform, ads in results.items():
                 if not ads:
                     continue
-                    
+
                 for ad_data in ads:
-                    # Stable platform_ad_id required; normalize to string (no hash fallback)
                     raw_id = ad_data.get("id")
                     if not raw_id:
                         logger.warning(
@@ -273,13 +260,7 @@ class AdFetcher:
                         )
                         continue
                     platform_ad_id = str(raw_id)
-                    
-                    # Check if ad already exists for this competitor + platform + platform_ad_id
-                    existing_ad = self.db.query(Ad).filter(
-                        Ad.competitor_id == competitor.id,
-                        Ad.platform == platform,
-                        Ad.platform_ad_id == platform_ad_id
-                    ).first()
+                    existing_ad = existing_map.get((platform, platform_ad_id))
                     
                     if existing_ad:
                         # UPDATE existing ad
@@ -338,7 +319,7 @@ class AdFetcher:
                         )
                         self.db.add(ad)
                         new_ads_count += 1
-                    
+                        existing_map[(platform, platform_ad_id)] = ad  # avoid duplicate in same batch
                     total_ads_processed += 1
             
             # Calculate actual ads count for competitor
@@ -358,10 +339,20 @@ class AdFetcher:
             ad_fetch.total_ads_fetched = total_ads_processed
             ad_fetch.platforms_queried = json.dumps([p for p in platforms if results.get(p)])
             
-            self.db.flush()  # ensure is_official and other updates are written
+            self.db.flush()
             self.db.commit()
-            
-            logger.info(f"Ads saved for {competitor.name}: {new_ads_count} new, {updated_ads_count} updated, {actual_ads_count} total active ads")
+            logger.info(
+                "DB processing took %.2fs for %s",
+                time.perf_counter() - db_start,
+                competitor.name,
+            )
+            logger.info(
+                "Ads saved for %s: %d new, %d updated, %d total active ads",
+                competitor.name,
+                new_ads_count,
+                updated_ads_count,
+                actual_ads_count,
+            )
             
             # Build platform results summary
             platform_summary = {}
@@ -372,7 +363,11 @@ class AdFetcher:
             # Structured response: ensure results is a dict and compute total_ads for router
             results = results or {}
             total_ads = sum(len(v) for v in results.values())
-            
+            logger.info(
+                "Competitor refresh completed in %.2fs for %s",
+                time.perf_counter() - request_start,
+                competitor.name,
+            )
             return {
                 "success": True,
                 "competitor_id": competitor_id,
@@ -425,26 +420,38 @@ class AdFetcher:
             }
     
     async def fetch_all_user_competitors(self, user_id: str, platforms: List[str] = None) -> List[Dict[str, Any]]:
-        """Fetch ads for all active competitors of a user"""
+        """Fetch ads for all active competitors of a user (concurrency-limited, no fixed delay)."""
         competitors = self.db.query(Competitor).filter(
             Competitor.user_id == user_id,
             Competitor.is_active == True
         ).all()
-        
-        results = []
-        for competitor in competitors:
-            try:
-                result = await self.fetch_competitor_ads(str(competitor.id), user_id, platforms)
-                results.append(result)
-                # Small delay between competitors to avoid rate limiting
-                await asyncio.sleep(2)
-            except Exception as e:
-                logger.error(f"Failed to fetch ads for competitor {competitor.name}: {e}")
-                results.append({
-                    "success": False,
-                    "competitor_id": str(competitor.id),
-                    "competitor_name": competitor.name,
-                    "error": str(e)
-                })
-        
-        return results
+        if not competitors:
+            return []
+
+        semaphore = asyncio.Semaphore(3)
+
+        async def process_one(comp: Competitor) -> Dict[str, Any]:
+            async with semaphore:
+                db = SessionLocal()
+                try:
+                    fetcher = AdFetcher(db, self.api_key)
+                    return await fetcher.fetch_competitor_ads(str(comp.id), user_id, platforms)
+                except Exception as e:
+                    logger.error("Failed to fetch ads for competitor %s: %s", comp.name, e)
+                    return {
+                        "success": False,
+                        "competitor_id": str(comp.id),
+                        "competitor_name": comp.name,
+                        "error": str(e),
+                    }
+                finally:
+                    db.close()
+
+        total_start = time.perf_counter()
+        results = await asyncio.gather(*[process_one(c) for c in competitors])
+        logger.info(
+            "Refresh-all completed in %.2fs for %d competitors",
+            time.perf_counter() - total_start,
+            len(competitors),
+        )
+        return list(results)

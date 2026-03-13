@@ -1,100 +1,225 @@
 # app/routers/ads.py
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Dict, Any, Optional
 from uuid import UUID
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import User, Competitor, Ad, AdFetch
 from app.schemas import AdResponse, AdFetchResponse
 from app.dependencies import get_current_user
 from app.services.ad_fetcher import AdFetcher
 from app.config import settings
 import asyncio
+import logging
+import threading
 
 router = APIRouter()
+
+# Track active refresh jobs per user to avoid duplicate long-running work
+active_refresh_jobs: Dict[str, bool] = {}
+active_refresh_lock = threading.Lock()
+
+
+def _refresh_competitor_task(competitor_id: str, user_id: str, platforms: List[str]) -> None:
+    """Background task to refresh a single competitor using its own DB session."""
+    db = SessionLocal()
+    loop: asyncio.AbstractEventLoop | None = None
+    try:
+        fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(
+            fetcher.fetch_competitor_ads(competitor_id, user_id, platforms)
+        )
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "Background refresh failed for competitor %s (user %s): %s",
+            competitor_id,
+            user_id,
+            e,
+        )
+    finally:
+        with active_refresh_lock:
+            active_refresh_jobs[user_id] = False
+        if loop is not None:
+            try:
+                loop.close()
+            except Exception:
+                pass
+        db.close()
+
+
+def _refresh_all_task(user_id: str, platforms: List[str]) -> None:
+    """Background task to refresh all competitors for a user using its own DB session."""
+    db = SessionLocal()
+    loop: asyncio.AbstractEventLoop | None = None
+    try:
+        fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(fetcher.fetch_all_user_competitors(user_id, platforms))
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "Background refresh-all failed for user %s: %s",
+            user_id,
+            e,
+        )
+    finally:
+        with active_refresh_lock:
+            active_refresh_jobs[user_id] = False
+        if loop is not None:
+            try:
+                loop.close()
+            except Exception:
+                pass
+        db.close()
+
 
 @router.post("/refresh/{competitor_id}")
 async def refresh_competitor_ads(
     competitor_id: UUID,
     platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
+    background_tasks: BackgroundTasks | None = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Refresh ads for a specific competitor. Runs synchronously so response returns when refetch is done."""
-    # Check if competitor exists and belongs to user
+    """Start refresh for one competitor. If BackgroundTasks is available, run in background and return 202."""
     competitor = db.query(Competitor).filter(
         Competitor.id == competitor_id,
         Competitor.user_id == current_user.user_id,
-        Competitor.is_active == True
+        Competitor.is_active == True,
     ).first()
-    
+
     if not competitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Competitor not found"
+            detail="Competitor not found",
         )
-    
-    # Validate platforms
+
     valid_platforms = ["google", "meta", "reddit", "linkedin", "youtube", "instagram"]
     for platform in platforms:
         if platform not in valid_platforms:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid platform: {platform}. Valid platforms: {valid_platforms}"
+                detail=f"Invalid platform: {platform}. Valid platforms: {valid_platforms}",
             )
-    
-    # Initialize ad fetcher and run synchronously (so frontend gets 200 only after refetch completes)
+
+    user_id_str = str(current_user.user_id)
+
+    # If a refresh is already running for this user, short‑circuit with 202
+    with active_refresh_lock:
+        if active_refresh_jobs.get(user_id_str):
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "message": "Refresh already in progress",
+                    "status": "running",
+                    "competitor_id": str(competitor_id),
+                    "competitor_name": competitor.name,
+                },
+            )
+
+        # Background mode: schedule refresh and return immediately
+        if background_tasks is not None:
+            active_refresh_jobs[user_id_str] = True
+            background_tasks.add_task(
+                _refresh_competitor_task,
+                str(competitor_id),
+                user_id_str,
+                list(platforms),
+            )
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "message": "Refresh started",
+                    "status": "running",
+                    "competitor_id": str(competitor_id),
+                    "competitor_name": competitor.name,
+                },
+            )
+
+    # Fallback synchronous behavior
     fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
     result = await fetcher.fetch_competitor_ads(
         str(competitor_id),
         str(current_user.user_id),
-        platforms
+        platforms,
     )
-    
+
     if result["success"]:
         return {
             "message": f"Ads refreshed successfully for {competitor.name}",
             "competitor_id": str(competitor_id),
             "competitor_name": competitor.name,
             "total_ads_fetched": result["total_ads"],
-            "platforms": list(result["platforms"].keys()),
-            "fetch_id": result["fetch_id"]
+            "platforms": list(result.get("platforms", {}).keys()),
+            "fetch_id": result["fetch_id"],
         }
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to refresh ads: {result.get('error', 'Unknown error')}"
+        detail=f"Failed to refresh ads: {result.get('error', 'Unknown error')}",
     )
+
 
 @router.post("/refresh-all")
 async def refresh_all_competitors_ads(
     platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
+    background_tasks: BackgroundTasks | None = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Refresh ads for all competitors of current user. Runs synchronously so response returns when refetch is done."""
-    # Validate platforms
+    """Start refresh for all competitors. If BackgroundTasks is available, run in background and return 202."""
     valid_platforms = ["google", "meta", "reddit", "linkedin", "youtube", "instagram"]
     for platform in platforms:
         if platform not in valid_platforms:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid platform: {platform}. Valid platforms: {valid_platforms}"
+                detail=f"Invalid platform: {platform}. Valid platforms: {valid_platforms}",
             )
-    
+
+    user_id_str = str(current_user.user_id)
+
+    with active_refresh_lock:
+        if active_refresh_jobs.get(user_id_str):
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "message": "Refresh already in progress",
+                    "status": "running",
+                },
+            )
+
+        if background_tasks is not None:
+            active_refresh_jobs[user_id_str] = True
+            background_tasks.add_task(
+                _refresh_all_task,
+                user_id_str,
+                list(platforms),
+            )
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "message": "Refresh started for all competitors",
+                    "status": "running",
+                },
+            )
+
+    # Fallback synchronous behavior
     fetcher = AdFetcher(db, settings.SCRAPECREATORS_API_KEY)
     results = await fetcher.fetch_all_user_competitors(str(current_user.user_id), platforms)
-    
+
     successful = sum(1 for r in results if r.get("success", False))
     total_ads = sum(r.get("total_ads", 0) for r in results if r.get("success", False))
-    
+
     return {
         "message": f"Refreshed ads for {successful} competitors",
         "user_id": str(current_user.user_id),
         "total_competitors_processed": len(results),
         "successful": successful,
         "total_ads_fetched": total_ads,
-        "platforms": platforms
+        "platforms": platforms,
     }
 
 @router.get("/competitor/{competitor_id}", response_model=List[AdResponse])

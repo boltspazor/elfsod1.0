@@ -134,7 +134,7 @@ const Home: React.FC = () => {
           votes: formatVotes(item.views || item.likes || 0),
           tags: [item.platform, ...(item.type ? [item.type] : [])].filter(Boolean) as string[],
           genre,
-          engagement: item.score ? `${Math.min(item.score, 100)}%` : 'N/A',
+          engagement: item.score != null ? `${Number(Math.min(item.score, 100)).toFixed(2)}%` : 'N/A',
           description: item.description || 'Trending ad content',
           url: item.url,
           platform: item.platform,

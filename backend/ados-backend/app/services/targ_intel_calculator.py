@@ -165,7 +165,7 @@ def _infer_geography_with_groq(company_name: str, domain: str = "", groq_api_key
         resp = _requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {_GROQ_API_KEY}",
+                "Authorization": f"Bearer {groq_api_key}",
                 "Content-Type": "application/json",
             },
             json=payload,

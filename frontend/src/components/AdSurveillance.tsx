@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { svgPlaceholder } from "@/utils/imageFallback";
@@ -318,17 +318,9 @@ const AdSurveillance = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<string>("all");
 
-  // Metrics state - UPDATED: Use frontend calculation
-  const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetrics | null>(
-    null,
-  );
-  const [platformStats, setPlatformStats] = useState<PlatformStats[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<
     "daily" | "weekly" | "monthly" | "all_time"
   >("weekly");
-  const [metricsSummary, setMetricsSummary] = useState<
-    CompetitorMetricsSummary[]
-  >([]);
   const [isCalculatingMetrics, setIsCalculatingMetrics] = useState(false);
 
   // View modes
@@ -734,6 +726,26 @@ const AdSurveillance = () => {
     );
   };
 
+  // Memoized metrics — recompute only when ads or competitors change
+  const summaryMetrics = useMemo(
+    () =>
+      competitors.length === 0
+        ? null
+        : calculateDashboardMetrics(ads, competitors),
+    [ads, competitors],
+  );
+  const platformStats = useMemo(
+    () => (competitors.length === 0 ? [] : calculatePlatformStats(ads)),
+    [ads, competitors],
+  );
+  const metricsSummary = useMemo(
+    () =>
+      competitors.length === 0
+        ? []
+        : calculateCompetitorMetricsSummary(ads, competitors),
+    [ads, competitors],
+  );
+
   // Initialize
   useEffect(() => {
     checkAuthAndLoadData();
@@ -757,7 +769,7 @@ const AdSurveillance = () => {
     }
   };
 
-  // Load competitors
+  // Load competitors: fetch ads once, then lazy-load trending so page renders quickly
   const loadCompetitors = async () => {
     try {
       console.log("Loading competitors...");
@@ -773,17 +785,14 @@ const AdSurveillance = () => {
       console.log("Processed competitors:", competitorsList.length);
       setCompetitors(competitorsList);
 
-      // Load data that depends on competitors
       if (competitorsList.length > 0) {
-        await Promise.all([loadRecentAds(), loadTrendingAds()]);
-
-        // Calculate metrics in frontend after loading ads
-        await calculateFrontendMetrics(competitorsList);
+        // Fetch ads once; metrics recompute via useMemo when ads state updates
+        await loadRecentAds();
+        // Lazy-load trending so page renders immediately; trending section shows loading state
+        loadTrendingAds();
       } else {
-        // Reset metrics if no competitors
-        setSummaryMetrics(null);
-        setPlatformStats([]);
-        setMetricsSummary([]);
+        setAds([]);
+        setFilteredAds([]);
       }
     } catch (error) {
       console.error("Error loading competitors:", error);
@@ -791,74 +800,11 @@ const AdSurveillance = () => {
     }
   };
 
-  // NEW: Calculate metrics in frontend
-  const calculateFrontendMetrics = async (competitorsList: Competitor[]) => {
-    try {
-      console.log("Calculating metrics in frontend...");
-
-      // Get all ads first
-      let allAds: AdData[] = [];
-      try {
-        const adsData = await AdsAPI.getAllAds(500);
-        console.log("All ads API response:", adsData);
-
-        if (Array.isArray(adsData)) {
-          allAds = adsData.map((ad) => {
-            // Parse spend and impressions safely
-            const parsedSpend = parseSpendValue(ad.spend);
-            const parsedImpressions = parseImpressionValue(ad.impressions);
-
-            return {
-              ...ad,
-              competitor_name: ad.competitor_name || "",
-              impressions: parsedImpressions,
-              spend: parsedSpend,
-              is_active: resolveAdActiveStatus({
-                is_active: ad.is_active,
-                last_seen: ad.last_seen,
-                created_at: ad.created_at,
-                first_seen: ad.first_seen,
-              }),
-            };
-          });
-        }
-
-        setAds(allAds);
-        setFilteredAds(allAds);
-      } catch (adsError) {
-        console.error("Error loading all ads:", adsError);
-        // Continue with empty ads array
-      }
-
-      // Calculate dashboard metrics
-      const dashboardMetrics = calculateDashboardMetrics(
-        allAds,
-        competitorsList,
-      );
-      setSummaryMetrics(dashboardMetrics);
-
-      // Calculate platform stats
-      const platformStatsData = calculatePlatformStats(allAds);
-      setPlatformStats(platformStatsData);
-
-      // Calculate competitor metrics summary
-      const competitorMetrics = calculateCompetitorMetricsSummary(
-        allAds,
-        competitorsList,
-      );
-      setMetricsSummary(competitorMetrics);
-
-      console.log("Frontend metrics calculation complete");
-    } catch (error) {
-      console.error("Error calculating frontend metrics:", error);
-      setError("Failed to calculate metrics. Using default values.");
-
-      // Set default values
-      const defaultMetrics = calculateDashboardMetrics([], competitorsList);
-      setSummaryMetrics(defaultMetrics);
-      setPlatformStats([]);
-      setMetricsSummary([]);
-    }
+  // Recompute metrics from existing ads (no fetch). Metrics are also derived via useMemo from ads/competitors.
+  const calculateFrontendMetricsFromAds = (adsList: AdData[], competitorsList: Competitor[]) => {
+    setAds(adsList);
+    setFilteredAds(adsList);
+    // summaryMetrics, platformStats, metricsSummary update automatically via useMemo
   };
 
   // Load recent ads - UPDATED to use getAllAds. When a competitor is selected, pass isOfficial so the API returns official/unofficial-only when that filter is on (avoids limit pushing those ads out).
@@ -905,9 +851,9 @@ const AdSurveillance = () => {
           });
         }
       } else {
-        // Get all ads
+        // Get all ads (limit 200 for faster initial load; pagination still works)
         try {
-          const data = await AdsAPI.getAllAds(500);
+          const data = await AdsAPI.getAllAds(200);
           console.log("All ads API response:", data);
 
           if (Array.isArray(data)) {
@@ -986,9 +932,11 @@ const AdSurveillance = () => {
       console.log("Loaded ads:", adsData.length);
       setAds(adsData);
       setFilteredAds(adsData);
+      return adsData;
     } catch (error) {
       console.error("Error loading ads:", error);
       setError("Failed to load ads. Please try refreshing.");
+      return [];
     }
   };
 
@@ -1248,11 +1196,8 @@ const AdSurveillance = () => {
     setError(null);
 
     try {
-      // Refresh ads first
       await loadRecentAds();
-
-      // Then recalculate metrics
-      await calculateFrontendMetrics(competitors);
+      // Metrics update automatically via useMemo(ads, competitors)
 
       // Show success message
       setError("Metrics calculated successfully!");
@@ -1359,8 +1304,7 @@ const AdSurveillance = () => {
           await loadRecentAds(created.id);
           setSelectedCompetitor(created.id);
           setSelectedCompany(created.id);
-          const list = await CompetitorsAPI.list();
-          await calculateFrontendMetrics(list);
+          // Metrics update via useMemo when ads/competitors change
         } catch (refreshErr: unknown) {
           console.error("Error refreshing ads for new competitor:", refreshErr);
           // Don't block modal close on refresh failure
@@ -1491,7 +1435,35 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
     }
   };
 
-  // Refresh ads handler - calls backend to refetch from platforms (Meta, Google, etc.)
+  // Poll recent fetch history until no fetch is running, then reload ads + trending.
+  // Uses progressive backoff from ~3s up to 10s between polls.
+  const pollFetchStatus = async (pollDelayMs = 3000) => {
+    try {
+      const history = await AdsAPI.fetchHistory(5);
+      const latest = Array.isArray(history) ? history[0] : undefined;
+      const hasRunning = latest?.status === "running";
+      if (hasRunning) {
+        const nextDelay = Math.min(Math.floor(pollDelayMs * 1.5), 10000);
+        setTimeout(() => {
+          pollFetchStatus(nextDelay);
+        }, pollDelayMs);
+      } else {
+        await Promise.all([
+          loadRecentAds(selectedCompetitor || undefined),
+          loadTrendingAds(),
+        ]);
+        setIsRefreshing(false);
+      }
+    } catch (err) {
+      console.error("Error polling fetch history:", err);
+      // Retry with same delay in case of transient errors
+      setTimeout(() => {
+        pollFetchStatus(pollDelayMs);
+      }, pollDelayMs);
+    }
+  };
+
+  // Refresh ads handler - start backend refresh and return immediately; UI polls for completion.
   const handleRefreshAds = async () => {
     const action = selectedCompetitor ? `refresh competitor ${selectedCompetitor}` : "refresh-all";
     console.log("[Refresh ads] Starting", { action, competitorsCount: competitors.length });
@@ -1505,23 +1477,11 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
         console.log("[Refresh ads] Calling POST /api/ads/refresh-all");
         await AdsAPI.refreshAll();
       }
-      console.log("[Refresh ads] Refetch completed, reloading list...");
-
-      // Wait a moment for backend to process
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Reload data after refresh
-      await Promise.all([
-        loadRecentAds(selectedCompetitor || undefined),
-        loadTrendingAds(),
-      ]);
-
-      // Recalculate metrics
-      await calculateFrontendMetrics(competitors);
+      // Do not block on the scraping; poll fetch history and refresh ads when done.
+      pollFetchStatus(3000);
     } catch (error: unknown) {
       console.error("Error refreshing ads:", error);
       setError(error instanceof Error ? error.message : "Failed to refresh ads");
-    } finally {
       setIsRefreshing(false);
     }
   };
@@ -1898,19 +1858,33 @@ ${ad.description || ad.full_text || ad.headline || "No copy available."}
             )}
             Check Connection
           </button>
-          <button
-            onClick={handleRefreshAds}
-            disabled={isRefreshing || competitors.length === 0}
-            title={competitors.length === 0 ? "Add a competitor first" : selectedCompetitor ? "Refresh ads for selected competitor" : "Refresh ads for all competitors"}
-            className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isRefreshing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefreshAds}
+              disabled={isRefreshing || competitors.length === 0}
+              title={
+                competitors.length === 0
+                  ? "Add a competitor first"
+                  : selectedCompetitor
+                    ? "Refresh ads for selected competitor"
+                    : "Refresh ads for all competitors"
+              }
+              className="px-4 py-2.5 bg-[#0ea5e9] hover:bg-[#0284c7] text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRefreshing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Refresh ads
+            </button>
+            {isRefreshing && (
+              <span className="text-xs text-[#aaa] flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Refreshing ads in background...
+              </span>
             )}
-            Refresh ads
-          </button>
+          </div>
         </div>
 
         {/* Data View Toggle */}
