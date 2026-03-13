@@ -460,34 +460,36 @@ export const TrendingAPI = {
 
   stats: () => fetchWithAuth('/api/trending/stats'),
 
-  // Helper to get trending ads for competitors
+  // Helper to get trending ads for competitors (searches run in parallel)
   getTrendingForCompetitors: async (competitorNames: string[]): Promise<TrendingAd[]> => {
+    const firstTwo = competitorNames.slice(0, 2);
+    const searches = firstTwo.map((name) =>
+      TrendingAPI.search({
+        keyword: name,
+        platforms: ['meta', 'instagram', 'youtube'],
+        limit_per_platform: 3,
+        async_mode: false
+      })
+    );
+    const settled = await Promise.allSettled(searches);
+
     const allTrendingAds: TrendingAd[] = [];
-    
-    // Limit to 2 competitors to avoid too many API calls
-    for (const name of competitorNames.slice(0, 2)) {
-      try {
-        const result = await TrendingAPI.search({
-          keyword: name,
-          platforms: ['meta', 'instagram', 'youtube'],
-          limit_per_platform: 3,
-          async_mode: false
-        });
-        
-        if (result.top_trending && Array.isArray(result.top_trending)) {
-          const competitorAds = result.top_trending.slice(0, 3).map((ad: TrendingAd) => ({
-            ...ad,
-            competitor_name: name
-          }));
-          allTrendingAds.push(...competitorAds);
-        }
-      } catch (error) {
-        console.error(`Error getting trending for ${name}:`, error);
-        // Continue with next competitor
+    settled.forEach((outcome, index) => {
+      const name = firstTwo[index];
+      if (outcome.status === 'rejected') {
+        console.error(`Error getting trending for ${name}:`, outcome.reason);
+        return;
       }
-    }
-    
-    // Sort by score and limit
+      const result = outcome.value;
+      if (result?.top_trending && Array.isArray(result.top_trending)) {
+        const competitorAds = result.top_trending.slice(0, 3).map((ad: TrendingAd) => ({
+          ...ad,
+          competitor_name: name
+        }));
+        allTrendingAds.push(...competitorAds);
+      }
+    });
+
     return allTrendingAds
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 5);

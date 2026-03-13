@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from typing import List, Optional, Dict, Any
+import json
+import logging
 import uuid
 from datetime import datetime
 
@@ -15,6 +17,11 @@ from app.services.trending_cache_service import (
     get_all_categories_cached,
     CATEGORY_KEYWORDS,
 )
+from app.utils.redis_client import get_redis_client, trending_cache_key
+
+logger = logging.getLogger(__name__)
+
+TRENDING_CACHE_TTL = 43200  # 12 hours
 
 router = APIRouter()
 
@@ -49,10 +56,30 @@ async def search_trending_ads(
             status_code=400,
             detail=f"Invalid platforms: {invalid_platforms}. Valid platforms: {valid_platforms}"
         )
-    
+
+    # Read-through Redis cache (normalized key: keyword + sorted platforms)
+    cache_key = trending_cache_key(request.keyword, request.platforms)
+    redis_client = get_redis_client()
+    if redis_client:
+        try:
+            cached = redis_client.get(cache_key)
+            if cached:
+                results = json.loads(cached)
+                return TrendingSearchResponse(
+                    task_id=results.get("task_id"),
+                    status=results.get("status", "completed"),
+                    keyword=results.get("keyword", request.keyword),
+                    results=results.get("results", {}),
+                    summary=results["summary"],
+                    top_trending=results.get("top_trending", []),
+                    platform_performance=results.get("platform_performance", {}),
+                )
+        except Exception as e:
+            logger.warning("Trending cache read failed: %s", e)
+
     # Initialize trending service
     trending_service = TrendingSearchService()
-    
+
     # If async mode requested, run in background
     if request.async_mode and background_tasks:
         task_id = str(uuid.uuid4())
@@ -103,7 +130,18 @@ async def search_trending_ads(
         platforms=request.platforms,
         limit_per_platform=request.limit_per_platform
     )
-    
+
+    # Store in Redis for 12 hours
+    if redis_client:
+        try:
+            redis_client.setex(
+                cache_key,
+                TRENDING_CACHE_TTL,
+                json.dumps(results, default=str),
+            )
+        except Exception as e:
+            logger.warning("Trending cache write failed: %s", e)
+
     return TrendingSearchResponse(
         task_id=None,
         status="completed",

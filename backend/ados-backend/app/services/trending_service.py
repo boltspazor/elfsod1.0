@@ -1,9 +1,13 @@
 # app/services/trending_service.py
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import asyncio
+import logging
 import os
 import re
+import time
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 
 CATEGORY_DISCOVERY_QUERIES = {
@@ -189,19 +193,12 @@ class TrendingSearchService:
 
         limit_per_platform = max(limit_per_platform, 50)
 
-        # PART 3: Fetch ads for each discovery query, then merge results
-        merged_by_platform: Dict[str, List[Dict[str, Any]]] = {
-            "meta": [],
-            "reddit": [],
-            "linkedin": [],
-            "youtube": [],
-            "instagram": [],
-        }
+        request_start = time.perf_counter()
 
-        for query in queries:
+        # PART 3: Run ALL queries concurrently (each query runs platform tasks in parallel)
+        async def fetch_one_query(query: str) -> List[Tuple[str, Any]]:
             tasks: List[Any] = []
             task_platforms: List[str] = []
-
             if "meta" in platforms and self.meta_service:
                 tasks.append(self._search_meta(query, limit_per_platform))
                 task_platforms.append("meta")
@@ -217,19 +214,38 @@ class TrendingSearchService:
             if "instagram" in platforms and self.instagram_service:
                 tasks.append(self._search_instagram(query, limit_per_platform))
                 task_platforms.append("instagram")
-
             if not tasks:
-                continue
-
+                return []
             query_results = await asyncio.gather(*tasks, return_exceptions=True)
-            for platform_name, result in zip(task_platforms, query_results):
+            return list(zip(task_platforms, query_results))
+
+        platform_fetch_start = time.perf_counter()
+        all_query_results = await asyncio.gather(
+            *[fetch_one_query(q) for q in queries],
+            return_exceptions=True,
+        )
+        platform_fetch_elapsed = time.perf_counter() - platform_fetch_start
+        logger.info("Trending platform fetch completed in %.2fs (%d queries)", platform_fetch_elapsed, len(queries))
+
+        merged_by_platform: Dict[str, List[Dict[str, Any]]] = {
+            "meta": [],
+            "reddit": [],
+            "linkedin": [],
+            "youtube": [],
+            "instagram": [],
+        }
+        for i, per_query in enumerate(all_query_results):
+            if isinstance(per_query, Exception):
+                logger.warning("Query %s failed: %s", queries[i] if i < len(queries) else i, per_query)
+                continue
+            for platform_name, result in per_query:
                 if isinstance(result, Exception):
-                    print(f"Error searching {platform_name} for query '{query}': {result}")
+                    logger.warning("Error searching %s for query %s: %s", platform_name, queries[i] if i < len(queries) else "", result)
                     continue
                 if result is None:
                     continue
                 if not isinstance(result, list):
-                    print(f"Warning: {platform_name} returned non-list result: {type(result)}")
+                    logger.warning("%s returned non-list result: %s", platform_name, type(result))
                     continue
                 for ad in result:
                     if not isinstance(ad, dict):
@@ -238,17 +254,20 @@ class TrendingSearchService:
                         ad["platform"] = platform_name
                     merged_by_platform[platform_name].append(ad)
 
-        all_results: List[Dict[str, Any]] = []
+        all_results = []
         for items in merged_by_platform.values():
             all_results.extend(items)
 
         # PART 5: Deduplicate ads by URL across all queries/platforms
+        dedupe_start = time.perf_counter()
+        count_before_dedupe = len(all_results)
         unique_ads: Dict[str, Dict[str, Any]] = {}
         for ad in all_results:
             url = ad.get("url")
             if url and url not in unique_ads:
                 unique_ads[url] = ad
         all_results = list(unique_ads.values())
+        logger.info("Deduplication completed in %.2fs (%d -> %d ads)", time.perf_counter() - dedupe_start, count_before_dedupe, len(all_results))
 
         # Re-bucket by platform after global dedupe
         platform_results: Dict[str, List[Dict[str, Any]]] = {
@@ -264,6 +283,7 @@ class TrendingSearchService:
                 platform_results[p].append(ad)
 
         # Apply filters + scoring per platform (keeps response structure unchanged)
+        scoring_start = time.perf_counter()
         for platform_name, result in platform_results.items():
             processed_items: List[Dict[str, Any]] = []
             for item in result:
@@ -350,7 +370,9 @@ class TrendingSearchService:
 
                     processed_items.append(item)
             platform_results[platform_name] = processed_items
-        
+
+        logger.info("Scoring/filtering completed in %.2fs", time.perf_counter() - scoring_start)
+
         # Calculate cross-platform rankings
         all_items = []
         for platform, items in platform_results.items():
@@ -373,7 +395,10 @@ class TrendingSearchService:
         
         # Get top trending items
         top_trending = all_items[:10] if all_items else []
-        
+
+        total_elapsed = time.perf_counter() - request_start
+        logger.info("Trending search completed in %.2fs (keyword=%s)", total_elapsed, keyword)
+
         return {
             "task_id": None,
             "status": "completed",
