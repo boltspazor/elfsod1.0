@@ -80,8 +80,8 @@ def _refresh_all_task(user_id: str, platforms: List[str]) -> None:
 @router.post("/refresh/{competitor_id}")
 async def refresh_competitor_ads(
     competitor_id: UUID,
-    platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
     background_tasks: BackgroundTasks,
+    platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -165,8 +165,8 @@ async def refresh_competitor_ads(
 
 @router.post("/refresh-all")
 async def refresh_all_competitors_ads(
-    platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
     background_tasks: BackgroundTasks,
+    platforms: List[str] = Query(["google", "meta", "reddit", "linkedin", "youtube", "instagram"]),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
